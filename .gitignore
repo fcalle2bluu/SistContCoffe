@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local data and scratch files
+*.csv
+*.txt
+inserts.json
+scratch.js
+/scratch/
+/dist/
+
