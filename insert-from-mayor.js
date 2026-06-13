@@ -81,7 +81,7 @@ async function main() {
         }
     }
 
-    const text = fs.readFileSync('Copia de LIBROS CONTABLES ABRIL 2026 - LIBRO MAYOR ABRIL 2026.csv', 'utf8');
+    const text = fs.readFileSync('LIBRO MAYOR ABRIL 2026.csv', 'utf8');
     const lines = text.split('\n').map(l => l.trim()).filter(l => l);
 
     let currentAccountName = null;
@@ -107,7 +107,10 @@ async function main() {
             const haber = haberCol ? parseFloat(haberCol) : 0;
             
             const [day, month, year] = fechaStr.split('/');
-            const fechaIso = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            let fechaIso = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            if (fechaIso === '1900-10-03') {
+                fechaIso = '2026-04-16';
+            }
             
             let accountName = currentAccountName;
             

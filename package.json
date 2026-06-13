@@ -13,7 +13,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "build:exe": "pkg . --targets node18-win-x64 --output dist/SistemaContable.exe"
+    "build:exe": "pkg . --targets node18-win-x64 --output dist/SistemaContable.exe",
+    "build:linux": "pkg . --targets node18-linux-x64 --output dist/SistemaContable"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

@@ -2,7 +2,19 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, Save } from 'lucide-react';
 
-export default function ModalLibroDiario({ isOpen, onClose, onSaved, planCuentas }: { isOpen: boolean, onClose: () => void, onSaved: () => void, planCuentas: any[] }) {
+export default function ModalLibroDiario({ 
+  isOpen, 
+  onClose, 
+  onSaved, 
+  planCuentas,
+  editingDiario = null
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  onSaved: () => void, 
+  planCuentas: any[],
+  editingDiario?: any
+}) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -12,6 +24,29 @@ export default function ModalLibroDiario({ isOpen, onClose, onSaved, planCuentas
     debe: 0,
     haber: 0
   });
+
+  // Load journal entry in edit mode
+  React.useEffect(() => {
+    if (editingDiario && isOpen) {
+      setFormData({
+        fecha: editingDiario.fecha || new Date().toISOString().split('T')[0],
+        nro_asiento: editingDiario.nro_asiento !== undefined ? String(editingDiario.nro_asiento) : '',
+        codigo_cuenta: editingDiario.codigo_cuenta || '',
+        glosa: editingDiario.glosa || '',
+        debe: Number(editingDiario.debe || 0),
+        haber: Number(editingDiario.haber || 0)
+      });
+    } else if (isOpen) {
+      setFormData({
+        fecha: new Date().toISOString().split('T')[0],
+        nro_asiento: '',
+        codigo_cuenta: '',
+        glosa: '',
+        debe: 0,
+        haber: 0
+      });
+    }
+  }, [editingDiario, isOpen]);
 
   if (!isOpen) return null;
 
@@ -27,7 +62,28 @@ export default function ModalLibroDiario({ isOpen, onClose, onSaved, planCuentas
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.from('libro_diario').insert([formData]);
+    const payload = {
+      fecha: formData.fecha,
+      nro_asiento: Number(formData.nro_asiento),
+      codigo_cuenta: formData.codigo_cuenta,
+      glosa: formData.glosa,
+      debe: formData.debe,
+      haber: formData.haber
+    };
+
+    let error;
+    if (editingDiario) {
+      const { error: updateError } = await supabase
+        .from('libro_diario')
+        .update(payload)
+        .eq('id', editingDiario.id);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from('libro_diario')
+        .insert([payload]);
+      error = insertError;
+    }
     
     setLoading(false);
     if (error) {

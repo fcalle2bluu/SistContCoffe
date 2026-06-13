@@ -37,5 +37,17 @@ export const ProductosService = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+
+  async updateProducto(id: number, producto: Partial<Omit<Producto, 'id'>>) {
+    const { data, error } = await supabase
+      .from('productos')
+      .update(producto)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Producto;
   }
 };

@@ -2,7 +2,17 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, Save } from 'lucide-react';
 
-export default function ModalInventarioPeps({ isOpen, onClose, onSaved }: { isOpen: boolean, onClose: () => void, onSaved: () => void }) {
+export default function ModalInventarioPeps({ 
+  isOpen, 
+  onClose, 
+  onSaved,
+  editingInventory = null
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  onSaved: () => void,
+  editingInventory?: any
+}) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -22,6 +32,47 @@ export default function ModalInventarioPeps({ isOpen, onClose, onSaved }: { isOp
     tueste_final: 0
   });
 
+  // Load inventory movement in edit mode
+  React.useEffect(() => {
+    if (editingInventory && isOpen) {
+      setFormData({
+        fecha: editingInventory.fecha || new Date().toISOString().split('T')[0],
+        detalle: editingInventory.detalle || '',
+        entradas: Number(editingInventory.entradas || 0),
+        salidas: Number(editingInventory.salidas || 0),
+        saldo_unidades: Number(editingInventory.saldo_unidades || 0),
+        costo_unitario: Number(editingInventory.costo_unitario || 0),
+        debe: Number(editingInventory.debe || 0),
+        haber: Number(editingInventory.haber || 0),
+        saldo_valor: Number(editingInventory.saldo_valor || 0),
+        tipo_cafe: editingInventory.tipo_cafe || '',
+        tipo_tueste: editingInventory.tipo_tueste || '',
+        clima: editingInventory.clima || '',
+        merma_porcentaje: Number(editingInventory.merma_porcentaje || 0),
+        merma_tueste: Number(editingInventory.merma_tueste || 0),
+        tueste_final: Number(editingInventory.tueste_final || 0)
+      });
+    } else if (isOpen) {
+      setFormData({
+        fecha: new Date().toISOString().split('T')[0],
+        detalle: '',
+        entradas: 0,
+        salidas: 0,
+        saldo_unidades: 0,
+        costo_unitario: 0,
+        debe: 0,
+        haber: 0,
+        saldo_valor: 0,
+        tipo_cafe: '',
+        tipo_tueste: '',
+        clima: '',
+        merma_porcentaje: 0,
+        merma_tueste: 0,
+        tueste_final: 0
+      });
+    }
+  }, [editingInventory, isOpen]);
+
   if (!isOpen) return null;
 
   const handleChange = (e: any) => {
@@ -36,7 +87,19 @@ export default function ModalInventarioPeps({ isOpen, onClose, onSaved }: { isOp
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.from('movimientos_inventario').insert([formData]);
+    let error;
+    if (editingInventory) {
+      const { error: updateError } = await supabase
+        .from('movimientos_inventario')
+        .update(formData)
+        .eq('id', editingInventory.id);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from('movimientos_inventario')
+        .insert([formData]);
+      error = insertError;
+    }
     
     setLoading(false);
     if (error) {
