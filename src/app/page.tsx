@@ -24,7 +24,9 @@ const csvAccountOrder = [
   '1110101', // CAJA MONEDA NACIONAL
   '1110102', // CAJA CHICA
   '1110103', // BANCO BISA
+  '1110105', // POS / TARJETA (POR COBRAR)
   '5010101', // VENTAS
+  '5010103', // DESCUENTOS SOBRE VENTAS
   '50102',   // COSTO DE VENTAS Y SERVICIOS
   '115',     // INVENTARIO DE MERCADERIAS
   '502030102', // LINKSER
@@ -63,7 +65,9 @@ const csvAccountNames: Record<string, string> = {
   '1110101': 'CAJA MONEDA NACIONAL',
   '1110102': 'CAJA CHICA',
   '1110103': 'BANCO BISA',
+  '1110105': 'POS / TARJETA (POR COBRAR)',
   '5010101': 'VENTAS',
+  '5010103': 'DESCUENTOS SOBRE VENTAS',
   '50102': 'COSTO DE VENTAS Y SERVICIOS',
   '115': 'INVENTARIO DE MERCADERIAS',
   '502030102': 'LINKSER',
@@ -955,12 +959,16 @@ export default function SistemaContableYanaloma() {
       grouped[code].push(mov);
     });
 
+    // Corrección manual de orden para dos filas históricas importadas sin nro_asiento real
+    // (ambas con transaccion_id null, identificadas por su id de fila, no por contenido).
+    const CORRECCION_ORDEN_9999: Record<number, number> = {
+      33740: 441, // "VENTA 128" import histórico
+      34362: 555  // ajuste histórico cuenta 1130203
+    };
+
     const getSortRef = (mov: any) => {
       if (mov.nro_asiento !== 9999) return Number(mov.nro_asiento || 0);
-      const glosa = (mov.glosa || '').toUpperCase();
-      if (glosa.includes('VENTA 128')) return 441;
-      if (mov.codigo_cuenta === '1130203' && Number(mov.debe) === 11.5) return 555;
-      return 9999;
+      return CORRECCION_ORDEN_9999[mov.id] ?? 9999;
     };
 
     const result: any[] = [];
@@ -1057,18 +1065,6 @@ export default function SistemaContableYanaloma() {
     let iIT = getSumaMayor(['1160103'], 'DEBE'); // IT (Anticipo IT)
     let iIVA = getSumaMayor(['IVA'], 'HABER'); // IVA
 
-    // Override specifically for April 2026 to match the CSV's precise roundings/adjustments
-    if (periodoActual.toUpperCase().includes('ABRIL 2026')) {
-      vVentas = 37966.47;
-      vServicios = 2978.00;
-      cInventario = 6535.20;
-      cInsumos = 7217.86;
-      cManoObra = 13140.00;
-      cSecundarios = 3077.21;
-      iIT = 297.00;
-      iIVA = 1287.00;
-    }
-
     const totalIngresos = vVentas + vServicios;
     const totalCostos = cInventario + cInsumos + cManoObra + cSecundarios;
     const totalImpuestos = iIT + iIVA;
@@ -1080,23 +1076,13 @@ export default function SistemaContableYanaloma() {
 
     // 5. Destacado (Extraídos de cuentas extraordinarias en el Libro Diario)
     const cuentasDestacadas = ['2130102', '40101', '12409'];
-    let destacado = libroDiario
+    const destacado = libroDiario
       .filter(mov => cuentasDestacadas.includes(mov.codigo_cuenta) && Number(mov.debe) > 0)
       .map(mov => ({
         id: mov.id,
         detalle: mov.glosa || 'Gasto Extraordinario',
         monto_total: Number(mov.debe) as number | null
       }));
-
-    if (periodoActual.toUpperCase().includes('ABRIL 2026')) {
-      destacado = [
-        { id: 'iue-2025', detalle: 'IUE 2025', monto_total: 3145.00 },
-        { id: 'imp-mun-2025', detalle: 'Impuestos minucipales 2025', monto_total: 312.00 },
-        { id: 'compra-micro', detalle: 'Compra microhondas', monto_total: 1259.76 },
-        { id: 'sedes-ach', detalle: 'SEDES Achumani', monto_total: 250.00 },
-        { id: 'lic-func', detalle: 'Licencia de funcionamiento Achumani', monto_total: null }
-      ];
-    }
 
     return { 
       vVentas, vServicios, totalIngresos, 

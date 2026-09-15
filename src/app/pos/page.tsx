@@ -971,12 +971,8 @@ export default function POSPage() {
 
       // 2. Insert Double Entry seat into libro_diario
       try {
-        const { data: maxSeatData } = await supabase
-          .from('libro_diario')
-          .select('nro_asiento')
-          .order('nro_asiento', { ascending: false })
-          .limit(1);
-        const nextSeat = maxSeatData && maxSeatData.length > 0 ? (Number(maxSeatData[0].nro_asiento) || 0) + 1 : 1;
+        const { data: nextSeat, error: seatError } = await supabase.rpc('siguiente_nro_asiento');
+        if (seatError) throw seatError;
 
         const glosaDiario = `EGRESO Caja POS - ${egresoData.detalle.trim()}`;
 
@@ -1051,7 +1047,10 @@ export default function POSPage() {
       const closeTxData = {
         fecha,
         detalle: detail,
-        tipo_movimiento: 'INGRESO', // neutral close record
+        // 'CIERRE_TURNO' (no 'INGRESO'): es un registro de auditoría del arqueo de caja,
+        // no una venta nueva -- las ventas del turno ya se contabilizaron una por una.
+        // Marcarlo como INGRESO duplicaba el efectivo en todos los reportes financieros.
+        tipo_movimiento: 'CIERRE_TURNO',
         categoria: 'Otros',
         monto_total: shiftSummary.sumEfectivo,
         caja: 0,
@@ -1062,8 +1061,9 @@ export default function POSPage() {
         tiene_factura: false,
         responsable: activeShift.cashier,
         hora,
-        codigo_debe: '1110102',
-        codigo_haber: '1110102',
+        // Sin cuentas contables: es solo un registro informativo, no genera asiento en el Libro Diario.
+        codigo_debe: null,
+        codigo_haber: null,
         observacion: `Cierre de Turno. Ef. Inicial: Bs. ${activeShift.monto_inicial.toFixed(2)}. Ef. Real: Bs. ${real.toFixed(2)}. Ef. Esperado: Bs. ${esperado.toFixed(2)}. Dif: Bs. ${diferencia.toFixed(2)}. QR: Bs. ${shiftSummary.sumQr.toFixed(2)} (${shiftSummary.countQr} vtas). POS: Bs. ${shiftSummary.sumPos.toFixed(2)} (${shiftSummary.countPos} vtas). Ventas Totales: Bs. ${shiftSummary.totalVentas.toFixed(2)} (${shiftSummary.totalCount} vtas).`
       };
 
@@ -1230,7 +1230,9 @@ export default function POSPage() {
                     const txOpening = {
                       fecha,
                       detalle: 'Ingreso a Caja',
-                      tipo_movimiento: 'INGRESO',
+                      // 'APERTURA_TURNO' (no 'INGRESO'): el fondo fijo inicial no es una venta,
+                      // marcarlo como INGRESO inflaba las ventas del día sin que hubiera venta real.
+                      tipo_movimiento: 'APERTURA_TURNO',
                       categoria: 'Otros',
                       monto_total: openShiftData.monto_inicial,
                       caja: 0,
@@ -1241,8 +1243,9 @@ export default function POSPage() {
                       tiene_factura: false,
                       responsable: currentUser.nombre,
                       hora,
-                      codigo_debe: '1110102',
-                      codigo_haber: '1110102'
+                      // Sin cuentas contables: es solo un registro informativo, no genera asiento en el Libro Diario.
+                      codigo_debe: null,
+                      codigo_haber: null
                     };
                     await supabase.from('transacciones').insert([txOpening]);
                   } catch (openingErr) {

@@ -125,8 +125,10 @@ export default function ModalComprasVentas({
       // DEBE (Where money goes): Caja/Banco
       if (met === 'EFECTIVO') {
         defaultDebe = '1110102'; // Caja Chica
-      } else if (met === 'QR' || met === 'POS') {
+      } else if (met === 'QR') {
         defaultDebe = '1110103'; // Banco Bisa
+      } else if (met === 'POS') {
+        defaultDebe = '1110105'; // POS / Tarjeta (por cobrar)
       }
       
       // HABER (Source of revenue): Ventas/Servicios
@@ -258,12 +260,13 @@ export default function ModalComprasVentas({
       if (oldLd && oldLd.length > 0) {
         seatNo = oldLd[0].nro_asiento;
       } else {
-        const { data: maxSeatData } = await supabase
-          .from('libro_diario')
-          .select('nro_asiento')
-          .order('nro_asiento', { ascending: false })
-          .limit(1);
-        seatNo = maxSeatData && maxSeatData.length > 0 ? (Number(maxSeatData[0].nro_asiento) || 0) + 1 : 1;
+        const { data: nextSeat, error: seatError } = await supabase.rpc('siguiente_nro_asiento');
+        if (seatError) {
+          setLoading(false);
+          alert("Error al generar el número de asiento: " + seatError.message);
+          return;
+        }
+        seatNo = nextSeat;
       }
 
       // Clear previous journal entries for this transaction
@@ -283,12 +286,13 @@ export default function ModalComprasVentas({
 
       transaccion_id = txData.id;
 
-      const { data: maxSeatData } = await supabase
-        .from('libro_diario')
-        .select('nro_asiento')
-        .order('nro_asiento', { ascending: false })
-        .limit(1);
-      seatNo = maxSeatData && maxSeatData.length > 0 ? (Number(maxSeatData[0].nro_asiento) || 0) + 1 : 1;
+      const { data: nextSeat, error: seatError } = await supabase.rpc('siguiente_nro_asiento');
+      if (seatError) {
+        setLoading(false);
+        alert("Error al generar el número de asiento: " + seatError.message);
+        return;
+      }
+      seatNo = nextSeat;
     }
 
     // 2. Insert Balanced Double Entry rows in 'libro_diario'

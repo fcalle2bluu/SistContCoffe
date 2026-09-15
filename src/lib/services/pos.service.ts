@@ -76,7 +76,12 @@ export const PosService = {
     const detalleStr = items.map(item => `${item.cantidad} ${item.nombre || 'Producto'}`).join(', ');
 
     // Determine DEBE and HABER account codes (solo si está pagada)
-    const codigoDebe = isPending ? null : (metodoPago === 'EFECTIVO' ? '1110102' : '1110103'); // 1110102 = Caja Chica, 1110103 = Banco Bisa
+    // EFECTIVO -> Caja Chica, QR -> Banco Bisa (liquidación directa), POS/Tarjeta -> cuenta propia (liquidación con demora)
+    const codigoDebe = isPending ? null : (
+      metodoPago === 'EFECTIVO' ? '1110102' :
+      metodoPago === 'POS' ? '1110105' :
+      '1110103'
+    );
     const codigoHaber = isPending ? null : '5010101'; // 5010101 = Ventas
 
     const transactionPayload = {
@@ -144,38 +149,52 @@ export const PosService = {
         .eq('transaccion_id', transaccion_id);
       if (cleanLdError) console.error("Error al limpiar asientos contables antiguos:", cleanLdError.message);
 
-      const { data: maxSeatData } = await supabase
-        .from('libro_diario')
-        .select('nro_asiento')
-        .order('nro_asiento', { ascending: false })
-        .limit(1);
-      const nextSeat = maxSeatData && maxSeatData.length > 0 ? (Number(maxSeatData[0].nro_asiento) || 0) + 1 : 1;
+      const { data: nextSeatData, error: seatError } = await supabase.rpc('siguiente_nro_asiento');
+      if (seatError) throw new Error("Error al generar el número de asiento: " + seatError.message);
+      const nextSeat = nextSeatData;
 
       const fechaTx = extraData?.fecha || new Date().toISOString().split('T')[0];
       const glosaTx = `Ingreso Venta POS - ${detalleStr || 'Venta POS'}`;
+      const montoBruto = total + montoDescuento;
+
+      const asientos = [
+        {
+          fecha: fechaTx,
+          nro_asiento: nextSeat,
+          transaccion_id: transaccion_id,
+          codigo_cuenta: codigoDebe,
+          debe: total,
+          haber: 0,
+          glosa: glosaTx
+        },
+        {
+          fecha: fechaTx,
+          nro_asiento: nextSeat,
+          transaccion_id: transaccion_id,
+          codigo_cuenta: codigoHaber,
+          debe: 0,
+          haber: montoBruto,
+          glosa: glosaTx
+        }
+      ];
+
+      // Si hubo descuento, se debita "Descuentos sobre Ventas" por el monto rebajado para
+      // que Ventas quede registrada a precio de lista y el descuento quede auditable.
+      if (montoDescuento > 0) {
+        asientos.push({
+          fecha: fechaTx,
+          nro_asiento: nextSeat,
+          transaccion_id: transaccion_id,
+          codigo_cuenta: '5010103',
+          debe: montoDescuento,
+          haber: 0,
+          glosa: `Descuento aplicado - ${motivoDescuento || glosaTx}`
+        });
+      }
 
       const { error: ldError } = await supabase
         .from('libro_diario')
-        .insert([
-          {
-            fecha: fechaTx,
-            nro_asiento: nextSeat,
-            transaccion_id: transaccion_id,
-            codigo_cuenta: codigoDebe,
-            debe: total,
-            haber: 0,
-            glosa: glosaTx
-          },
-          {
-            fecha: fechaTx,
-            nro_asiento: nextSeat,
-            transaccion_id: transaccion_id,
-            codigo_cuenta: codigoHaber,
-            debe: 0,
-            haber: total,
-            glosa: glosaTx
-          }
-        ]);
+        .insert(asientos);
 
       if (ldError) throw new Error("Error al registrar el asiento de partida doble en el Libro Diario: " + ldError.message);
     } else {
