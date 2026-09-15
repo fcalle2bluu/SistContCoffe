@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+dist
+.git
+.env
+.env.*
+*.md
+scratch_*.js
+LIBRO DIARIO ABRIL 2026.html
