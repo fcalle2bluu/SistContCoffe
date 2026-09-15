@@ -2595,21 +2595,21 @@ export default function SistemaContableYanaloma() {
                         .waffle-container {
                           font-family: 'Outfit', 'Inter', system-ui, sans-serif;
                           font-size: 9.5pt;
-                          color: #1e293b;
-                          background-color: #ffffff;
+                          color: #e7e5e4;
+                          background-color: #0c0a09;
                           padding: 0px;
                         }
                         .waffle-table {
                           border-collapse: collapse;
-                          background-color: #fff;
-                          border: 1px solid #e2e8f0;
+                          background-color: #0c0a09;
+                          border: 1px solid #292524;
                           width: 839px;
                           table-layout: fixed;
-                          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+                          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.2);
                           border-radius: 8px;
                         }
                         .waffle-table th, .waffle-table td {
-                          border: 1px solid #f1f5f9;
+                          border: 1px solid #292524;
                           padding: 4px 8px;
                           box-sizing: border-box;
                           height: 32px;
@@ -2619,8 +2619,8 @@ export default function SistemaContableYanaloma() {
                           font-size: 15pt;
                           font-weight: 800;
                           text-align: center;
-                          color: #064e3b;
-                          background-color: #fff;
+                          color: #34d399;
+                          background-color: #0c0a09;
                           border: none !important;
                           padding-top: 18px;
                           padding-bottom: 4px;
@@ -2630,8 +2630,8 @@ export default function SistemaContableYanaloma() {
                           font-size: 10pt;
                           font-weight: 700;
                           text-align: center;
-                          color: #b45309;
-                          background-color: #fff;
+                          color: #fbbf24;
+                          background-color: #0c0a09;
                           border: none !important;
                           padding-bottom: 4px;
                           letter-spacing: 0.05em;
@@ -2640,9 +2640,9 @@ export default function SistemaContableYanaloma() {
                           font-size: 8.5pt;
                           font-weight: 700;
                           text-align: center;
-                          color: #78716c;
-                          background-color: #fff;
-                          border-bottom: 2px solid #e2e8f0 !important;
+                          color: #a8a29e;
+                          background-color: #0c0a09;
+                          border-bottom: 2px solid #292524 !important;
                           padding-bottom: 12px;
                           letter-spacing: 0.05em;
                           border-top: none !important;
@@ -2663,105 +2663,105 @@ export default function SistemaContableYanaloma() {
                         .waffle-cell-fecha {
                           text-align: center;
                           font-size: 9pt;
-                          background-color: #fff;
-                          color: #64748b;
+                          background-color: #0c0a09;
+                          color: #a8a29e;
                           font-weight: 500;
                           text-transform: uppercase;
                         }
                         .waffle-cell-nro {
                           text-align: center;
                           font-size: 9.5pt;
-                          background-color: #fff;
-                          color: #1e293b;
+                          background-color: #0c0a09;
+                          color: #e7e5e4;
                           font-weight: 700;
                         }
                         .waffle-cell-ref {
                           text-align: right;
                           font-size: 9pt;
-                          background-color: #fff;
-                          color: #64748b;
+                          background-color: #0c0a09;
+                          color: #a8a29e;
                           font-weight: 600;
                         }
                         .waffle-badge-debe {
-                          background-color: #f0fdf4;
-                          color: #15803d;
-                          border: 1px solid #dcfce7;
+                          background-color: rgba(16, 185, 129, 0.12);
+                          color: #4ade80;
+                          border: 1px solid rgba(16, 185, 129, 0.3);
                           border-radius: 6px;
                           display: inline-block;
                           padding: 2.5px 8px;
                           margin-left: 2px;
                           font-size: 8.5pt;
                           font-weight: 600;
-                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.15);
                           transition: all 0.2s ease;
                         }
                         .waffle-badge-debe:hover {
                           transform: translateY(-1px);
-                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.05);
-                          background-color: #dcfce7;
+                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.25);
+                          background-color: rgba(16, 185, 129, 0.2);
                         }
                         .waffle-badge-haber {
-                          background-color: #fdf8f2;
-                          color: #a16207;
-                          border: 1px solid #fef3c7;
+                          background-color: rgba(217, 119, 6, 0.12);
+                          color: #fbbf24;
+                          border: 1px solid rgba(217, 119, 6, 0.3);
                           border-radius: 6px;
                           display: inline-block;
                           padding: 2.5px 8px;
                           margin-left: 2px;
                           font-size: 8.5pt;
                           font-weight: 600;
-                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.15);
                           transition: all 0.2s ease;
                         }
                         .waffle-badge-haber:hover {
                           transform: translateY(-1px);
-                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.05);
-                          background-color: #fef3c7;
+                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.25);
+                          background-color: rgba(217, 119, 6, 0.2);
                         }
                         .waffle-badge-venta {
-                          background-color: #ecfdf5;
-                          color: #047857;
-                          border: 1px solid #a7f3d0;
+                          background-color: rgba(16, 185, 129, 0.12);
+                          color: #34d399;
+                          border: 1px solid rgba(16, 185, 129, 0.35);
                           border-radius: 6px;
                           display: inline-block;
                           padding: 2.5px 8px;
                           margin-left: 2px;
                           font-size: 8.5pt;
                           font-weight: 700;
-                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.15);
                           transition: all 0.2s ease;
                         }
                         .waffle-badge-venta:hover {
                           transform: translateY(-1px);
-                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.05);
-                          background-color: #a7f3d0;
+                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.25);
+                          background-color: rgba(16, 185, 129, 0.22);
                         }
                         .waffle-badge-costo {
-                          background-color: #fff5f5;
-                          color: #e53e3e;
-                          border: 1px solid #fed7d7;
+                          background-color: rgba(239, 68, 68, 0.12);
+                          color: #f87171;
+                          border: 1px solid rgba(239, 68, 68, 0.3);
                           border-radius: 6px;
                           display: inline-block;
                           padding: 2.5px 8px;
                           margin-left: 2px;
                           font-size: 8.5pt;
                           font-weight: 700;
-                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+                          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.15);
                           transition: all 0.2s ease;
                         }
                         .waffle-badge-costo:hover {
                           transform: translateY(-1px);
-                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.05);
-                          background-color: #fed7d7;
+                          box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.25);
+                          background-color: rgba(239, 68, 68, 0.2);
                         }
                         .waffle-marker-green {
-                          background-color: rgba(16, 185, 129, 0.05) !important;
+                          background-color: rgba(16, 185, 129, 0.1) !important;
                           border-left: 3px solid #10b981 !important;
                           text-align: center;
                           vertical-align: middle;
                         }
                         .waffle-marker-red {
-                          background-color: rgba(239, 68, 68, 0.05) !important;
+                          background-color: rgba(239, 68, 68, 0.1) !important;
                           border-left: 3px solid #ef4444 !important;
                           text-align: center;
                           vertical-align: middle;
@@ -2769,8 +2769,8 @@ export default function SistemaContableYanaloma() {
                         .waffle-cell-debe, .waffle-cell-haber {
                           text-align: right;
                           font-size: 9.5pt;
-                          background-color: #fff;
-                          color: #0f172a;
+                          background-color: #0c0a09;
+                          color: #e7e5e4;
                           font-weight: 500;
                         }
                         .waffle-glosa-text {
@@ -2779,8 +2779,8 @@ export default function SistemaContableYanaloma() {
                           font-style: italic;
                           vertical-align: middle;
                           white-space: normal;
-                          background-color: #f8fafc;
-                          color: #475569;
+                          background-color: #1c1917;
+                          color: #a8a29e;
                           padding: 6px 12px !important;
                           line-height: 18px;
                         }
@@ -2788,10 +2788,10 @@ export default function SistemaContableYanaloma() {
                           text-align: right;
                           font-weight: 700;
                           font-size: 10pt;
-                          border-bottom: 3px double #047857 !important;
-                          border-top: 1px solid #e2e8f0 !important;
-                          color: #047857;
-                          background-color: #f8fafc;
+                          border-bottom: 3px double #34d399 !important;
+                          border-top: 1px solid #292524 !important;
+                          color: #34d399;
+                          background-color: #1c1917;
                         }
                       `}</style>
                       <table className="waffle-table">
@@ -2828,13 +2828,13 @@ export default function SistemaContableYanaloma() {
                             <td className="waffle-header-blue">ACCIÓN</td>
                           </tr>
                           <tr className="h-4" style={{ height: '16px' }}>
-                            <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                            <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                            <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                            <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                            <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                            <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                            <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
+                            <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                            <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                            <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                            <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                            <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                            <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                            <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
                           </tr>
 
                           {filteredDiarioPlanillaSeats.map((seat: any, seatIdx: number) => {
@@ -2852,45 +2852,45 @@ export default function SistemaContableYanaloma() {
                               const mov = rowIdx < totalRowsCount ? (rowIdx < debedMovs.length ? debedMovs[rowIdx] : haberMovs[rowIdx - debedMovs.length]) : null;
                               
                               return (
-                                <tr key={`${seatIdx}-${rowIdx}`} className="hover:bg-slate-50/60 transition-colors">
-                                  <td className="waffle-cell-fecha border-r border-[#f1f5f9]">
+                                <tr key={`${seatIdx}-${rowIdx}`} className="hover:bg-stone-900/80 transition-colors">
+                                  <td className="waffle-cell-fecha border-r border-stone-800">
                                     {row[0]}
                                   </td>
-                                  
-                                  <td className={isGlosaRow ? "waffle-cell-ref border-r border-[#f1f5f9] font-mono text-right text-stone-500" : "waffle-cell-nro border-r border-[#f1f5f9] font-mono text-center"}>
+
+                                  <td className={isGlosaRow ? "waffle-cell-ref border-r border-stone-800 font-mono text-right text-stone-400" : "waffle-cell-nro border-r border-stone-800 font-mono text-center"}>
                                     {row[1]}
                                   </td>
-                                  
+
                                   {isGlosaRow ? (
-                                    <td className="waffle-glosa-text border-r border-[#f1f5f9] text-stone-500 italic pl-4 py-2" colSpan={2}>
+                                    <td className="waffle-glosa-text border-r border-stone-800 text-stone-400 italic pl-4 py-2" colSpan={2}>
                                       {row[2]}
                                     </td>
                                   ) : isSumRow ? (
-                                    <td className="border-r border-[#f1f5f9]" colSpan={2} style={{ backgroundColor: '#f8fafc' }}></td>
+                                    <td className="border-r border-stone-800" colSpan={2} style={{ backgroundColor: '#1c1917' }}></td>
                                   ) : (
                                     <>
                                       {row[2] ? (
-                                        <td className="border-r border-[#f1f5f9] text-left align-middle py-1.5 bg-white">
+                                        <td className="border-r border-stone-800 text-left align-middle py-1.5 bg-[#0c0a09]">
                                           <span className="waffle-badge-debe">
                                             {row[2]}
                                           </span>
                                         </td>
                                       ) : (
                                         row[3] && row[3].toUpperCase().includes('VENTA') ? (
-                                          <td className="waffle-marker-green border-r border-[#f1f5f9] text-center align-middle py-1.5">
-                                            <span className="text-[7.5pt] font-extrabold tracking-widest text-emerald-700 font-mono uppercase opacity-90">INGRESOS</span>
+                                          <td className="waffle-marker-green border-r border-stone-800 text-center align-middle py-1.5">
+                                            <span className="text-[7.5pt] font-extrabold tracking-widest text-emerald-400 font-mono uppercase opacity-90">INGRESOS</span>
                                           </td>
                                         ) : row[3] && row[3].toUpperCase() === 'INVENTARIOS' ? (
-                                          <td className="waffle-marker-red border-r border-[#f1f5f9] text-center align-middle py-1.5">
-                                            <span className="text-[7.5pt] font-extrabold tracking-widest text-rose-700 font-mono uppercase opacity-90">INVENTARIO</span>
+                                          <td className="waffle-marker-red border-r border-stone-800 text-center align-middle py-1.5">
+                                            <span className="text-[7.5pt] font-extrabold tracking-widest text-rose-400 font-mono uppercase opacity-90">INVENTARIO</span>
                                           </td>
                                         ) : (
-                                          <td className="border-r border-[#f1f5f9] text-left align-middle py-1.5 bg-white"></td>
+                                          <td className="border-r border-stone-800 text-left align-middle py-1.5 bg-[#0c0a09]"></td>
                                         )
                                       )}
-                                      
+
                                       {row[3] ? (
-                                        <td className="border-r border-[#f1f5f9] text-left align-middle py-1.5 bg-white">
+                                        <td className="border-r border-stone-800 text-left align-middle py-1.5 bg-[#0c0a09]">
                                           {row[3].toUpperCase().includes('VENTA') ? (
                                             <span className="waffle-badge-venta">
                                               {row[3]}
@@ -2906,20 +2906,20 @@ export default function SistemaContableYanaloma() {
                                           )}
                                         </td>
                                       ) : (
-                                        <td className="border-r border-[#f1f5f9] text-left align-middle py-1.5 bg-white"></td>
+                                        <td className="border-r border-stone-800 text-left align-middle py-1.5 bg-[#0c0a09]"></td>
                                       )}
                                     </>
                                   )}
-                                  
-                                  <td className={isSumRow ? "waffle-total-cell-double border-r border-[#f1f5f9] font-bold font-mono text-right" : "waffle-cell-debe border-r border-[#f1f5f9] font-mono text-right"}>
+
+                                  <td className={isSumRow ? "waffle-total-cell-double border-r border-stone-800 font-bold font-mono text-right" : "waffle-cell-debe border-r border-stone-800 font-mono text-right"}>
                                     {row[4]}
                                   </td>
-                                  
-                                  <td className={isSumRow ? "waffle-total-cell-double border-r border-[#f1f5f9] font-bold font-mono text-right" : "waffle-cell-haber border-r border-[#f1f5f9] font-mono text-right"}>
+
+                                  <td className={isSumRow ? "waffle-total-cell-double border-r border-stone-800 font-bold font-mono text-right" : "waffle-cell-haber border-r border-stone-800 font-mono text-right"}>
                                     {row[5]}
                                   </td>
 
-                                  <td className="border border-[#f1f5f9] bg-white p-1 text-center align-middle">
+                                  <td className="border border-stone-800 bg-[#0c0a09] p-1 text-center align-middle">
                                     {rowIdx < totalRowsCount && mov && (
                                       isLinked ? (
                                         <div className="flex justify-center text-emerald-600" title={`Enlazado a Transacción #${transaccionId}`}>
@@ -2930,14 +2930,14 @@ export default function SistemaContableYanaloma() {
                                           <div className="flex items-center justify-center gap-1 mx-auto">
                                             <button
                                               onClick={() => handleEditDiario(mov)}
-                                              className="p-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-855 transition-all flex items-center justify-center"
+                                              className="p-0.5 rounded bg-amber-950/40 hover:bg-amber-900/60 text-amber-400 hover:text-amber-300 transition-all flex items-center justify-center"
                                               title="Modificar Línea"
                                             >
                                               <Edit3 size={11} />
                                             </button>
                                             <button
                                               onClick={() => handleDeleteDiarioRow(mov.id)}
-                                              className="p-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-805 transition-all flex items-center justify-center"
+                                              className="p-0.5 rounded bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 hover:text-rose-300 transition-all flex items-center justify-center"
                                               title="Eliminar Línea"
                                             >
                                               <Trash2 size={11} />
@@ -2954,7 +2954,7 @@ export default function SistemaContableYanaloma() {
                                             {txObj && (
                                               <button
                                                 onClick={() => handleEditTransaction(txObj)}
-                                                className="p-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-850 transition-all flex items-center justify-center"
+                                                className="p-0.5 rounded bg-amber-950/40 hover:bg-amber-900/60 text-amber-400 hover:text-amber-300 transition-all flex items-center justify-center"
                                                 title="Modificar Transacción Matriz"
                                               >
                                                 <Edit3 size={11} />
@@ -2962,7 +2962,7 @@ export default function SistemaContableYanaloma() {
                                             )}
                                             <button
                                               onClick={() => handleDeleteTransaction(transaccionId)}
-                                              className="p-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 transition-all flex items-center justify-center"
+                                              className="p-0.5 rounded bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 hover:text-rose-300 transition-all flex items-center justify-center"
                                               title="Eliminar Transacción (Cascada)"
                                             >
                                               <Trash2 size={11} />
@@ -2973,7 +2973,7 @@ export default function SistemaContableYanaloma() {
                                         currentUser?.role === 'admin' && (
                                           <button
                                             onClick={() => handleDeleteDiarioSeat(seat.nro_asiento, seat.fecha)}
-                                            className="px-1 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 transition-all font-sans text-[8px] font-bold border border-rose-200"
+                                            className="px-1 py-0.5 rounded bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 hover:text-rose-300 transition-all font-sans text-[8px] font-bold border border-rose-800"
                                             title="Eliminar Asiento Completo"
                                           >
                                             Borrar Asiento
@@ -2988,13 +2988,13 @@ export default function SistemaContableYanaloma() {
 
                             const spacerJSX = (
                               <tr key={`${seatIdx}-spacer`} className="h-4" style={{ height: '16px' }}>
-                                <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                                <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                                <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                                <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                                <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                                <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
-                                <td style={{ backgroundColor: '#fff', border: 'none' }}></td>
+                                <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                                <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                                <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                                <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                                <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                                <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
+                                <td style={{ backgroundColor: '#0c0a09', border: 'none' }}></td>
                               </tr>
                             );
 
