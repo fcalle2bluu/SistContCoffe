@@ -26,7 +26,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "☕",
       gradient: "from-amber-800 to-amber-950",
-      bgLight: "bg-amber-50 text-amber-900 border-amber-200 hover:border-amber-400",
+      bgLight: "bg-amber-950/40 text-amber-200 border-amber-800/60 hover:border-amber-500",
       iconColor: "text-amber-800",
       desc: "Café Puro Caliente"
     };
@@ -35,7 +35,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "🥛",
       gradient: "from-amber-700 to-amber-900",
-      bgLight: "bg-amber-100/60 text-amber-950 border-amber-300 hover:border-amber-500",
+      bgLight: "bg-amber-900/30 text-amber-100 border-amber-700/60 hover:border-amber-400",
       iconColor: "text-amber-700",
       desc: "Café de Especialidad"
     };
@@ -44,7 +44,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "🧊",
       gradient: "from-cyan-600 to-blue-700",
-      bgLight: "bg-cyan-50 text-cyan-900 border-cyan-200 hover:border-cyan-400",
+      bgLight: "bg-cyan-950/40 text-cyan-200 border-cyan-800/60 hover:border-cyan-500",
       iconColor: "text-cyan-600",
       desc: "Bebida Fría / Hielo"
     };
@@ -53,7 +53,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "🍹",
       gradient: "from-orange-400 to-red-600",
-      bgLight: "bg-orange-50 text-orange-950 border-orange-200 hover:border-orange-400",
+      bgLight: "bg-orange-950/40 text-orange-200 border-orange-800/60 hover:border-orange-500",
       iconColor: "text-orange-600",
       desc: "Refresco & Fruta"
     };
@@ -62,7 +62,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "🥐",
       gradient: "from-yellow-500 to-amber-600",
-      bgLight: "bg-yellow-50 text-yellow-950 border-yellow-200 hover:border-yellow-400",
+      bgLight: "bg-yellow-950/40 text-yellow-200 border-yellow-800/60 hover:border-yellow-500",
       iconColor: "text-yellow-600",
       desc: "Pastelería de Barra"
     };
@@ -71,7 +71,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "🍵",
       gradient: "from-emerald-500 to-teal-700",
-      bgLight: "bg-emerald-50 text-emerald-950 border-emerald-200 hover:border-emerald-400",
+      bgLight: "bg-emerald-950/40 text-emerald-200 border-emerald-800/60 hover:border-emerald-500",
       iconColor: "text-emerald-600",
       desc: "Té & Hierbas"
     };
@@ -80,7 +80,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "🧪",
       gradient: "from-slate-600 to-slate-800",
-      bgLight: "bg-slate-100 text-slate-900 border-slate-200 hover:border-slate-400",
+      bgLight: "bg-slate-900/40 text-slate-200 border-slate-700/60 hover:border-slate-500",
       iconColor: "text-slate-700",
       desc: "Método Filtrado"
     };
@@ -89,7 +89,7 @@ const getProductTheme = (producto: Producto) => {
     return {
       emoji: "🛍️",
       gradient: "from-emerald-800 to-emerald-950",
-      bgLight: "bg-emerald-50 text-emerald-900 border-emerald-300 hover:border-emerald-500",
+      bgLight: "bg-emerald-950/50 text-emerald-200 border-emerald-700/60 hover:border-emerald-400",
       iconColor: "text-emerald-700",
       desc: "Café en Grano / Molido"
     };
@@ -98,7 +98,7 @@ const getProductTheme = (producto: Producto) => {
   return {
     emoji: "✨",
     gradient: "from-stone-600 to-stone-850",
-    bgLight: "bg-stone-50 text-stone-900 border-stone-200 hover:border-stone-400",
+    bgLight: "bg-stone-900/60 text-stone-200 border-stone-700/60 hover:border-stone-500",
     iconColor: "text-stone-700",
     desc: "Varios"
   };
@@ -1291,10 +1291,10 @@ export default function POSPage() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full bg-stone-50 text-stone-850 font-sans antialiased overflow-hidden">
-      
+    <div className="flex flex-col md:flex-row h-screen w-full bg-stone-950 text-stone-100 font-sans antialiased overflow-hidden">
+
       {/* Panel Izquierdo: Catálogo y Categorías */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden border-r">
+      <div className="flex-1 flex flex-col h-full overflow-hidden border-r border-stone-800">
         
         {/* Header Superior POS */}
         <div className="p-4 bg-emerald-800 text-white shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -1383,22 +1383,22 @@ export default function POSPage() {
         </div>
 
         {/* Buscador y Pestañas de Categoría */}
-        <div className="bg-white border-b p-4 space-y-4">
+        <div className="bg-stone-900 border-b border-stone-800 p-4 space-y-4">
           {/* Fila de Buscador */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={18} className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-stone-400" />
-              <input 
-                type="text" 
-                placeholder="Buscar producto por nombre o categoría..." 
+              <input
+                type="text"
+                placeholder="Buscar producto por nombre o categoría..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 border border-stone-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 bg-stone-50 font-medium"
+                className="w-full pl-10 pr-10 py-2.5 bg-stone-950 border border-stone-800 rounded-xl text-white text-sm outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder-stone-600 font-medium"
               />
               {searchTerm && (
-                <button 
-                  onClick={() => setSearchTerm("")} 
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100"
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-stone-400 hover:text-white rounded-full hover:bg-stone-800"
                 >
                   <X size={15} />
                 </button>
@@ -1411,7 +1411,7 @@ export default function POSPage() {
                   setEditingProduct(null);
                   setShowProductModal(true);
                 }}
-                className="bg-emerald-800 hover:bg-emerald-750 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
               >
                 <Plus size={15} /> Añadir Producto
               </button>
@@ -1437,9 +1437,9 @@ export default function POSPage() {
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all active:scale-95 ${
-                    isActive 
-                      ? 'bg-emerald-800 text-white border-emerald-900 shadow-sm scale-102 font-extrabold' 
-                      : 'bg-stone-50 text-stone-600 border-stone-200 hover:bg-stone-100 hover:text-stone-850'
+                    isActive
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm scale-102 font-extrabold'
+                      : 'bg-stone-950 text-stone-400 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
                   }`}
                 >
                   <span>{icon}</span>
@@ -1449,14 +1449,14 @@ export default function POSPage() {
             })}
           </div>
         </div>
-        
+
         {/* Panel de Monitorización de Mesas y Cuentas Abiertas en Tiempo Real */}
-        <div className="bg-white border-b p-4 space-y-3 shadow-inner">
+        <div className="bg-stone-900 border-b border-stone-800 p-4 space-y-3 shadow-inner">
           <div className="flex justify-between items-center">
             <h3 className="text-xs font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5 font-mono">
               🪑 Mesas & Cuentas Activas
             </h3>
-            <span className="text-[10px] bg-amber-50 text-amber-700 font-extrabold px-2.5 py-0.5 rounded border border-amber-200">
+            <span className="text-[10px] bg-amber-950/40 text-amber-400 font-extrabold px-2.5 py-0.5 rounded border border-amber-800/60">
               {pendingTransactions.length} Cuentas Abiertas
             </span>
           </div>
@@ -1492,13 +1492,13 @@ export default function POSPage() {
                     }
                   }}
                   className={`px-4 py-3 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center justify-between min-w-[100px] h-20 active:scale-95 shadow-sm cursor-pointer ${
-                    pendingTx 
-                      ? (isSelected 
-                          ? 'bg-amber-600 text-white border-amber-700 scale-102 ring-2 ring-amber-500/25 font-extrabold' 
-                          : 'bg-amber-50 border-amber-250 text-amber-900 hover:bg-amber-100 hover:border-amber-400')
-                      : (isSelected 
-                          ? 'bg-emerald-800 text-white border-emerald-900 scale-102 font-extrabold'
-                          : 'bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100')
+                    pendingTx
+                      ? (isSelected
+                          ? 'bg-amber-600 text-white border-amber-500 scale-102 ring-2 ring-amber-500/25 font-extrabold'
+                          : 'bg-amber-950/40 border-amber-800/60 text-amber-200 hover:bg-amber-900/50 hover:border-amber-500')
+                      : (isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-500 scale-102 font-extrabold'
+                          : 'bg-stone-950 border-stone-800 text-stone-400 hover:bg-stone-850')
                   }`}
                 >
                   <div className="flex items-center gap-1">
@@ -1538,9 +1538,9 @@ export default function POSPage() {
                       toast.info(`Cargada Cuenta ${pendingTx.mesa} con Bs. ${pendingTx.monto_total.toFixed(2)}`);
                     }}
                     className={`px-4 py-3 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center justify-between min-w-[100px] h-20 active:scale-95 shadow-sm cursor-pointer ${
-                      isSelected 
-                        ? 'bg-amber-600 text-white border-amber-700 scale-102 ring-2 ring-amber-500/25 font-extrabold' 
-                        : 'bg-amber-50 border-amber-250 text-amber-900 hover:bg-amber-100 hover:border-amber-400'
+                      isSelected
+                        ? 'bg-amber-600 text-white border-amber-500 scale-102 ring-2 ring-amber-500/25 font-extrabold'
+                        : 'bg-amber-950/40 border-amber-800/60 text-amber-200 hover:bg-amber-900/50 hover:border-amber-500'
                     }`}
                   >
                     <div className="flex items-center gap-1 w-full justify-center">
@@ -1565,7 +1565,7 @@ export default function POSPage() {
                   toast.success(`Cuenta temporal '${cleanName}' activa. Agrega productos.`);
                 }
               }}
-              className="px-4 py-3 rounded-2xl border border-dashed border-stone-300 text-stone-500 hover:border-stone-400 hover:bg-stone-100/50 text-xs font-bold transition-all flex flex-col items-center justify-center min-w-[100px] h-20 active:scale-95 cursor-pointer"
+              className="px-4 py-3 rounded-2xl border border-dashed border-stone-700 text-stone-500 hover:border-stone-500 hover:bg-stone-850/50 text-xs font-bold transition-all flex flex-col items-center justify-center min-w-[100px] h-20 active:scale-95 cursor-pointer"
             >
               <span>➕</span>
               <span className="text-[9px] mt-1 font-mono leading-none">Personalizada</span>
@@ -1574,19 +1574,19 @@ export default function POSPage() {
         </div>
 
         {/* Catálogo Grid de Productos */}
-        <div className="flex-1 overflow-y-auto p-4 bg-stone-50/50 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-4 bg-stone-950 scrollbar-thin">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full text-stone-400 mt-20 gap-3">
-              <RefreshCw className="w-10 h-10 animate-spin text-emerald-700" />
+              <RefreshCw className="w-10 h-10 animate-spin text-emerald-500" />
               <p className="font-mono text-sm">Cargando catálogo de productos...</p>
             </div>
           ) : filteredProductos.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-stone-400 mt-20 gap-3">
               <Layers className="w-12 h-12 opacity-30" />
               <p className="font-bold text-sm">No se encontraron productos en esta categoría.</p>
-              <button 
-                onClick={() => { setActiveCategory("Todos"); setSearchTerm(""); }} 
-                className="text-xs text-emerald-700 hover:underline font-bold"
+              <button
+                onClick={() => { setActiveCategory("Todos"); setSearchTerm(""); }}
+                className="text-xs text-emerald-400 hover:underline font-bold"
               >
                 Limpiar filtros
               </button>
@@ -1599,7 +1599,7 @@ export default function POSPage() {
                   <div
                     key={producto.id} 
                     onClick={() => addToCart(producto)}
-                    className={`group cursor-pointer bg-white border ${theme.bgLight} rounded-2xl shadow-sm p-3.5 flex flex-col justify-between h-40 transition-all duration-300 hover:shadow-md hover:scale-103 hover:-translate-y-0.5 active:scale-95 select-none relative`}
+                    className={`group cursor-pointer bg-stone-900 border ${theme.bgLight} rounded-2xl shadow-sm p-3.5 flex flex-col justify-between h-40 transition-all duration-300 hover:shadow-md hover:scale-103 hover:-translate-y-0.5 active:scale-95 select-none relative`}
                   >
                     {/* Tarjeta superior con gradiente sutil de categoría */}
                     <div className="flex justify-between items-start gap-2">
@@ -1607,7 +1607,7 @@ export default function POSPage() {
                         <span className="text-[9px] font-bold uppercase tracking-wider text-stone-400 font-mono leading-none mb-1">
                           {theme.desc}
                         </span>
-                        <span className="font-bold text-xs leading-snug text-stone-850 group-hover:text-emerald-800 transition-colors line-clamp-3">
+                        <span className="font-bold text-xs leading-snug text-stone-100 group-hover:text-emerald-400 transition-colors line-clamp-3">
                           {producto.nombre}
                         </span>
                       </div>
@@ -1626,7 +1626,7 @@ export default function POSPage() {
                             e.stopPropagation();
                             handleEditProduct(producto);
                           }}
-                          className="w-7 h-7 bg-emerald-50 hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-150 hover:border-emerald-700 rounded-lg shadow-sm flex items-center justify-center transition-all active:scale-90 cursor-pointer"
+                          className="w-7 h-7 bg-emerald-950/60 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-800/60 hover:border-emerald-500 rounded-lg shadow-sm flex items-center justify-center transition-all active:scale-90 cursor-pointer"
                           title="Modificar producto"
                         >
                           <Edit3 size={12} />
@@ -1637,7 +1637,7 @@ export default function POSPage() {
                             e.stopPropagation();
                             handleDeleteProduct(producto.id, producto.nombre);
                           }}
-                          className="w-7 h-7 bg-red-50 hover:bg-red-650 text-red-650 hover:text-white border border-red-150 hover:border-red-600 rounded-lg shadow-sm flex items-center justify-center transition-all active:scale-90 cursor-pointer"
+                          className="w-7 h-7 bg-red-950/60 hover:bg-red-600 text-red-400 hover:text-white border border-red-800/60 hover:border-red-500 rounded-lg shadow-sm flex items-center justify-center transition-all active:scale-90 cursor-pointer"
                           title="Eliminar producto"
                         >
                           <Trash2 size={12} />
@@ -1646,15 +1646,15 @@ export default function POSPage() {
                     )}
 
                     {/* Fila inferior con el precio oficial */}
-                    <div className="flex items-center justify-between border-t border-dashed border-stone-150 pt-2.5 mt-2">
+                    <div className="flex items-center justify-between border-t border-dashed border-stone-800 pt-2.5 mt-2">
                       <div className="flex flex-col">
                         <span className="text-[8px] font-bold text-stone-400 uppercase font-mono">Precio</span>
-                        <span className="text-emerald-800 font-black text-sm leading-none font-mono mt-0.5">
+                        <span className="text-amber-400 font-black text-sm leading-none font-mono mt-0.5">
                           Bs. {producto.precio_venta.toFixed(2)}
                         </span>
                       </div>
-                      
-                      <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white flex items-center justify-center transition-all">
+
+                      <div className="w-6 h-6 rounded-full bg-emerald-950/60 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center transition-all">
                         <Plus className="w-3.5 h-3.5" />
                       </div>
                     </div>
@@ -1667,10 +1667,10 @@ export default function POSPage() {
       </div>
 
       {/* Panel Derecho: Ticket de Ventas */}
-      <div className="w-full md:w-96 bg-white flex flex-col h-[50vh] md:h-full shadow-2xl z-10">
-        
+      <div className="w-full md:w-96 bg-stone-900 flex flex-col h-[50vh] md:h-full shadow-2xl shadow-black/40 z-10">
+
         {/* Ticket Header */}
-        <div className="p-4 bg-stone-900 text-white flex items-center justify-between shadow-md">
+        <div className="p-4 bg-stone-900 text-white flex items-center justify-between shadow-md border-b border-stone-800">
           <div className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-amber-500" />
             <h2 className="font-black text-sm tracking-wide uppercase">Ticket de Venta</h2>
@@ -1681,13 +1681,13 @@ export default function POSPage() {
         </div>
 
         {/* Mesa Activa Info Bar */}
-        <div className="bg-stone-100 border-b border-stone-200 px-4 py-2 flex justify-between items-center text-xs font-bold text-stone-700">
+        <div className="bg-stone-850 border-b border-stone-800 px-4 py-2 flex justify-between items-center text-xs font-bold text-stone-300">
           <span className="flex items-center gap-1.5">
-            📍 Cuenta Activa: <strong className="text-emerald-800 font-extrabold uppercase">{selectedMesa}</strong>
+            📍 Cuenta Activa: <strong className="text-emerald-400 font-extrabold uppercase">{selectedMesa}</strong>
           </span>
           {activePendingTxId && (
             <div className="flex items-center gap-2">
-              <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-250 font-mono">
+              <span className="text-[9px] bg-amber-950/40 text-amber-400 px-1.5 py-0.5 rounded border border-amber-800/60 font-mono">
                 Abierta (id #{activePendingTxId})
               </span>
               <button
@@ -1709,7 +1709,7 @@ export default function POSPage() {
                     }
                   }
                 }}
-                className="text-[9px] bg-red-100 hover:bg-red-200 text-red-700 px-1.5 py-0.5 rounded border border-red-200 font-bold active:scale-95 cursor-pointer"
+                className="text-[9px] bg-red-950/40 hover:bg-red-900/60 text-red-400 px-1.5 py-0.5 rounded border border-red-900/50 font-bold active:scale-95 cursor-pointer"
               >
                 Eliminar 🗑️
               </button>
@@ -1718,10 +1718,10 @@ export default function POSPage() {
         </div>
 
         {/* Lista de Compra */}
-        <div className="flex-1 overflow-y-auto p-4 bg-stone-50/40 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-4 bg-stone-900 scrollbar-thin">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-stone-400 mt-20 gap-4">
-              <div className="p-5 bg-stone-100 rounded-full border border-stone-200">
+              <div className="p-5 bg-stone-850 rounded-full border border-stone-800">
                 <Receipt className="w-12 h-12 opacity-30 text-stone-500" />
               </div>
               <p className="text-xs font-bold uppercase tracking-wider text-stone-400">El ticket está vacío</p>
@@ -1732,47 +1732,47 @@ export default function POSPage() {
               {cart.map(item => {
                 const theme = getProductTheme(item);
                 return (
-                  <div key={item.id} className="flex flex-col gap-2.5 p-3.5 bg-white border border-stone-200/80 rounded-2xl shadow-sm hover:border-stone-300 transition-all">
+                  <div key={item.id} className="flex flex-col gap-2.5 p-3.5 bg-stone-950 border border-stone-850 rounded-2xl shadow-sm hover:border-stone-700 transition-all">
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex items-start gap-2">
                         <span className="text-base select-none mt-0.5">{theme.emoji}</span>
                         <div className="flex flex-col">
-                          <span className="font-bold text-xs text-stone-800 leading-snug">{item.nombre}</span>
+                          <span className="font-bold text-xs text-stone-100 leading-snug">{item.nombre}</span>
                           {item.isCustom ? (
-                            <span className="text-[8px] bg-amber-50 text-amber-700 font-extrabold px-1.5 py-0.5 rounded border border-amber-250 mt-1 uppercase w-max font-mono">Personalizado</span>
+                            <span className="text-[8px] bg-amber-950/40 text-amber-400 font-extrabold px-1.5 py-0.5 rounded border border-amber-800/60 mt-1 uppercase w-max font-mono">Personalizado</span>
                           ) : (
                             <span className="text-[8px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">{item.categoria || 'Menú'}</span>
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col items-end">
-                        <span className="font-black text-xs font-mono text-stone-900">Bs. {(item.precio_venta * item.cantidad).toFixed(2)}</span>
+                        <span className="font-black text-xs font-mono text-amber-400">Bs. {(item.precio_venta * item.cantidad).toFixed(2)}</span>
                         <span className="text-[9px] font-bold text-stone-400 font-mono mt-0.5">({item.precio_venta.toFixed(2)} c/u)</span>
                       </div>
                     </div>
 
                     {/* Modificadores de Cantidad */}
-                    <div className="flex items-center justify-between border-t border-stone-100 pt-2.5 mt-1.5">
-                      <div className="flex items-center border border-stone-200 bg-stone-50 rounded-xl overflow-hidden shadow-inner">
-                        <button 
+                    <div className="flex items-center justify-between border-t border-stone-850 pt-2.5 mt-1.5">
+                      <div className="flex items-center border border-stone-800 bg-stone-900 rounded-xl overflow-hidden shadow-inner">
+                        <button
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="h-7 w-8 hover:bg-stone-200 active:scale-90 text-stone-600 flex items-center justify-center font-bold transition-all"
+                          className="h-7 w-8 bg-stone-800 hover:bg-stone-750 active:scale-90 text-stone-300 flex items-center justify-center font-bold transition-all"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="w-8 text-center text-xs font-black text-stone-800 font-mono bg-white h-7 flex items-center justify-center border-x">{item.cantidad}</span>
-                        <button 
+                        <span className="w-8 text-center text-xs font-black text-stone-100 font-mono bg-stone-900 h-7 flex items-center justify-center border-x border-stone-800">{item.cantidad}</span>
+                        <button
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="h-7 w-8 hover:bg-stone-200 active:scale-90 text-stone-600 flex items-center justify-center font-bold transition-all"
+                          className="h-7 w-8 bg-stone-800 hover:bg-stone-750 active:scale-90 text-stone-300 flex items-center justify-center font-bold transition-all"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
 
-                      <button 
+                      <button
                         onClick={() => removeFromCart(item.id)}
-                        className="h-8 w-8 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-100"
+                        className="h-8 w-8 text-stone-400 hover:text-red-400 hover:bg-red-950/40 rounded-xl flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-900/50"
                         title="Quitar del ticket"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1787,19 +1787,19 @@ export default function POSPage() {
 
         {/* Sección de Ajustes Contables: Tipo de Pedido y Descuentos */}
         {cart.length > 0 && (
-          <div className="p-4 bg-stone-50 border-t border-stone-200 space-y-3.5">
-            
+          <div className="p-4 bg-stone-900 border-t border-stone-800 space-y-3.5">
+
             {/* 1. Selector de Tipo de Pedido */}
             <div>
               <span className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1.5 font-mono">Tipo de Pedido</span>
-              <div className="flex bg-stone-200 p-0.5 rounded-lg gap-0.5 border border-stone-250 shadow-inner">
+              <div className="flex bg-stone-950 p-0.5 rounded-lg gap-0.5 border border-stone-800 shadow-inner">
                 <button
                   type="button"
                   onClick={() => setTipoPedido('SITIO')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-xs font-bold transition-all active:scale-95 ${
-                    tipoPedido === 'SITIO' 
-                      ? 'bg-white text-emerald-800 shadow-sm' 
-                      : 'text-stone-600 hover:text-stone-900'
+                    tipoPedido === 'SITIO'
+                      ? 'bg-stone-800 text-emerald-400 shadow-sm'
+                      : 'text-stone-500 hover:text-stone-200'
                   }`}
                 >
                   <Utensils size={13} />
@@ -1809,9 +1809,9 @@ export default function POSPage() {
                   type="button"
                   onClick={() => setTipoPedido('LLEVAR')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-xs font-bold transition-all active:scale-95 ${
-                    tipoPedido === 'LLEVAR' 
-                      ? 'bg-emerald-800 text-white shadow-sm font-extrabold' 
-                      : 'text-stone-600 hover:text-stone-900'
+                    tipoPedido === 'LLEVAR'
+                      ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                      : 'text-stone-500 hover:text-stone-200'
                   }`}
                 >
                   <ShoppingBag size={13} />
@@ -1819,21 +1819,21 @@ export default function POSPage() {
                 </button>
               </div>
               {tipoPedido === 'LLEVAR' && (
-                <p className="text-[9px] text-emerald-700 font-bold font-sans mt-1">
+                <p className="text-[9px] text-emerald-400 font-bold font-sans mt-1">
                   📦 ¡Modo Para Llevar activo! Se descontarán automáticamente vasos/bolsas del inventario de empaques.
                 </p>
               )}
             </div>
 
             {/* 2. Sección de Descuento Manual Dinámico */}
-            <div className="border-t border-dashed border-stone-250 pt-2.5">
+            <div className="border-t border-dashed border-stone-800 pt-2.5">
               <button
                 type="button"
                 onClick={() => setShowDiscountSection(prev => !prev)}
-                className="flex items-center justify-between w-full text-xs font-bold text-stone-500 hover:text-stone-800 transition-colors py-0.5"
+                className="flex items-center justify-between w-full text-xs font-bold text-stone-500 hover:text-stone-100 transition-colors py-0.5"
               >
                 <span className="flex items-center gap-1">🏷️ ¿Aplicar descuento manual?</span>
-                <span className="text-[10px] font-bold text-emerald-700">{showDiscountSection ? 'Ocultar ▲' : 'Aplicar ▼'}</span>
+                <span className="text-[10px] font-bold text-emerald-400">{showDiscountSection ? 'Ocultar ▲' : 'Aplicar ▼'}</span>
               </button>
 
               {showDiscountSection && (
@@ -1841,26 +1841,26 @@ export default function POSPage() {
                   {/* Fila de controles de Descuento */}
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
-                      <input 
+                      <input
                         type="number"
                         step="any"
                         placeholder="0.00"
                         min="0"
                         value={valorDescuento || ""}
                         onChange={(e) => setValorDescuento(Math.max(0, Number(e.target.value)))}
-                        className="w-full pl-7 pr-3 py-1.5 border border-stone-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 font-mono font-bold bg-white"
+                        className="w-full pl-7 pr-3 py-1.5 bg-stone-950 border border-stone-800 rounded-lg text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono font-bold"
                       />
                       <span className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-[10px] text-stone-400 font-bold">
                         {tipoDescuento === 'MONTO' ? 'Bs' : '%'}
                       </span>
                     </div>
 
-                    <div className="flex bg-stone-200 p-0.5 rounded-lg gap-0.5 border">
+                    <div className="flex bg-stone-950 p-0.5 rounded-lg gap-0.5 border border-stone-800">
                       <button
                         type="button"
                         onClick={() => setTipoDescuento('MONTO')}
                         className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
-                          tipoDescuento === 'MONTO' ? 'bg-white text-amber-700 shadow-sm' : 'text-stone-500'
+                          tipoDescuento === 'MONTO' ? 'bg-stone-800 text-amber-400 shadow-sm' : 'text-stone-500'
                         }`}
                       >
                         Bs
@@ -1869,7 +1869,7 @@ export default function POSPage() {
                         type="button"
                         onClick={() => setTipoDescuento('PORCENTAJE')}
                         className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
-                          tipoDescuento === 'PORCENTAJE' ? 'bg-white text-amber-700 shadow-sm' : 'text-stone-500'
+                          tipoDescuento === 'PORCENTAJE' ? 'bg-stone-800 text-amber-400 shadow-sm' : 'text-stone-500'
                         }`}
                       >
                         %
@@ -1881,25 +1881,25 @@ export default function POSPage() {
                   {valorDescuento > 0 && (
                     <div className="space-y-1 animate-in fade-in zoom-in-95 duration-200">
                       <div className="flex justify-between items-center">
-                        <label className="text-[9px] font-bold text-red-500 uppercase tracking-wider flex items-center gap-1">
+                        <label className="text-[9px] font-bold text-red-400 uppercase tracking-wider flex items-center gap-1">
                           <AlertCircle size={10} /> Justificación Obligatoria *
                         </label>
                         <span className="text-[8px] text-stone-400">(Taza de cliente, falta gramaje, etc.)</span>
                       </div>
-                      <input 
+                      <input
                         type="text"
                         placeholder="Escribe el motivo del descuento aquí..."
                         required
                         value={motivoDescuento}
                         onChange={(e) => setMotivoDescuento(e.target.value)}
-                        className={`w-full p-2 border rounded-lg text-xs outline-none font-medium focus:ring-2 bg-white ${
-                          !motivoDescuento.trim() 
-                            ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500 shadow-sm shadow-red-50' 
-                            : 'border-stone-200 focus:ring-amber-500/20 focus:border-amber-600'
+                        className={`w-full p-2 bg-stone-950 border rounded-lg text-white text-xs outline-none font-medium focus:ring-2 ${
+                          !motivoDescuento.trim()
+                            ? 'border-red-900/50 focus:ring-red-500/40 focus:border-red-500'
+                            : 'border-stone-800 focus:ring-emerald-500 focus:border-transparent'
                         }`}
                       />
                       {!motivoDescuento.trim() && (
-                        <p className="text-[8.5px] text-red-500 font-bold leading-none mt-0.5">⚠️ No se puede cobrar hasta rellenar la justificación.</p>
+                        <p className="text-[8.5px] text-red-400 font-bold leading-none mt-0.5">⚠️ No se puede cobrar hasta rellenar la justificación.</p>
                       )}
                     </div>
                   )}
@@ -1911,15 +1911,15 @@ export default function POSPage() {
         )}
 
         {/* Sección de Resumen y Cobro */}
-        <div className="p-4 bg-white border-t border-stone-200 space-y-4">
+        <div className="p-4 bg-stone-900 border-t border-stone-800 space-y-4">
           {/* Subtotal, Descuento y Total Desglosados */}
           {valorDescuento > 0 && (
-            <div className="space-y-1.5 border-b border-dashed pb-2.5 text-xs font-semibold text-stone-600">
+            <div className="space-y-1.5 border-b border-dashed border-stone-800 pb-2.5 text-xs font-semibold text-stone-400">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
                 <span className="font-mono">Bs. {subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-amber-700">
+              <div className="flex justify-between text-amber-400">
                 <span>Descuento aplicado ({tipoDescuento === 'PORCENTAJE' ? `${valorDescuento}%` : 'Monto'}):</span>
                 <span className="font-mono">- Bs. {montoDescuentoCalculado.toFixed(2)}</span>
               </div>
@@ -1929,11 +1929,11 @@ export default function POSPage() {
           <div className="flex justify-between items-baseline">
             <span className="text-xs font-bold text-stone-400 uppercase tracking-widest font-mono">Total a pagar:</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-xs font-extrabold text-emerald-800">Bs.</span>
-              <span className="text-4xl font-black text-emerald-800 font-mono tracking-tight">{total.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-xs font-extrabold text-amber-400">Bs.</span>
+              <span className="text-4xl font-black text-amber-400 font-mono tracking-tight">{total.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             {selectedMesa && selectedMesa !== "Llevar" && (
               <Button
@@ -1945,12 +1945,12 @@ export default function POSPage() {
                 💾 GUARDAR CUENTA
               </Button>
             )}
-            <Button 
+            <Button
               className={`h-14 text-base font-extrabold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 tracking-wider ${
-                isDescuentoInvalido 
-                  ? 'bg-stone-300 text-stone-500 border border-stone-200 cursor-not-allowed shadow-none' 
-                  : 'bg-emerald-700 hover:bg-emerald-600 text-white hover:shadow-emerald-700/10 active:scale-99'
-              } ${selectedMesa && selectedMesa !== "Llevar" ? 'w-1/2' : 'w-full'}`} 
+                isDescuentoInvalido
+                  ? 'bg-stone-800 text-stone-500 border border-stone-700 cursor-not-allowed shadow-none'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-emerald-700/10 active:scale-99'
+              } ${selectedMesa && selectedMesa !== "Llevar" ? 'w-1/2' : 'w-full'}`}
               disabled={cart.length === 0 || procesando || isDescuentoInvalido}
               onClick={openCheckout}
             >
@@ -1963,9 +1963,9 @@ export default function POSPage() {
 
       {/* MODAL: ITEM PERSONALIZADO AL VUELO */}
       {showCustomForm && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={addCustomToCart} className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-stone-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-amber-600 text-white p-4 flex justify-between items-center border-b">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={addCustomToCart} className="bg-stone-900 rounded-2xl shadow-2xl shadow-black/40 w-full max-w-md overflow-hidden border border-stone-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-amber-600 text-white p-4 flex justify-between items-center border-b border-amber-700">
               <div className="flex items-center gap-2">
                 <Sparkles size={18} />
                 <h3 className="font-bold text-sm uppercase tracking-wider">Añadir Item Personalizado</h3>
@@ -1974,39 +1974,39 @@ export default function POSPage() {
                 <X size={18} />
               </button>
             </div>
-            
-            <div className="p-5 space-y-4 text-xs font-medium text-stone-850">
+
+            <div className="p-5 space-y-4 text-xs font-medium text-stone-300">
               <div>
-                <label className="block text-stone-500 font-bold mb-1 uppercase tracking-wider">Nombre del Item</label>
-                <input 
-                  type="text" 
+                <label className="block text-stone-400 font-bold mb-1 uppercase tracking-wider">Nombre del Item</label>
+                <input
+                  type="text"
                   required
                   placeholder="Ej: Desayuno Especial, Extra Barra, etc."
                   value={customItem.nombre}
                   onChange={(e) => setCustomItem(prev => ({ ...prev, nombre: e.target.value }))}
-                  className="w-full border border-stone-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 font-medium"
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder-stone-600 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-stone-500 font-bold mb-1 uppercase tracking-wider">Precio de Venta (Bs)</label>
-                  <input 
-                    type="number" 
+                  <label className="block text-stone-400 font-bold mb-1 uppercase tracking-wider">Precio de Venta (Bs)</label>
+                  <input
+                    type="number"
                     step="0.01"
                     required
                     placeholder="0.00"
                     value={customItem.precio_venta}
                     onChange={(e) => setCustomItem(prev => ({ ...prev, precio_venta: e.target.value }))}
-                    className="w-full border border-stone-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 font-mono font-bold"
+                    className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder-stone-600 font-mono font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-stone-500 font-bold mb-1 uppercase tracking-wider">Categoría</label>
-                  <select 
+                  <label className="block text-stone-400 font-bold mb-1 uppercase tracking-wider">Categoría</label>
+                  <select
                     value={customItem.categoria}
                     onChange={(e) => setCustomItem(prev => ({ ...prev, categoria: e.target.value }))}
-                    className="w-full border border-stone-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 bg-stone-50 font-bold"
+                    className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-bold cursor-pointer"
                   >
                     <option value="Repostería / Pastelería">Repostería</option>
                     <option value="Cafetería Caliente">Cafetería Caliente</option>
@@ -2018,17 +2018,17 @@ export default function POSPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-4 bg-stone-50 border-t">
-              <button 
-                type="button" 
-                onClick={() => setShowCustomForm(false)} 
-                className="px-4 py-2 border rounded-lg font-bold text-stone-600 hover:bg-stone-100 transition-colors text-xs"
+            <div className="flex justify-end gap-3 p-4 bg-stone-900 border-t border-stone-800">
+              <button
+                type="button"
+                onClick={() => setShowCustomForm(false)}
+                className="px-4 py-2 border border-stone-800 rounded-lg font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 type="submit"
-                className="px-6 py-2 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-700 transition-colors text-xs flex items-center gap-1.5 shadow"
+                className="px-6 py-2 bg-amber-600 text-white rounded-lg font-bold hover:bg-amber-500 transition-colors text-xs flex items-center gap-1.5 shadow"
               >
                 <Plus size={14} /> Añadir al ticket
               </button>
@@ -2039,11 +2039,11 @@ export default function POSPage() {
 
       {/* MODAL DE COBRO AUTOMÁTICO */}
       {showCheckoutModal && (
-        <div className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-stone-150 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-stone-900 rounded-3xl shadow-2xl shadow-black/40 w-full max-w-lg overflow-hidden border border-stone-800 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+
             {/* Modal Header */}
-            <div className="bg-stone-900 text-white p-5 flex justify-between items-center border-b shadow-sm">
+            <div className="bg-stone-900 text-white p-5 flex justify-between items-center border-b border-stone-800 shadow-sm">
               <div>
                 <h3 className="text-base font-black tracking-wider uppercase flex items-center gap-2">
                   <Receipt className="w-5 h-5 text-emerald-400" />
@@ -2053,21 +2053,21 @@ export default function POSPage() {
               </div>
               <div className="text-right">
                 <span className="text-[9px] uppercase font-bold tracking-wider text-stone-400 block font-mono">Total Oficial</span>
-                <span className="text-2xl font-black text-emerald-400 font-mono">Bs. {total.toFixed(2)}</span>
+                <span className="text-2xl font-black text-amber-400 font-mono">Bs. {total.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Modal Body */}
-            <ScrollArea className="flex-1 p-6 space-y-5 text-xs text-stone-850 font-medium overflow-y-auto">
-              
+            <ScrollArea className="flex-1 p-6 space-y-5 text-xs text-stone-300 font-medium overflow-y-auto">
+
               {/* Responsable & Mesa */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-stone-500 mb-1.5 uppercase tracking-wider">Responsable del Turno</label>
-                  <select 
-                    value={checkoutData.responsable} 
+                  <select
+                    value={checkoutData.responsable}
                     onChange={(e) => handleCheckoutDataChange('responsable', e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl p-3 bg-stone-50 font-bold cursor-pointer"
+                    className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white font-bold cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="Turno Mañana">Turno Mañana</option>
                     <option value="Turno Tarde">Turno Tarde</option>
@@ -2076,23 +2076,23 @@ export default function POSPage() {
                     <option value="Otro">Otro Responsable...</option>
                   </select>
                   {checkoutData.responsable === 'Otro' && (
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Nombre del responsable"
                       value={checkoutData.customResponsable}
                       onChange={(e) => handleCheckoutDataChange('customResponsable', e.target.value)}
-                      className="w-full border rounded-xl p-2.5 mt-2 font-sans"
+                      className="w-full bg-stone-950 border border-stone-800 rounded-xl p-2.5 mt-2 text-white placeholder-stone-600 font-sans outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   )}
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-stone-500 mb-1.5 uppercase tracking-wider">Mesa / Ubicación</label>
-                  <select 
-                    value={checkoutData.mesa} 
+                  <select
+                    value={checkoutData.mesa}
                     disabled={tipoPedido === 'LLEVAR'}
                     onChange={(e) => handleCheckoutDataChange('mesa', e.target.value)}
-                    className="w-full border border-stone-200 rounded-xl p-3 bg-stone-50 font-bold cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed"
+                    className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white font-bold cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-stone-900 disabled:text-stone-600 disabled:cursor-not-allowed"
                   >
                     <option value="Llevar">Para Llevar (Takeaway)</option>
                     <option value="Mesa 1">Mesa 1</option>
@@ -2104,12 +2104,12 @@ export default function POSPage() {
                     <option value="Otro">Otra Mesa...</option>
                   </select>
                   {checkoutData.mesa === 'Otro' && tipoPedido !== 'LLEVAR' && (
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Número o nombre de mesa"
                       value={checkoutData.customMesa}
                       onChange={(e) => handleCheckoutDataChange('customMesa', e.target.value)}
-                      className="w-full border rounded-xl p-2.5 mt-2 font-sans"
+                      className="w-full bg-stone-950 border border-stone-800 rounded-xl p-2.5 mt-2 text-white placeholder-stone-600 font-sans outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                   )}
                 </div>
@@ -2119,14 +2119,14 @@ export default function POSPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-stone-500 mb-1.5 uppercase tracking-wider">Método de Pago</label>
-                  <div className="flex bg-stone-100 p-1 rounded-xl gap-1 border border-stone-200 shadow-inner">
+                  <div className="flex bg-stone-950 p-1 rounded-xl gap-1 border border-stone-800 shadow-inner">
                     {['EFECTIVO', 'QR', 'POS'].map((method) => {
                       const isActive = checkoutData.metodo_pago === method;
                       let activeStyle = '';
                       if (isActive) {
-                        if (method === 'EFECTIVO') activeStyle = 'bg-emerald-800 text-white shadow-md';
-                        else if (method === 'QR') activeStyle = 'bg-blue-700 text-white shadow-md';
-                        else activeStyle = 'bg-purple-750 text-white shadow-md';
+                        if (method === 'EFECTIVO') activeStyle = 'bg-emerald-600 text-white shadow-md';
+                        else if (method === 'QR') activeStyle = 'bg-blue-600 text-white shadow-md';
+                        else activeStyle = 'bg-purple-600 text-white shadow-md';
                       }
                       return (
                         <button
@@ -2134,7 +2134,7 @@ export default function POSPage() {
                           type="button"
                           onClick={() => handleCheckoutDataChange('metodo_pago', method)}
                           className={`flex-1 text-center py-2.5 rounded-lg font-black text-[10px] tracking-wider transition-all active:scale-95 ${
-                            isActive ? activeStyle : 'text-stone-600 hover:bg-stone-200'
+                            isActive ? activeStyle : 'text-stone-400 hover:bg-stone-850'
                           }`}
                         >
                           {method}
@@ -2145,15 +2145,15 @@ export default function POSPage() {
                 </div>
 
                 <div className="flex flex-col justify-end">
-                  <label className="flex items-center gap-3 cursor-pointer select-none border border-stone-250 rounded-xl p-3 bg-white hover:bg-stone-50 transition-colors shadow-sm">
-                    <input 
-                      type="checkbox" 
+                  <label className="flex items-center gap-3 cursor-pointer select-none border border-stone-800 rounded-xl p-3 bg-stone-950 hover:bg-stone-850 transition-colors shadow-sm">
+                    <input
+                      type="checkbox"
                       checked={checkoutData.tiene_factura}
                       onChange={(e) => handleCheckoutDataChange('tiene_factura', e.target.checked)}
-                      className="h-4.5 w-4.5 rounded border-stone-300 text-emerald-800 focus:ring-emerald-700 cursor-pointer"
+                      className="h-4.5 w-4.5 rounded border-stone-700 bg-stone-900 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
                     />
                     <div className="flex flex-col">
-                      <span className="font-extrabold text-stone-700 text-xs">Generar Factura</span>
+                      <span className="font-extrabold text-stone-200 text-xs">Generar Factura</span>
                       <span className="text-[9px] text-stone-400">Marcar SI para débito fiscal</span>
                     </div>
                   </label>
@@ -2162,23 +2162,23 @@ export default function POSPage() {
 
               {/* Cálculos de Pago en Efectivo con Billetes Bolivianos */}
               {checkoutData.metodo_pago === 'EFECTIVO' ? (
-                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-4 animate-in fade-in slide-in-from-top-3 duration-200">
+                <div className="bg-stone-950 border border-stone-800 rounded-2xl p-4 space-y-4 animate-in fade-in slide-in-from-top-3 duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Dinero Recibido (Billetes Bs.)</label>
                     <div className="flex flex-wrap gap-1.5">
-                      <button 
-                        type="button" 
-                        onClick={() => handleCheckoutDataChange('pago', total)} 
-                        className="text-[9px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black px-2.5 py-1.5 rounded-lg border border-emerald-200 transition-colors active:scale-95"
+                      <button
+                        type="button"
+                        onClick={() => handleCheckoutDataChange('pago', total)}
+                        className="text-[9px] bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-400 font-black px-2.5 py-1.5 rounded-lg border border-emerald-800/60 transition-colors active:scale-95"
                       >
                         Dinero Justo
                       </button>
                       {[
-                        { val: 10, style: 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200' },
-                        { val: 20, style: 'bg-orange-50 hover:bg-orange-100 text-orange-900 border-orange-200' },
-                        { val: 50, style: 'bg-purple-50 hover:bg-purple-100 text-purple-800 border-purple-200' },
-                        { val: 100, style: 'bg-red-50 hover:bg-red-100 text-red-800 border-red-200' },
-                        { val: 200, style: 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-250' }
+                        { val: 10, style: 'bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 border-blue-800/60' },
+                        { val: 20, style: 'bg-orange-950/40 hover:bg-orange-900/60 text-orange-300 border-orange-800/60' },
+                        { val: 50, style: 'bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 border-purple-800/60' },
+                        { val: 100, style: 'bg-red-950/40 hover:bg-red-900/60 text-red-300 border-red-800/60' },
+                        { val: 200, style: 'bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border-amber-800/60' }
                       ].map(({ val, style }) => (
                         <button
                           key={val}
@@ -2186,8 +2186,8 @@ export default function POSPage() {
                           disabled={val < total}
                           onClick={() => handleCheckoutDataChange('pago', val)}
                           className={`text-[9px] px-2.5 py-1.5 rounded-lg font-black border transition-colors active:scale-95 ${
-                            val < total 
-                              ? 'bg-stone-100 text-stone-300 border-stone-200 cursor-not-allowed' 
+                            val < total
+                              ? 'bg-stone-900 text-stone-600 border-stone-800 cursor-not-allowed'
                               : style
                           }`}
                         >
@@ -2198,58 +2198,58 @@ export default function POSPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         step="0.01"
                         placeholder="0.00"
                         value={checkoutData.pago || ''}
                         onChange={(e) => handleCheckoutDataChange('pago', Number(e.target.value))}
-                        className="w-full border border-stone-300 rounded-xl p-3 text-xl font-black text-stone-900 bg-white font-mono shadow-inner outline-none focus:ring-2 focus:ring-emerald-700/20"
+                        className="w-full bg-stone-900 border border-stone-800 rounded-xl p-3 text-xl font-black text-white font-mono shadow-inner outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         autoFocus
                       />
                     </div>
-                    <div className="flex flex-col justify-center items-end bg-amber-50/50 border border-amber-100 rounded-xl px-4 py-2">
-                      <span className="text-[9px] text-amber-700 font-extrabold tracking-widest uppercase">Cambio a Devolver</span>
-                      <span className="text-2xl font-black text-amber-700 font-mono">
+                    <div className="flex flex-col justify-center items-end bg-amber-950/30 border border-amber-800/50 rounded-xl px-4 py-2">
+                      <span className="text-[9px] text-amber-400 font-extrabold tracking-widest uppercase">Cambio a Devolver</span>
+                      <span className="text-2xl font-black text-amber-400 font-mono">
                         Bs. {checkoutData.cambio.toFixed(2)}
                       </span>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="bg-stone-50 border border-stone-150 rounded-2xl p-4 text-center text-stone-500 font-mono text-[10px] leading-relaxed shadow-inner">
-                  📱 Cobro electrónico seleccionado. Los fondos se registrarán automáticamente en la cuenta de <strong className="text-stone-700">{checkoutData.metodo_pago === 'QR' ? 'BANCO BISA' : 'LINKSER / POS'}</strong> por la cantidad exacta de <strong className="text-emerald-800">Bs. {total.toFixed(2)}</strong>.
+                <div className="bg-stone-950 border border-stone-800 rounded-2xl p-4 text-center text-stone-500 font-mono text-[10px] leading-relaxed shadow-inner">
+                  📱 Cobro electrónico seleccionado. Los fondos se registrarán automáticamente en la cuenta de <strong className="text-stone-300">{checkoutData.metodo_pago === 'QR' ? 'BANCO BISA' : 'LINKSER / POS'}</strong> por la cantidad exacta de <strong className="text-emerald-400">Bs. {total.toFixed(2)}</strong>.
                 </div>
               )}
 
               {/* Observación de la Venta */}
               <div>
                 <label className="block text-[10px] font-bold text-stone-500 mb-1.5 uppercase tracking-wider">Notas u Observación de la Venta</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder="Ej: Cliente habitual, pago QR Bisa, sin hielo..."
                   value={checkoutData.observacion}
                   onChange={(e) => handleCheckoutDataChange('observacion', e.target.value)}
-                  className="w-full border border-stone-200 rounded-xl p-3 font-medium outline-none focus:ring-2 focus:ring-emerald-700/20 focus:border-emerald-600 bg-stone-50"
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white placeholder-stone-600 font-medium outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
             </ScrollArea>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 p-4 bg-stone-50 border-t shadow-inner">
-              <button 
-                type="button" 
-                onClick={() => setShowCheckoutModal(false)} 
-                className="px-5 py-2.5 border rounded-xl font-bold text-stone-600 hover:bg-stone-100 transition-colors"
+            <div className="flex justify-end gap-3 p-4 bg-stone-900 border-t border-stone-800 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setShowCheckoutModal(false)}
+                className="px-5 py-2.5 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors"
                 disabled={procesando}
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={handleCheckoutSubmit}
-                className="px-7 py-2.5 bg-emerald-850 hover:bg-emerald-800 text-white rounded-xl font-black tracking-wider transition-colors flex items-center gap-2 shadow"
+                className="px-7 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black tracking-wider transition-colors flex items-center gap-2 shadow disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={procesando || (checkoutData.metodo_pago === 'EFECTIVO' && checkoutData.pago < total)}
               >
                 {procesando ? 'Procesando Venta...' : 'CONFIRMAR Y REGISTRAR VENTA'}
@@ -2262,10 +2262,10 @@ export default function POSPage() {
 
       {/* MODAL: RE-IMPRIMIR TICKETS DEL DÍA */}
       {showReprintModal && (
-        <div className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-stone-150 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-stone-900 rounded-3xl shadow-2xl shadow-black/40 w-full max-w-lg overflow-hidden border border-stone-800 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
             {/* Modal Header */}
-            <div className="bg-stone-900 text-white p-5 flex justify-between items-center border-b shadow-sm">
+            <div className="bg-stone-900 text-white p-5 flex justify-between items-center border-b border-stone-800 shadow-sm">
               <div>
                 <h3 className="text-base font-black tracking-wider uppercase flex items-center gap-2">
                   <Receipt className="w-5 h-5 text-amber-500" />
@@ -2273,7 +2273,7 @@ export default function POSPage() {
                 </h3>
                 <p className="text-[10px] text-stone-400 font-mono mt-0.5">HISTORIAL DE VENTAS DE HOY</p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowReprintModal(false)}
                 className="p-1 rounded-lg hover:bg-stone-850 text-stone-400 hover:text-white transition-colors"
               >
@@ -2295,32 +2295,32 @@ export default function POSPage() {
               ) : (
                 <div className="space-y-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
                   {todayTickets.map((tx) => (
-                    <div 
-                      key={tx.id} 
-                      className="flex items-center justify-between p-3.5 bg-stone-50 border rounded-2xl hover:border-stone-300 hover:bg-stone-100/50 transition-all text-xs font-mono"
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-3.5 bg-stone-950 border border-stone-800 rounded-2xl hover:border-stone-700 hover:bg-stone-850/50 transition-all text-xs font-mono"
                     >
                       <div className="flex-1 min-w-0 pr-4">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-black text-stone-900 font-mono">Venta #{tx.id}</span>
-                          <span className="text-[9px] bg-stone-200 text-stone-700 px-1.5 py-0.5 rounded font-bold font-mono">{tx.hora || '--:--'}</span>
-                          <span className="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-100 px-1.5 py-0.5 rounded font-bold font-mono">{tx.tipo_pedido || 'SITIO'}</span>
+                          <span className="font-black text-stone-100 font-mono">Venta #{tx.id}</span>
+                          <span className="text-[9px] bg-stone-800 text-stone-300 px-1.5 py-0.5 rounded font-bold font-mono">{tx.hora || '--:--'}</span>
+                          <span className="text-[9px] bg-emerald-950/40 text-emerald-400 border border-emerald-800/60 px-1.5 py-0.5 rounded font-bold font-mono">{tx.tipo_pedido || 'SITIO'}</span>
                         </div>
                         <div className="text-[10px] text-stone-500 truncate" title={tx.detalle}>
                           {tx.detalle || 'Venta general'}
                         </div>
                         <div className="text-[9px] text-stone-400 font-sans mt-0.5">
-                          Mesa/Ubicación: <strong className="text-stone-600 font-semibold">{tx.mesa || 'Consumir en Sitio'}</strong> • Cajero: {tx.responsable || 'Caja'}
+                          Mesa/Ubicación: <strong className="text-stone-300 font-semibold">{tx.mesa || 'Consumir en Sitio'}</strong> • Cajero: {tx.responsable || 'Caja'}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
                           <span className="text-[9px] text-stone-400 block uppercase font-sans">Total</span>
-                          <strong className="text-emerald-800 text-sm font-mono font-black">Bs. {Number(tx.monto_total || 0).toFixed(2)}</strong>
+                          <strong className="text-amber-400 text-sm font-mono font-black">Bs. {Number(tx.monto_total || 0).toFixed(2)}</strong>
                         </div>
                         <button
                           type="button"
                           onClick={() => imprimirTicketHistorico(tx)}
-                          className="p-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl shadow-md transition-all active:scale-90 flex items-center justify-center"
+                          className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-md transition-all active:scale-90 flex items-center justify-center"
                           title="Imprimir"
                         >
                           <Receipt size={16} />
@@ -2333,11 +2333,11 @@ export default function POSPage() {
             </ScrollArea>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-stone-50 border-t flex justify-end">
-              <button 
+            <div className="p-4 bg-stone-900 border-t border-stone-800 flex justify-end">
+              <button
                 type="button"
                 onClick={() => setShowReprintModal(false)}
-                className="px-5 py-2 border rounded-xl font-bold text-stone-600 hover:bg-stone-200 transition-colors text-xs"
+                className="px-5 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
               >
                 Cerrar
               </button>
@@ -2348,9 +2348,9 @@ export default function POSPage() {
 
       {/* MODAL: REGISTRAR EGRESO CAJERO */}
       {showEgresoModal && (
-        <div className="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleEgresoSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-stone-150 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-red-800 text-white p-5 flex justify-between items-center border-b shadow-sm">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <form onSubmit={handleEgresoSubmit} className="bg-stone-900 rounded-3xl shadow-2xl shadow-black/40 w-full max-w-md overflow-hidden border border-stone-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-red-800 text-white p-5 flex justify-between items-center border-b border-red-900/50 shadow-sm">
               <div className="flex items-center gap-2">
                 <DollarSign size={18} className="text-red-300" />
                 <div>
@@ -2362,39 +2362,39 @@ export default function POSPage() {
                 <X size={18} />
               </button>
             </div>
-            
-            <div className="p-5 space-y-4 text-xs font-medium text-stone-850">
+
+            <div className="p-5 space-y-4 text-xs font-medium text-stone-300">
               <div>
-                <label className="block text-stone-500 font-bold mb-1.5 uppercase tracking-wider">Concepto o Detalle *</label>
-                <input 
-                  type="text" 
+                <label className="block text-stone-400 font-bold mb-1.5 uppercase tracking-wider">Concepto o Detalle *</label>
+                <input
+                  type="text"
                   required
                   placeholder="Ej: Pago de garrafa de gas, compra pan, etc."
                   value={egresoData.detalle}
                   onChange={(e) => setEgresoData(prev => ({ ...prev, detalle: e.target.value }))}
-                  className="w-full border border-stone-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 bg-stone-50 font-medium"
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder-stone-600 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-stone-500 font-bold mb-1.5 uppercase tracking-wider">Monto (Bs.) *</label>
-                  <input 
-                    type="number" 
+                  <label className="block text-stone-400 font-bold mb-1.5 uppercase tracking-wider">Monto (Bs.) *</label>
+                  <input
+                    type="number"
                     step="0.01"
                     required
                     placeholder="0.00"
                     value={egresoData.monto}
                     onChange={(e) => setEgresoData(prev => ({ ...prev, monto: e.target.value }))}
-                    className="w-full border border-stone-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 font-mono font-bold"
+                    className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder-stone-600 font-mono font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-stone-500 font-bold mb-1.5 uppercase tracking-wider">Categoría</label>
-                  <select 
+                  <label className="block text-stone-400 font-bold mb-1.5 uppercase tracking-wider">Categoría</label>
+                  <select
                     value={egresoData.categoria}
                     onChange={(e) => setEgresoData(prev => ({ ...prev, categoria: e.target.value }))}
-                    className="w-full border border-stone-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-600 bg-stone-50 font-bold cursor-pointer"
+                    className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-bold cursor-pointer"
                   >
                     <option value="Insumos alimenticios">Insumos alimenticios</option>
                     <option value="Costos secundarios">Costos secundarios</option>
@@ -2404,35 +2404,35 @@ export default function POSPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border border-stone-200 rounded-xl p-3 bg-stone-50 shadow-inner">
+              <div className="flex items-center justify-between border border-stone-800 rounded-xl p-3 bg-stone-950 shadow-inner">
                 <div className="flex flex-col">
-                  <span className="font-extrabold text-stone-700 text-xs">¿Tiene Factura?</span>
+                  <span className="font-extrabold text-stone-200 text-xs">¿Tiene Factura?</span>
                   <span className="text-[9px] text-stone-400">Marcar si se cuenta con factura oficial</span>
                 </div>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={egresoData.tiene_factura}
                   onChange={(e) => setEgresoData(prev => ({ ...prev, tiene_factura: e.target.checked }))}
-                  className="h-5 w-5 rounded border-stone-300 text-red-700 focus:ring-red-600 cursor-pointer"
+                  className="h-5 w-5 rounded border-stone-700 bg-stone-900 text-red-500 focus:ring-red-500 cursor-pointer"
                 />
               </div>
 
-              <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-red-800 text-[10px] leading-relaxed font-sans">
+              <div className="bg-red-950/40 border border-red-900/50 rounded-xl p-3 text-red-200 text-[10px] leading-relaxed font-sans">
                 ⚠️ <strong>Nota:</strong> Los fondos se descontarán inmediatamente del dinero en caja del turno en curso (Caja Chica). Se generará automáticamente un asiento de partida doble en el Libro Diario.
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-4 bg-stone-50 border-t shadow-inner">
-              <button 
-                type="button" 
-                onClick={() => setShowEgresoModal(false)} 
-                className="px-4 py-2 border rounded-xl font-bold text-stone-600 hover:bg-stone-100 transition-colors text-xs"
+            <div className="flex justify-end gap-3 p-4 bg-stone-900 border-t border-stone-800 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setShowEgresoModal(false)}
+                className="px-4 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 type="submit"
-                className="px-6 py-2 bg-red-700 text-white rounded-xl font-bold hover:bg-red-800 transition-colors text-xs flex items-center gap-1.5 shadow"
+                className="px-6 py-2 bg-red-700 text-white rounded-xl font-bold hover:bg-red-600 transition-colors text-xs flex items-center gap-1.5 shadow"
               >
                 Registrar Egreso
               </button>
@@ -2443,9 +2443,9 @@ export default function POSPage() {
 
       {/* MODAL: CIERRE DE TURNO / CAJA */}
       {showCloseShiftModal && activeShift && (
-        <div className="fixed inset-0 bg-stone-955/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-stone-150 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-amber-700 text-white p-5 flex justify-between items-center border-b shadow-sm">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-stone-900 rounded-3xl shadow-2xl shadow-black/40 w-full max-w-md overflow-hidden border border-stone-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-amber-700 text-white p-5 flex justify-between items-center border-b border-amber-800 shadow-sm">
               <div className="flex items-center gap-2">
                 <AlertCircle size={18} className="text-amber-200 animate-bounce" />
                 <div>
@@ -2457,53 +2457,53 @@ export default function POSPage() {
                 <X size={18} />
               </button>
             </div>
-            
-            <div className="p-5 space-y-4 text-xs font-medium text-stone-850">
-              <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 space-y-2.5 font-mono text-[11px] text-stone-700 shadow-inner">
-                <div className="flex justify-between border-b pb-1 border-stone-200"><span className="text-stone-400">CAJERO:</span><span className="font-bold">{activeShift.cashier}</span></div>
-                <div className="flex justify-between border-b pb-1 border-stone-200"><span className="text-stone-400">TURNO:</span><span className="font-bold text-amber-750">{activeShift.turno}</span></div>
-                <div className="flex justify-between border-b pb-1 border-stone-200"><span className="text-stone-400">FECHA:</span><span>{activeShift.date}</span></div>
-                
+
+            <div className="p-5 space-y-4 text-xs font-medium text-stone-300">
+              <div className="bg-stone-950 border border-stone-800 rounded-2xl p-4 space-y-2.5 font-mono text-[11px] text-stone-300 shadow-inner">
+                <div className="flex justify-between border-b pb-1 border-stone-800"><span className="text-stone-500">CAJERO:</span><span className="font-bold text-stone-100">{activeShift.cashier}</span></div>
+                <div className="flex justify-between border-b pb-1 border-stone-800"><span className="text-stone-500">TURNO:</span><span className="font-bold text-amber-400">{activeShift.turno}</span></div>
+                <div className="flex justify-between border-b pb-1 border-stone-800"><span className="text-stone-500">FECHA:</span><span className="text-stone-200">{activeShift.date}</span></div>
+
                 <div className="h-2"></div>
-                <div className="flex justify-between text-stone-600"><span className="font-sans">Saldo Inicial en Caja:</span><span className="font-bold">Bs. {activeShift.monto_inicial.toFixed(2)}</span></div>
-                <div className="flex justify-between text-emerald-700"><span className="font-sans">(+) Ventas en Efectivo:</span><span className="font-bold">+Bs. {shiftSummary.sumEfectivo.toFixed(2)} <span className="text-[9px] text-stone-450 font-normal">({shiftSummary.countEfectivo} vtas)</span></span></div>
-                <div className="flex justify-between text-red-700"><span className="font-sans">(-) Egresos en Efectivo:</span><span className="font-bold">-Bs. {activeShift.egresos_efectivo.toFixed(2)}</span></div>
-                
-                <div className="border-t border-dashed border-stone-400 my-1.5 pt-1.5 flex justify-between text-[11px] text-stone-900 font-bold">
+                <div className="flex justify-between text-stone-400"><span className="font-sans">Saldo Inicial en Caja:</span><span className="font-bold text-stone-200">Bs. {activeShift.monto_inicial.toFixed(2)}</span></div>
+                <div className="flex justify-between text-emerald-400"><span className="font-sans">(+) Ventas en Efectivo:</span><span className="font-bold">+Bs. {shiftSummary.sumEfectivo.toFixed(2)} <span className="text-[9px] text-stone-500 font-normal">({shiftSummary.countEfectivo} vtas)</span></span></div>
+                <div className="flex justify-between text-red-400"><span className="font-sans">(-) Egresos en Efectivo:</span><span className="font-bold">-Bs. {activeShift.egresos_efectivo.toFixed(2)}</span></div>
+
+                <div className="border-t border-dashed border-stone-700 my-1.5 pt-1.5 flex justify-between text-[11px] text-stone-100 font-bold">
                   <span>EFECTIVO ESPERADO EN CAJA:</span>
-                  <span className="text-amber-800 font-mono">Bs. {(activeShift.monto_inicial + shiftSummary.sumEfectivo - activeShift.egresos_efectivo).toFixed(2)}</span>
+                  <span className="text-amber-400 font-mono">Bs. {(activeShift.monto_inicial + shiftSummary.sumEfectivo - activeShift.egresos_efectivo).toFixed(2)}</span>
                 </div>
 
-                <div className="border-t border-dashed border-stone-300 my-1.5 pt-1.5 space-y-1 text-stone-605">
-                  <div className="font-sans font-bold text-[9px] text-stone-400 uppercase tracking-wider">Conciliación Bancaria / POS</div>
-                  <div className="flex justify-between text-blue-700"><span>Ventas QR Bisa:</span><span className="font-bold">Bs. {shiftSummary.sumQr.toFixed(2)} <span className="text-[9px] text-stone-450 font-normal">({shiftSummary.countQr} vtas)</span></span></div>
-                  <div className="flex justify-between text-purple-700"><span>Ventas Tarjeta POS:</span><span className="font-bold">Bs. {shiftSummary.sumPos.toFixed(2)} <span className="text-[9px] text-stone-450 font-normal">({shiftSummary.countPos} vtas)</span></span></div>
+                <div className="border-t border-dashed border-stone-800 my-1.5 pt-1.5 space-y-1 text-stone-400">
+                  <div className="font-sans font-bold text-[9px] text-stone-500 uppercase tracking-wider">Conciliación Bancaria / POS</div>
+                  <div className="flex justify-between text-blue-400"><span>Ventas QR Bisa:</span><span className="font-bold">Bs. {shiftSummary.sumQr.toFixed(2)} <span className="text-[9px] text-stone-500 font-normal">({shiftSummary.countQr} vtas)</span></span></div>
+                  <div className="flex justify-between text-purple-400"><span>Ventas Tarjeta POS:</span><span className="font-bold">Bs. {shiftSummary.sumPos.toFixed(2)} <span className="text-[9px] text-stone-500 font-normal">({shiftSummary.countPos} vtas)</span></span></div>
                 </div>
 
-                <div className="border-t border-dashed border-stone-450 my-2 pt-2 flex justify-between text-xs text-stone-900 font-black">
+                <div className="border-t border-dashed border-stone-700 my-2 pt-2 flex justify-between text-xs text-stone-100 font-black">
                   <span>TOTAL DE VENTAS TURNO:</span>
-                  <span className="text-emerald-800 font-mono">Bs. {shiftSummary.totalVentas.toFixed(2)} <span className="text-[9px] text-stone-500 font-bold">({shiftSummary.totalCount} vtas)</span></span>
+                  <span className="text-emerald-400 font-mono">Bs. {shiftSummary.totalVentas.toFixed(2)} <span className="text-[9px] text-stone-500 font-bold">({shiftSummary.totalCount} vtas)</span></span>
                 </div>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-stone-500 mb-1.5 uppercase tracking-wider">Efectivo Real Contado en Cajón (Bs.) *</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="0.01"
                   required
                   placeholder="0.00"
                   value={efectivoRealContado}
                   onChange={(e) => setEfectivoRealContado(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full border border-stone-300 rounded-xl p-3 text-xl font-black text-stone-900 bg-white font-mono shadow-inner outline-none focus:ring-2 focus:ring-amber-500/20"
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-xl font-black text-white font-mono shadow-inner outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 />
               </div>
 
               {efectivoRealContado !== '' && (
                 <div className={`p-3 rounded-xl border text-[11px] font-mono flex justify-between items-center ${
-                  (Number(efectivoRealContado) - (activeShift.monto_inicial + shiftSummary.sumEfectivo - activeShift.egresos_efectivo)) >= 0 
-                    ? 'bg-emerald-50 border-emerald-150 text-emerald-800' 
-                    : 'bg-red-50 border-red-150 text-red-800'
+                  (Number(efectivoRealContado) - (activeShift.monto_inicial + shiftSummary.sumEfectivo - activeShift.egresos_efectivo)) >= 0
+                    ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                    : 'bg-red-950/40 border-red-900/50 text-red-300'
                 }`}>
                   <span className="font-sans font-bold">Diferencia (Sobrante/Faltante):</span>
                   <span className="font-black text-sm">
@@ -2513,18 +2513,18 @@ export default function POSPage() {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 p-4 bg-stone-50 border-t shadow-inner">
-              <button 
-                type="button" 
-                onClick={() => setShowCloseShiftModal(false)} 
-                className="px-4 py-2 border rounded-xl font-bold text-stone-600 hover:bg-stone-100 transition-colors text-xs"
+            <div className="flex justify-end gap-3 p-4 bg-stone-900 border-t border-stone-800 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setShowCloseShiftModal(false)}
+                className="px-4 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={handleCloseShiftSubmit}
-                className="px-6 py-2 bg-amber-700 text-white rounded-xl font-bold hover:bg-amber-800 transition-colors text-xs flex items-center gap-1.5 shadow"
+                className="px-6 py-2 bg-amber-700 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors text-xs flex items-center gap-1.5 shadow"
               >
                 Registrar y Cerrar Turno
               </button>

@@ -95,26 +95,26 @@ export default function ModalLibroDiario({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-stone-900 border border-stone-800 rounded-xl shadow-2xl shadow-black/40 w-full max-w-2xl overflow-hidden flex flex-col">
         <div className="bg-emerald-800 p-4 text-white flex justify-between items-center">
           <h3 className="font-bold">Registrar Asiento Contable</h3>
           <button onClick={onClose} className="hover:bg-emerald-700 p-1 rounded"><X size={20}/></button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 text-sm text-gray-800">
+
+        <form onSubmit={handleSubmit} className="p-6 text-sm text-stone-200">
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block font-bold mb-1">Fecha</label>
-              <input type="date" name="fecha" required value={formData.fecha} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block font-bold mb-1 text-stone-300">Fecha</label>
+              <input type="date" name="fecha" required value={formData.fecha} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block font-bold mb-1">Nº Asiento</label>
-              <input type="number" name="nro_asiento" required value={formData.nro_asiento} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block font-bold mb-1 text-stone-300">Nº Asiento</label>
+              <input type="number" name="nro_asiento" required value={formData.nro_asiento} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div className="col-span-2">
-              <label className="block font-bold mb-1">Cuenta Contable</label>
-              <select name="codigo_cuenta" required value={formData.codigo_cuenta} onChange={handleChange} className="w-full border rounded p-2 font-mono text-xs">
+              <label className="block font-bold mb-1 text-stone-300">Cuenta Contable</label>
+              <select name="codigo_cuenta" required value={formData.codigo_cuenta} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 font-mono text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
                 <option value="">Seleccione una cuenta...</option>
                 {planCuentas.map(c => (
                   <option key={c.codigo} value={c.codigo}>{c.codigo} - {c.nombre}</option>
@@ -122,25 +122,25 @@ export default function ModalLibroDiario({
               </select>
             </div>
             <div className="col-span-2">
-              <label className="block font-bold mb-1">Detalle / Glosa</label>
-              <input type="text" name="glosa" required value={formData.glosa} onChange={handleChange} className="w-full border rounded p-2" placeholder="Explicación del asiento" />
+              <label className="block font-bold mb-1 text-stone-300">Detalle / Glosa</label>
+              <input type="text" name="glosa" required value={formData.glosa} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Explicación del asiento" />
             </div>
           </div>
 
-          <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800">Importes (Bs)</h4>
+          <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400">Importes (Bs)</h4>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-xs font-bold mb-1">DEBE</label>
-              <input type="number" step="0.01" name="debe" value={formData.debe} onChange={handleChange} className="w-full border rounded p-2 font-mono text-lg text-emerald-700" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">DEBE</label>
+              <input type="number" step="0.01" name="debe" value={formData.debe} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 font-mono text-lg text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">HABER</label>
-              <input type="number" step="0.01" name="haber" value={formData.haber} onChange={handleChange} className="w-full border rounded p-2 font-mono text-lg text-orange-700" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">HABER</label>
+              <input type="number" step="0.01" name="haber" value={formData.haber} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 font-mono text-lg text-amber-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
           </div>
 
           <div className="mt-8 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-stone-700 rounded font-bold text-stone-300 hover:bg-stone-800">Cancelar</button>
             <button type="submit" disabled={loading} className="px-6 py-2 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700 flex items-center gap-2">
               <Save size={16} /> {loading ? 'Guardando...' : 'Guardar Asiento'}
             </button>

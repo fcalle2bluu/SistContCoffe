@@ -103,7 +103,7 @@ export default function ModalMovimientoMasa({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col font-sans animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-stone-900 border border-stone-800 rounded-2xl shadow-2xl shadow-black/40 w-full max-w-md overflow-hidden flex flex-col font-sans animate-in fade-in zoom-in-95 duration-200">
         <div className="bg-emerald-800 p-4 text-white flex justify-between items-center border-b border-emerald-900">
           <h3 className="font-bold text-sm tracking-wide uppercase">
             Registrar Movimiento de Masa
@@ -112,19 +112,19 @@ export default function ModalMovimientoMasa({
             <X size={18} />
           </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 text-sm text-gray-800 space-y-5">
+
+        <form onSubmit={handleSubmit} className="p-6 text-sm text-stone-200 space-y-5">
           {/* Selector de Entrada/Salida */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 font-mono">Tipo de Transacción</label>
+            <label className="block text-xs font-bold text-stone-300 uppercase mb-2 font-mono">Tipo de Transacción</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleTipoChange('ENTRADA')}
                 className={`py-2 px-4 rounded-xl font-bold transition-all border text-center cursor-pointer ${
-                  formData.tipo_movimiento === 'ENTRADA' 
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20' 
-                    : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                  formData.tipo_movimiento === 'ENTRADA'
+                    ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400 ring-2 ring-emerald-500/20'
+                    : 'bg-stone-950 border-stone-800 text-stone-400 hover:bg-stone-800'
                 }`}
               >
                 📥 ENTRADA (Producción)
@@ -133,9 +133,9 @@ export default function ModalMovimientoMasa({
                 type="button"
                 onClick={() => handleTipoChange('SALIDA')}
                 className={`py-2 px-4 rounded-xl font-bold transition-all border text-center cursor-pointer ${
-                  formData.tipo_movimiento === 'SALIDA' 
-                    ? 'bg-amber-50 border-amber-500 text-amber-850 ring-2 ring-amber-500/20' 
-                    : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                  formData.tipo_movimiento === 'SALIDA'
+                    ? 'bg-amber-950/30 border-amber-500 text-amber-400 ring-2 ring-amber-500/20'
+                    : 'bg-stone-950 border-stone-800 text-stone-400 hover:bg-stone-800'
                 }`}
               >
                 📤 SALIDA (Consumo/Uso)
@@ -145,13 +145,13 @@ export default function ModalMovimientoMasa({
 
           {/* Masa Select */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 font-mono">Seleccionar Masa *</label>
+            <label className="block text-xs font-bold text-stone-300 uppercase mb-1.5 font-mono">Seleccionar Masa *</label>
             <select
               name="masa_id"
               required
               value={formData.masa_id}
               onChange={handleChange}
-              className="w-full border border-stone-200 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-stone-50 font-medium cursor-pointer"
+              className="w-full bg-stone-950 border border-stone-800 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-white font-medium cursor-pointer"
             >
               <option value="" disabled>Seleccione una masa...</option>
               {masas.map(m => (
@@ -165,7 +165,7 @@ export default function ModalMovimientoMasa({
           <div className="grid grid-cols-2 gap-4">
             {/* Cantidad */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 font-mono">Cantidad *</label>
+              <label className="block text-xs font-bold text-stone-300 uppercase mb-1.5 font-mono">Cantidad *</label>
               <div className="relative">
                 <input
                   type="number"
@@ -176,9 +176,9 @@ export default function ModalMovimientoMasa({
                   placeholder="0.00"
                   value={formData.cantidad}
                   onChange={handleChange}
-                  className="w-full border border-stone-200 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-stone-50 font-mono text-base font-bold"
+                  className="w-full bg-stone-950 border border-stone-800 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-amber-400 placeholder-stone-600 font-mono text-base font-bold"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-stone-400 font-bold text-xs select-none">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono text-stone-500 font-bold text-xs select-none">
                   {masas.find(m => m.id === Number(formData.masa_id))?.unidad_medida || 'unid'}
                 </span>
               </div>
@@ -186,21 +186,21 @@ export default function ModalMovimientoMasa({
 
             {/* Fecha */}
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 font-mono">Fecha *</label>
+              <label className="block text-xs font-bold text-stone-300 uppercase mb-1.5 font-mono">Fecha *</label>
               <input
                 type="date"
                 name="fecha"
                 required
                 value={formData.fecha}
                 onChange={handleChange}
-                className="w-full border border-stone-200 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-stone-50 font-mono"
+                className="w-full bg-stone-950 border border-stone-800 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-white font-mono"
               />
             </div>
           </div>
 
           {/* Motivo */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 font-mono">Motivo o Referencia *</label>
+            <label className="block text-xs font-bold text-stone-300 uppercase mb-1.5 font-mono">Motivo o Referencia *</label>
             <input
               type="text"
               name="motivo"
@@ -208,12 +208,12 @@ export default function ModalMovimientoMasa({
               placeholder={formData.tipo_movimiento === 'ENTRADA' ? "Ej: Producción del día" : "Ej: Uso para croissants horneados, merma..."}
               value={formData.motivo}
               onChange={handleChange}
-              className="w-full border border-stone-200 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-stone-50 font-medium"
+              className="w-full bg-stone-950 border border-stone-800 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-white placeholder-stone-600 font-medium"
             />
           </div>
 
-          <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-stone-100">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-stone-200 rounded-xl font-bold text-gray-600 hover:bg-stone-50 transition-colors cursor-pointer">Cancelar</button>
+          <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-stone-800">
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-stone-700 rounded-xl font-bold text-stone-300 hover:bg-stone-800 transition-colors cursor-pointer">Cancelar</button>
             <button type="submit" disabled={loading} className="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow">
               <Save size={16} /> {loading ? 'Registrando...' : 'Registrar Movimiento'}
             </button>

@@ -57,44 +57,44 @@ export default function ModalPeriodo({ isOpen, onClose, onSaved }: { isOpen: boo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-stone-900 border border-stone-800 rounded-xl shadow-2xl shadow-black/40 w-full max-w-md overflow-hidden flex flex-col">
         <div className="bg-emerald-800 p-4 text-white flex justify-between items-center">
           <h3 className="font-bold">Añadir Nuevo Periodo</h3>
           <button onClick={onClose} className="hover:bg-emerald-700 p-1 rounded"><X size={20}/></button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 text-sm text-gray-800">
-          
+
+        <form onSubmit={handleSubmit} className="p-6 text-sm text-stone-200">
+
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block font-bold mb-1">Mes (1-12)</label>
-              <input type="number" min="1" max="12" name="mes" value={formData.mes} onChange={handleChange} onBlur={autoFillDates} className="w-full border rounded p-2" />
+              <label className="block font-bold mb-1 text-stone-300">Mes (1-12)</label>
+              <input type="number" min="1" max="12" name="mes" value={formData.mes} onChange={handleChange} onBlur={autoFillDates} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block font-bold mb-1">Año</label>
-              <input type="number" name="anio" value={formData.anio} onChange={handleChange} onBlur={autoFillDates} className="w-full border rounded p-2" />
+              <label className="block font-bold mb-1 text-stone-300">Año</label>
+              <input type="number" name="anio" value={formData.anio} onChange={handleChange} onBlur={autoFillDates} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
           </div>
 
           <div className="mb-4">
-            <label className="block font-bold mb-1">Nombre del Periodo</label>
-            <input type="text" name="nombre" required value={formData.nombre} onChange={handleChange} className="w-full border rounded p-2 bg-gray-50 font-bold" placeholder="MAYO 2026" />
+            <label className="block font-bold mb-1 text-stone-300">Nombre del Periodo</label>
+            <input type="text" name="nombre" required value={formData.nombre} onChange={handleChange} className="w-full bg-stone-900 border border-stone-800 rounded-lg p-2 text-amber-400 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-bold" placeholder="MAYO 2026" />
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <label className="block font-bold mb-1 text-xs">FECHA INICIO</label>
-              <input type="date" name="fecha_inicio" required value={formData.fecha_inicio} onChange={handleChange} className="w-full border rounded p-2 text-xs" />
+              <label className="block font-bold mb-1 text-xs text-stone-300">FECHA INICIO</label>
+              <input type="date" name="fecha_inicio" required value={formData.fecha_inicio} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-xs text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block font-bold mb-1 text-xs">FECHA FIN</label>
-              <input type="date" name="fecha_fin" required value={formData.fecha_fin} onChange={handleChange} className="w-full border rounded p-2 text-xs" />
+              <label className="block font-bold mb-1 text-xs text-stone-300">FECHA FIN</label>
+              <input type="date" name="fecha_fin" required value={formData.fecha_fin} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-xs text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
           </div>
 
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-stone-700 rounded font-bold text-stone-300 hover:bg-stone-800">Cancelar</button>
             <button type="submit" disabled={loading} className="px-6 py-2 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700 flex items-center gap-2">
               <Save size={16} /> {loading ? 'Guardando...' : 'Crear Periodo'}
             </button>

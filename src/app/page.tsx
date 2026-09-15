@@ -1970,15 +1970,15 @@ export default function SistemaContableYanaloma() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-800 font-sans antialiased">
-      <header className="bg-emerald-800 text-white p-4 shadow-sm border-b border-emerald-950">
+    <div className="min-h-screen bg-stone-950 text-stone-200 font-sans antialiased">
+      <header className="bg-emerald-900 text-white p-4 shadow-sm border-b border-emerald-950">
         <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-xl font-bold tracking-tight">THE ROASTING LAB / CAFÉ YANALOMA</h1>
             <p className="text-xs text-emerald-200 font-mono">Gestión Contable Integrada • Expresado en Bolivianos (Bs)</p>
           </div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => {
                 const cacheKey = `yanaloma_cache_${periodoActualId || 'default'}`;
                 localStorage.removeItem(cacheKey);
@@ -1989,10 +1989,10 @@ export default function SistemaContableYanaloma() {
             >
               <RefreshCw size={15} />
             </button>
-            <div className="flex items-center bg-emerald-700 px-3 py-1 rounded border border-emerald-600">
+            <div className="flex items-center bg-emerald-800 px-3 py-1 rounded border border-emerald-600">
               <span className="text-xs font-mono mr-2">Periodo:</span>
-              <select 
-                value={periodoActualId || ''} 
+              <select
+                value={periodoActualId || ''}
                 onChange={(e) => {
                   if (e.target.value === 'NEW') setShowPeriodoModal(true);
                   else setPeriodoActualId(Number(e.target.value));
@@ -2001,7 +2001,7 @@ export default function SistemaContableYanaloma() {
               >
                 {periodos.length === 0 && <option value="">Cargando...</option>}
                 {periodos.map(p => (
-                  <option key={p.id} value={p.id} className="text-gray-800">{p.nombre}</option>
+                  <option key={p.id} value={p.id} className="text-stone-800">{p.nombre}</option>
                 ))}
                 <option disabled>──────────</option>
                 <option value="NEW" className="font-bold text-emerald-800 bg-emerald-100">+ Añadir nuevo mes...</option>
@@ -2010,13 +2010,13 @@ export default function SistemaContableYanaloma() {
             <a href="/pos" className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-1.5 rounded shadow flex items-center gap-1.5 transition-colors">
               <ShoppingCart size={14} /> IR A CAJA (POS)
             </a>
-            <button onClick={exportToExcel} className="bg-white hover:bg-gray-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded shadow flex items-center gap-1.5 transition-colors">
+            <button onClick={exportToExcel} className="bg-emerald-800/40 hover:bg-emerald-800/70 border border-emerald-600/40 text-white text-xs font-bold px-3 py-1.5 rounded shadow flex items-center gap-1.5 transition-colors">
               <Download size={14} /> Exportar Reporte
             </button>
             {currentUser && (
               <div className="flex items-center gap-2 bg-emerald-900/40 px-3 py-1 rounded border border-emerald-700/30 text-xs font-mono text-emerald-100 shadow-inner">
                 <span className="font-bold">👤 {currentUser.nombre} ({currentUser.role.toUpperCase()})</span>
-                <button 
+                <button
                   onClick={() => {
                     localStorage.removeItem('yanaloma_user');
                     window.location.reload();
@@ -2032,7 +2032,7 @@ export default function SistemaContableYanaloma() {
         </div>
       </header>
 
-      <nav className="bg-white border-b shadow-sm overflow-x-auto whitespace-nowrap sticky top-0 z-50">
+      <nav className="bg-stone-900 border-b border-stone-800 shadow-sm overflow-x-auto whitespace-nowrap sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto flex">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -2042,10 +2042,10 @@ export default function SistemaContableYanaloma() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-6 py-4 text-xs font-bold tracking-wider uppercase border-b-4 transition-all ${
-                  isActive ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  isActive ? 'border-emerald-600 text-emerald-400 bg-emerald-950/40' : 'border-transparent text-stone-500 hover:bg-stone-850 hover:text-stone-200'
                 }`}
               >
-                <Icon size={16} className={isActive ? 'text-emerald-600' : 'text-gray-400'} />
+                <Icon size={16} className={isActive ? 'text-emerald-400' : 'text-stone-500'} />
                 {tab.name}
               </button>
             );
@@ -2055,11 +2055,11 @@ export default function SistemaContableYanaloma() {
 
       <main className="max-w-[1600px] mx-auto p-4 sm:p-6">
         {loading ? (
-           <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-12 text-center text-gray-500 font-mono animate-pulse">
+           <div className="bg-stone-900 border border-stone-800 rounded-lg shadow-sm p-12 text-center text-stone-500 font-mono animate-pulse">
              Calculando y Sincronizando con Base de Datos...
            </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 overflow-x-auto">
+          <div className="bg-stone-900 border border-stone-800 rounded-lg shadow-sm p-6 overflow-x-auto">
             {/* 1. PESTAÑA: ESTADO DE RESULTADOS */}
             {activeTab === 'estado_resultados' && (
               <div>
@@ -2067,89 +2067,89 @@ export default function SistemaContableYanaloma() {
                   
                   {/* TABLA CONTABLE */}
                   <div className="lg:col-span-7 w-full">
-                    <div className="border rounded overflow-hidden shadow-sm bg-white p-6">
+                    <div className="border border-stone-800 rounded overflow-hidden shadow-sm bg-stone-900 p-6">
                       {/* HEADER IDENTICO AL CSV */}
-                      <div className="text-center font-mono mb-6 uppercase text-xs text-stone-600 border-b pb-4 leading-relaxed">
-                        <div className="font-bold text-sm text-stone-850">THE ROASTING LAB S.R.L.</div>
-                        <div className="font-bold text-stone-800">ESTADO DE RESULTADOS</div>
+                      <div className="text-center font-mono mb-6 uppercase text-xs text-stone-400 border-b border-stone-800 pb-4 leading-relaxed">
+                        <div className="font-bold text-sm text-stone-100">THE ROASTING LAB S.R.L.</div>
+                        <div className="font-bold text-stone-100">ESTADO DE RESULTADOS</div>
                         <div>{periodoActual.toLowerCase()}</div>
                         <div>EXPRESADO EN BOLIVIANOS (BS)</div>
                       </div>
-                      
+
                       <table className="w-full text-sm text-left">
-                        <tbody className="divide-y font-medium text-gray-700">
+                        <tbody className="divide-y divide-stone-850 font-medium text-stone-300">
                           {/* INGRESOS TOTALES */}
-                          <tr className="bg-gray-100 font-bold font-mono">
+                          <tr className="bg-stone-850 font-bold font-mono">
                             <td className="px-6 py-2.5" colSpan={3}>INGRESOS TOTALES</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Ventas</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.vVentas)}</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Servicios</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.vServicios)}</td>
                           </tr>
-                          <tr className="border-b border-gray-200 font-bold font-mono">
+                          <tr className="border-b border-stone-800 font-bold font-mono">
                             <td></td>
                             <td></td>
-                            <td className="px-6 py-2 text-right text-stone-800 border-t border-stone-400">{formatNumber(plData.totalIngresos)}</td>
+                            <td className="px-6 py-2 text-right text-stone-100 border-t border-stone-600">{formatNumber(plData.totalIngresos)}</td>
                           </tr>
-                          
+
                           {/* COSTOS TOTALES */}
-                          <tr className="bg-gray-100 font-bold font-mono">
+                          <tr className="bg-stone-850 font-bold font-mono">
                             <td className="px-6 py-2.5" colSpan={3}>COSTOS TOTALES</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Inventario</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cInventario)}</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Insumos alimenticios</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cInsumos)}</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Mano de obra</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cManoObra)}</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Costos secundarios</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cSecundarios)}</td>
                           </tr>
-                          <tr className="border-b border-gray-200 font-bold font-mono">
+                          <tr className="border-b border-stone-800 font-bold font-mono">
                             <td></td>
                             <td></td>
-                            <td className="px-6 py-2 text-right text-stone-800 border-t border-stone-400">{formatNumber(plData.totalCostos)}</td>
+                            <td className="px-6 py-2 text-right text-stone-100 border-t border-stone-600">{formatNumber(plData.totalCostos)}</td>
                           </tr>
-                          
+
                           {/* IMPUESTOS */}
-                          <tr className="bg-gray-100 font-bold font-mono">
+                          <tr className="bg-stone-850 font-bold font-mono">
                             <td className="px-6 py-2.5" colSpan={3}>IMPUESTOS</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">IT</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.iIT)}</td>
                           </tr>
-                          <tr className="border-b border-gray-100 font-mono">
+                          <tr className="border-b border-stone-850 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">IVA</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.iIVA)}</td>
                           </tr>
-                          <tr className="border-b border-gray-200 font-bold font-mono">
+                          <tr className="border-b border-stone-800 font-bold font-mono">
                             <td></td>
                             <td></td>
-                            <td className="px-6 py-2 text-right text-stone-800 border-t border-stone-400">{formatNumber(plData.totalImpuestos)}</td>
+                            <td className="px-6 py-2 text-right text-stone-100 border-t border-stone-600">{formatNumber(plData.totalImpuestos)}</td>
                           </tr>
-                          
+
                           {/* TOTAL */}
-                          <tr className="bg-stone-800 text-white font-bold text-base font-mono">
+                          <tr className="bg-emerald-900 text-white font-bold text-base font-mono">
                             <td className="px-6 py-3">TOTAL</td>
                             <td></td>
                             <td className="px-6 py-3 text-right">{formatNumber(plData.utilidad)}</td>
@@ -2159,17 +2159,17 @@ export default function SistemaContableYanaloma() {
                           <tr><td colSpan={3} className="h-8"></td></tr>
 
                           {/* DESTACADO */}
-                          <tr className="bg-purple-50/40 font-bold font-mono">
+                          <tr className="bg-purple-950/30 font-bold font-mono">
                             <td className="px-6 py-2.5" colSpan={3}>Destacado</td>
                           </tr>
                           {plData.destacado.length === 0 && (
-                            <tr><td colSpan={3} className="px-6 py-3 text-center text-gray-400 italic font-normal font-mono">No hay gastos destacados en este periodo.</td></tr>
+                            <tr><td colSpan={3} className="px-6 py-3 text-center text-stone-500 italic font-normal font-mono">No hay gastos destacados en este periodo.</td></tr>
                           )}
                           {plData.destacado.map((d: any) => (
-                            <tr key={d.id} className="border-b border-gray-100 font-mono">
+                            <tr key={d.id} className="border-b border-stone-850 font-mono">
                               <td className="px-6 py-2 pl-10 font-normal">{d.detalle}</td>
                               <td></td>
-                              <td className="px-6 py-2 text-right text-purple-750">
+                              <td className="px-6 py-2 text-right text-purple-400">
                                 {d.monto_total !== null && d.monto_total !== undefined ? formatNumber(d.monto_total) : ''}
                               </td>
                             </tr>
@@ -2179,16 +2179,16 @@ export default function SistemaContableYanaloma() {
                     </div>
 
                     {/* Rentabilidad de Productos (Todos los Productos) */}
-                    <div className="mt-8 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                      <div className="mb-4 pb-2 border-b">
-                        <h4 className="text-xs font-bold text-stone-850 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <div className="mt-8 bg-stone-900 border border-stone-800 rounded-lg p-6 shadow-sm">
+                      <div className="mb-4 pb-2 border-b border-stone-800">
+                        <h4 className="text-xs font-bold text-stone-100 uppercase tracking-wider font-mono flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
                           Productos (o Categorías) más rentables
                         </h4>
                       </div>
 
                       {/* RENDERIZADO DEL GRÁFICO DE BARRAS HORIZONTALES REAL (TODOS LOS PRODUCTOS) */}
-                      <div className="bg-white border rounded-lg p-4 shadow-inner space-y-3.5 max-h-[380px] overflow-y-auto">
+                      <div className="bg-stone-950 border border-stone-800 rounded-lg p-4 shadow-inner space-y-3.5 max-h-[380px] overflow-y-auto">
                         {(() => {
                           const topRentables = metricasOperativas.topRentables;
                           const maxGanancia = topRentables[0]?.ganancia || 1;
@@ -2197,23 +2197,23 @@ export default function SistemaContableYanaloma() {
                             const pct = maxGanancia > 0 ? (p.ganancia / maxGanancia) * 100 : 0;
                             return (
                               <div key={i} className="text-xs">
-                                <div className="flex justify-between items-center font-semibold text-gray-700 mb-0.5">
+                                <div className="flex justify-between items-center font-semibold text-stone-300 mb-0.5">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-bold font-mono text-cyan-700 bg-cyan-50 w-4 h-4 rounded-full flex items-center justify-center">{i+1}</span>
-                                    <span className="font-sans text-gray-800">{p.nombre}</span>
-                                    <span className="text-[10px] font-bold font-mono text-gray-400">({p.cantidad} uds)</span>
+                                    <span className="text-[10px] font-bold font-mono text-cyan-400 bg-cyan-950/40 w-4 h-4 rounded-full flex items-center justify-center">{i+1}</span>
+                                    <span className="font-sans text-stone-200">{p.nombre}</span>
+                                    <span className="text-[10px] font-bold font-mono text-stone-500">({p.cantidad} uds)</span>
                                   </div>
-                                  <div className="font-mono text-cyan-800 font-bold">Bs {formatNumber(p.ganancia)}</div>
+                                  <div className="font-mono text-cyan-300 font-bold">Bs {formatNumber(p.ganancia)}</div>
                                 </div>
-                                <div className="h-3 w-full bg-stone-100 rounded-full overflow-hidden mt-1.5">
-                                  <div 
+                                <div className="h-3 w-full bg-stone-800 rounded-full overflow-hidden mt-1.5">
+                                  <div
                                     style={{ width: `${pct}%` }}
                                     className="h-full bg-gradient-to-r from-cyan-600 to-teal-400 rounded-full transition-all duration-700 ease-out"
                                   />
                                 </div>
-                                <div className="flex justify-between items-center text-[9px] font-bold font-mono text-gray-400 mt-1">
+                                <div className="flex justify-between items-center text-[9px] font-bold font-mono text-stone-500 mt-1">
                                   <span>Margen Neto: Bs {formatNumber(p.margen)} / ud</span>
-                                  <span className="text-teal-600">Rentabilidad: +{Math.round(pct)}%</span>
+                                  <span className="text-teal-400">Rentabilidad: +{Math.round(pct)}%</span>
                                 </div>
                               </div>
                             );
@@ -2225,18 +2225,18 @@ export default function SistemaContableYanaloma() {
 
                   {/* ESTADÍSTICAS DE VENTAS DIARIAS */}
                   <div className="lg:col-span-5 w-full">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-2 border-b">
-                      <h2 className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                        <BarChart3 className="text-emerald-700" size={20} />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-2 border-b border-stone-800">
+                      <h2 className="text-lg font-bold text-stone-300 flex items-center gap-2">
+                        <BarChart3 className="text-emerald-400" size={20} />
                         VENTAS POR DÍA
                       </h2>
-                      <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200 self-start sm:self-auto">
+                      <div className="flex bg-stone-900 p-0.5 rounded-lg border border-stone-800 self-start sm:self-auto">
                         <button
                           onClick={() => setGraficoMetrica('monto')}
                           className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                             graficoMetrica === 'monto'
-                              ? 'bg-white text-emerald-800 shadow-sm'
-                              : 'text-gray-500 hover:text-gray-800'
+                              ? 'bg-stone-700 text-emerald-300 shadow-sm'
+                              : 'text-stone-500 hover:text-stone-200'
                           }`}
                         >
                           Monto (Bs)
@@ -2245,8 +2245,8 @@ export default function SistemaContableYanaloma() {
                           onClick={() => setGraficoMetrica('cantidad')}
                           className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                             graficoMetrica === 'cantidad'
-                              ? 'bg-white text-emerald-800 shadow-sm'
-                              : 'text-gray-500 hover:text-gray-800'
+                              ? 'bg-stone-700 text-emerald-300 shadow-sm'
+                              : 'text-stone-500 hover:text-stone-200'
                           }`}
                         >
                           Ventas
@@ -2254,35 +2254,35 @@ export default function SistemaContableYanaloma() {
                       </div>
                     </div>
 
-                    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                    <div className="bg-stone-900 border border-stone-800 rounded-lg p-6 shadow-sm">
                       {/* KPIs del día de la semana */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                        <div className="bg-emerald-50/60 border border-emerald-100/80 rounded-xl p-4 flex items-center gap-3">
+                        <div className="bg-emerald-950/40 border border-emerald-900/50 rounded-xl p-4 flex items-center gap-3">
                           <div className="p-3 bg-emerald-700 text-white rounded-lg shadow-sm">
                             <TrendingUp size={18} />
                           </div>
                           <div>
-                            <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-800">Mayor Recaudación</p>
-                            <p className="text-base font-bold text-gray-800 leading-tight">{ventasDiaSemana.maxVentaDia.dia}</p>
-                            <p className="text-xs font-mono font-bold text-emerald-700 mt-0.5">Bs {formatNumber(ventasDiaSemana.maxVentaDia.total)}</p>
+                            <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-300">Mayor Recaudación</p>
+                            <p className="text-base font-bold text-stone-100 leading-tight">{ventasDiaSemana.maxVentaDia.dia}</p>
+                            <p className="text-xs font-mono font-bold text-emerald-400 mt-0.5">Bs {formatNumber(ventasDiaSemana.maxVentaDia.total)}</p>
                           </div>
                         </div>
 
-                        <div className="bg-amber-50/60 border border-amber-100/80 rounded-xl p-4 flex items-center gap-3">
+                        <div className="bg-amber-950/40 border border-amber-900/50 rounded-xl p-4 flex items-center gap-3">
                           <div className="p-3 bg-amber-600 text-white rounded-lg shadow-sm">
                             <ShoppingCart size={18} />
                           </div>
                           <div>
-                            <p className="text-[10px] uppercase font-bold tracking-wider text-amber-800">Mayor Afluencia</p>
-                            <p className="text-base font-bold text-gray-800 leading-tight">{ventasDiaSemana.maxCantDia.dia}</p>
-                            <p className="text-xs font-mono font-bold text-amber-700 mt-0.5">{ventasDiaSemana.maxCantDia.cantidad} Transacciones</p>
+                            <p className="text-[10px] uppercase font-bold tracking-wider text-amber-300">Mayor Afluencia</p>
+                            <p className="text-base font-bold text-stone-100 leading-tight">{ventasDiaSemana.maxCantDia.dia}</p>
+                            <p className="text-xs font-mono font-bold text-amber-400 mt-0.5">{ventasDiaSemana.maxCantDia.cantidad} Transacciones</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Gráfico de Barras */}
                       <div className="h-64 flex flex-col justify-end pt-4">
-                        <div className="flex items-end justify-between h-48 px-2 border-b border-gray-200 pb-2">
+                        <div className="flex items-end justify-between h-48 px-2 border-b border-stone-800 pb-2">
                           {ventasDiaSemana.datos.map((d, index) => {
                             const val = graficoMetrica === 'monto' ? d.total : d.cantidad;
                             const maxVal = graficoMetrica === 'monto' 
@@ -2302,15 +2302,15 @@ export default function SistemaContableYanaloma() {
                                   </div>
                                   <div className="w-1.5 h-1.5 bg-stone-800 rotate-45 -mt-1"></div>
                                 </div>
-                                
+
                                 {/* Barra */}
                                 <div className="w-full px-1 sm:px-2 flex flex-col justify-end h-full">
-                                  <div 
+                                  <div
                                     style={{ height: `${Math.max(percent, 4)}%` }}
                                     className={`w-full rounded-t transition-all duration-500 ease-out cursor-pointer shadow-sm group-hover:scale-y-102 origin-bottom ${
-                                      isMax 
-                                        ? 'bg-gradient-to-t from-emerald-700 to-teal-400 shadow-md ring-2 ring-emerald-500/20' 
-                                        : 'bg-gradient-to-t from-gray-300 to-gray-400 group-hover:from-emerald-600/80 group-hover:to-teal-400/80'
+                                      isMax
+                                        ? 'bg-gradient-to-t from-emerald-700 to-teal-400 shadow-md ring-2 ring-emerald-500/20'
+                                        : 'bg-gradient-to-t from-stone-700 to-stone-600 group-hover:from-emerald-600/80 group-hover:to-teal-400/80'
                                     }`}
                                   />
                                 </div>
@@ -2318,15 +2318,15 @@ export default function SistemaContableYanaloma() {
                             );
                           })}
                         </div>
-                        
+
                         {/* Etiquetas */}
-                        <div className="flex justify-between items-center pt-2 px-2 text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider font-mono">
+                        <div className="flex justify-between items-center pt-2 px-2 text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider font-mono">
                           {ventasDiaSemana.datos.map((d, index) => {
                             const isMax = graficoMetrica === 'monto'
                               ? d.dia === ventasDiaSemana.maxVentaDia.dia
                               : d.dia === ventasDiaSemana.maxCantDia.dia;
                             return (
-                              <div key={index} className={`flex-1 text-center truncate ${isMax ? 'text-emerald-700 font-extrabold' : ''}`}>
+                              <div key={index} className={`flex-1 text-center truncate ${isMax ? 'text-emerald-400 font-extrabold' : ''}`}>
                                 {d.dia.slice(0, 3)}
                               </div>
                             );
@@ -2335,15 +2335,15 @@ export default function SistemaContableYanaloma() {
                       </div>
 
                       {/* Desglose */}
-                      <div className="mt-6 border-t border-gray-150 pt-4">
-                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider font-mono mb-3">Resumen de Ventas</h4>
+                      <div className="mt-6 border-t border-stone-850 pt-4">
+                        <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider font-mono mb-3">Resumen de Ventas</h4>
                         <div className="grid grid-cols-7 text-center gap-1">
                           {ventasDiaSemana.datos.map((d, index) => {
                             const isMax = graficoMetrica === 'monto'
                               ? d.dia === ventasDiaSemana.maxVentaDia.dia
                               : d.dia === ventasDiaSemana.maxCantDia.dia;
                             return (
-                              <div key={index} className={`p-1.5 rounded-lg ${isMax ? 'bg-emerald-50 border border-emerald-150 text-emerald-800' : 'bg-gray-50 text-gray-600'}`}>
+                              <div key={index} className={`p-1.5 rounded-lg ${isMax ? 'bg-emerald-950/40 border border-emerald-900/50 text-emerald-300' : 'bg-stone-850 text-stone-400'}`}>
                                 <p className="text-[9px] font-extrabold font-mono uppercase leading-none">{d.dia.slice(0, 3)}</p>
                                 <p className="text-xs font-bold font-mono mt-1 leading-none">
                                   {graficoMetrica === 'monto' ? `${Math.round(d.total)}` : d.cantidad}
@@ -2356,33 +2356,33 @@ export default function SistemaContableYanaloma() {
                     </div>
 
                     {/* 2. Gráficos Operativos y de Rendimiento */}
-                    <div className="mt-8 border-t border-gray-200 pt-6">
-                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider font-mono mb-2 flex items-center gap-1.5">
-                          <BarChart3 className="text-emerald-700" size={16} />
+                    <div className="mt-8 border-t border-stone-800 pt-6">
+                        <h3 className="text-sm font-bold text-stone-300 uppercase tracking-wider font-mono mb-2 flex items-center gap-1.5">
+                          <BarChart3 className="text-emerald-400" size={16} />
                           2. Gráficos Operativos y de Rendimiento
                         </h3>
-                        <p className="text-xs text-gray-500 font-sans mb-4 leading-relaxed">
+                        <p className="text-xs text-stone-500 font-sans mb-4 leading-relaxed">
                           Si además de los asientos contables el sistema procesa el detalle transaccional de las órdenes:
                         </p>
 
                         <div className="space-y-4">
                           {/* Mapa de Calor */}
-                          <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 transition-all hover:shadow-md">
+                          <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 transition-all hover:shadow-md">
                             <div className="mb-3">
-                              <h4 className="text-xs font-bold text-stone-850 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                              <h4 className="text-xs font-bold text-stone-100 uppercase tracking-wider font-mono flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                 Mapa de Calor de Ventas (Día de la semana vs. Hora)
                               </h4>
                             </div>
-                            
+
                             {/* RENDERIZADO DEL HEATMAP REAL */}
-                            <div className="bg-white border rounded-lg p-3 shadow-inner overflow-x-auto">
+                            <div className="bg-stone-900 border border-stone-800 rounded-lg p-3 shadow-inner overflow-x-auto">
                               {!mounted ? (
-                                <div className="h-44 bg-stone-50 animate-pulse flex items-center justify-center text-xs text-gray-400 font-mono">Cargando mapa de calor...</div>
+                                <div className="h-44 bg-stone-950 animate-pulse flex items-center justify-center text-xs text-stone-500 font-mono">Cargando mapa de calor...</div>
                               ) : (
                                 <table className="w-full min-w-[280px]">
                                   <thead>
-                                    <tr className="text-[9px] font-bold font-mono text-gray-400">
+                                    <tr className="text-[9px] font-bold font-mono text-stone-500">
                                       <th className="w-8"></th>
                                       {metricasOperativas.horaEtiquetas.map((h, i) => (
                                         <th key={i} className="pb-1.5 text-center">{h}</th>
@@ -2397,15 +2397,15 @@ export default function SistemaContableYanaloma() {
 
                                       return (
                                         <tr key={dayIdx}>
-                                          <td className="text-[10px] font-bold font-mono text-gray-500 text-left pr-2 py-0.5">{shortName}</td>
+                                          <td className="text-[10px] font-bold font-mono text-stone-500 text-left pr-2 py-0.5">{shortName}</td>
                                           {rowValues.map((val, hourIdx) => {
                                             const intensity = maxRowVal > 0 ? val / maxRowVal : 0;
                                             return (
                                               <td key={hourIdx} className="p-0.5 relative group">
-                                                <div 
-                                                  style={{ 
-                                                    backgroundColor: val === 0 ? '#f5f5f4' : `rgba(4, 120, 87, ${Math.max(0.12, intensity)})`,
-                                                    color: val === 0 ? '#d6d3d1' : (intensity > 0.4 ? '#ffffff' : '#047857')
+                                                <div
+                                                  style={{
+                                                    backgroundColor: val === 0 ? '#1c1917' : `rgba(16, 185, 129, ${Math.max(0.15, intensity)})`,
+                                                    color: val === 0 ? '#57534e' : (intensity > 0.4 ? '#ffffff' : '#6ee7b7')
                                                   }}
                                                   className={`h-7 rounded flex items-center justify-center text-[9px] font-bold font-mono transition-all duration-300 hover:scale-105 cursor-pointer`}
                                                 >
@@ -2430,18 +2430,18 @@ export default function SistemaContableYanaloma() {
                           </div>
 
                           {/* Evolución del Ticket Promedio */}
-                          <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 transition-all hover:shadow-md">
+                          <div className="bg-stone-950 border border-stone-800 rounded-xl p-4 transition-all hover:shadow-md">
                             <div className="mb-3">
-                              <h4 className="text-xs font-bold text-stone-850 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                              <h4 className="text-xs font-bold text-stone-100 uppercase tracking-wider font-mono flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-teal-500"></span>
                                 Evolución del Ticket Promedio
                               </h4>
                             </div>
 
                             {/* RENDERIZADO DEL GRÁFICO DE LINEAS REAL */}
-                            <div className="bg-white border rounded-lg p-3 shadow-inner">
+                            <div className="bg-stone-900 border border-stone-800 rounded-lg p-3 shadow-inner">
                               {!mounted ? (
-                                <div className="h-28 bg-stone-50 border rounded-lg animate-pulse flex items-center justify-center text-xs text-gray-400 font-mono">Cargando gráfico...</div>
+                                <div className="h-28 bg-stone-950 border border-stone-800 rounded-lg animate-pulse flex items-center justify-center text-xs text-stone-500 font-mono">Cargando gráfico...</div>
                               ) : (() => {
                                 const maxPromedio = Math.max(...metricasOperativas.ticketPorDia.map(t => t.promedio)) || 50;
                                 const pointsStr = metricasOperativas.ticketPorDia
@@ -2464,9 +2464,9 @@ export default function SistemaContableYanaloma() {
                                   <div className="relative">
                                     <svg viewBox="0 0 500 125" className="w-full h-28 overflow-visible">
                                       {/* Gridlines */}
-                                      <line x1="15" y1="20" x2="485" y2="20" stroke="#f3f4f6" strokeWidth="1" />
-                                      <line x1="15" y1="65" x2="485" y2="65" stroke="#f3f4f6" strokeWidth="1" />
-                                      <line x1="15" y1="110" x2="485" y2="110" stroke="#e5e7eb" strokeWidth="1" />
+                                      <line x1="15" y1="20" x2="485" y2="20" stroke="#292524" strokeWidth="1" />
+                                      <line x1="15" y1="65" x2="485" y2="65" stroke="#292524" strokeWidth="1" />
+                                      <line x1="15" y1="110" x2="485" y2="110" stroke="#44403c" strokeWidth="1" />
 
                                       {/* Area chart filled under the line */}
                                       <path d={areaPath} fill="rgba(20, 184, 166, 0.08)" />
@@ -2487,14 +2487,14 @@ export default function SistemaContableYanaloma() {
                                         const y = 110 - (t.promedio / maxPromedio) * 90;
                                         return (
                                           <g key={i} className="group cursor-pointer">
-                                            <circle cx={x} cy={y} r="3" fill="#14b8a6" className="transition-all duration-300 group-hover:r-5 group-hover:fill-teal-700" />
+                                            <circle cx={x} cy={y} r="3" fill="#14b8a6" className="transition-all duration-300 group-hover:r-5 group-hover:fill-teal-400" />
                                             <circle cx={x} cy={y} r="10" fill="transparent" />
                                             <title>Día {t.dia}: Bs {t.promedio}</title>
                                           </g>
                                         );
                                       })}
                                     </svg>
-                                    <div className="flex justify-between items-center text-[8px] font-bold font-mono text-gray-400 pt-1.5 px-2.5">
+                                    <div className="flex justify-between items-center text-[8px] font-bold font-mono text-stone-500 pt-1.5 px-2.5">
                                       <span>Día 1</span>
                                       <span>Día 10</span>
                                       <span>Día 20</span>
@@ -2515,35 +2515,35 @@ export default function SistemaContableYanaloma() {
 
             {activeTab === 'libro_diario' && (
               <div>
-                <div className="flex justify-between items-center mb-4 pb-2 border-b">
-                  <h2 className="text-lg font-bold text-gray-700">LIBRO DIARIO DE CONTABILIDAD</h2>
+                <div className="flex justify-between items-center mb-4 pb-2 border-b border-stone-800">
+                  <h2 className="text-lg font-bold text-stone-300">LIBRO DIARIO DE CONTABILIDAD</h2>
                   <button onClick={() => setShowDiarioModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1">
                     <Plus size={14} /> Registrar Asiento
                   </button>
                 </div>
-                
+
                 {/* Controles de Filtros y Buscador */}
-                <div className="bg-gray-50 border rounded-lg p-4 mb-6">
+                <div className="bg-stone-950 border border-stone-800 rounded-lg p-4 mb-6">
                   {/* Buscador por cuenta o glosa */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 font-mono">Buscar por Cuenta o Glosa</label>
+                    <label className="block text-xs font-bold text-stone-500 uppercase mb-1.5 font-mono">Buscar por Cuenta o Glosa</label>
                     <div className="relative">
-                      <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Código, cuenta, glosa o N° asiento..." 
+                      <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500" />
+                      <input
+                        type="text"
+                        placeholder="Código, cuenta, glosa o N° asiento..."
                         value={diarioSearchTerm}
                         onChange={(e) => setDiarioSearchTerm(e.target.value)}
-                        className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 w-full bg-white font-mono"
+                        className="pl-9 pr-4 py-2 border border-stone-800 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 w-full bg-stone-900 text-stone-200 font-mono"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 text-xs text-gray-500">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 text-xs text-stone-500">
                   <div className="flex items-center gap-3">
                     <span>
-                      Mostrando <span className="font-bold text-gray-700">{filteredDiarioPlanillaSeats.length}</span> asientos contables.
+                      Mostrando <span className="font-bold text-stone-300">{filteredDiarioPlanillaSeats.length}</span> asientos contables.
                     </span>
                     <button
                       type="button"
@@ -2555,27 +2555,27 @@ export default function SistemaContableYanaloma() {
                   </div>
                   {/* Ordenadores */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-gray-400 uppercase font-mono">Ordenar por:</span>
-                    <button 
-                      onClick={() => handleDiarioSort('nro_asiento')} 
+                    <span className="font-bold text-stone-500 uppercase font-mono">Ordenar por:</span>
+                    <button
+                      onClick={() => handleDiarioSort('nro_asiento')}
                       className={`px-2.5 py-1 rounded border transition-all flex items-center gap-1 font-mono font-bold ${
-                        diarioSortKey === 'nro_asiento' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white hover:bg-gray-50'
+                        diarioSortKey === 'nro_asiento' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-850'
                       }`}
                     >
                       N° Asiento {diarioSortKey === 'nro_asiento' && (diarioSortDirection === 'asc' ? '▲' : '▼')}
                     </button>
-                    <button 
-                      onClick={() => handleDiarioSort('fecha')} 
+                    <button
+                      onClick={() => handleDiarioSort('fecha')}
                       className={`px-2.5 py-1 rounded border transition-all flex items-center gap-1 font-mono font-bold ${
-                        diarioSortKey === 'fecha' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white hover:bg-gray-50'
+                        diarioSortKey === 'fecha' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-850'
                       }`}
                     >
                       Fecha {diarioSortKey === 'fecha' && (diarioSortDirection === 'asc' ? '▲' : '▼')}
                     </button>
-                    <button 
-                      onClick={() => handleDiarioSort('monto')} 
+                    <button
+                      onClick={() => handleDiarioSort('monto')}
                       className={`px-2.5 py-1 rounded border transition-all flex items-center gap-1 font-mono font-bold ${
-                        diarioSortKey === 'monto' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white hover:bg-gray-50'
+                        diarioSortKey === 'monto' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-850'
                       }`}
                     >
                       Importe {diarioSortKey === 'monto' && (diarioSortDirection === 'asc' ? '▲' : '▼')}
@@ -2584,11 +2584,11 @@ export default function SistemaContableYanaloma() {
                 </div>
 
                 {filteredDiarioPlanillaSeats.length === 0 && (
-                  <div className="text-center py-10 text-gray-400">No se encontraron asientos contables con los filtros seleccionados.</div>
+                  <div className="text-center py-10 text-stone-500">No se encontraron asientos contables con los filtros seleccionados.</div>
                 )}
 
                 {filteredDiarioPlanillaSeats.length > 0 && (
-                  <div className="overflow-x-auto bg-white border border-stone-200 shadow-sm rounded-xl p-6 flex justify-center">
+                  <div className="overflow-x-auto bg-stone-900 border border-stone-800 shadow-sm rounded-xl p-6 flex justify-center">
                     <div className="waffle-container">
                       <style>{`
                         .waffle-container {
@@ -3009,8 +3009,8 @@ export default function SistemaContableYanaloma() {
 
             {activeTab === 'libro_mayor' && (
               <div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 pb-2 border-b gap-4">
-                  <h2 className="text-lg font-bold text-gray-700">LIBRO MAYOR - {periodoActual}</h2>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 pb-2 border-b border-stone-800 gap-4">
+                  <h2 className="text-lg font-bold text-stone-300">LIBRO MAYOR - {periodoActual}</h2>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -3019,11 +3019,11 @@ export default function SistemaContableYanaloma() {
                     >
                       🖨️ Imprimir Libro Mayor (PDF)
                     </button>
-                    <span className="text-xs font-bold text-gray-500 uppercase">Cuenta:</span>
+                    <span className="text-xs font-bold text-stone-500 uppercase">Cuenta:</span>
                     <select
                       value={cuentaMayorActiva}
                       onChange={(e) => setCuentaMayorActiva(e.target.value)}
-                      className="border border-gray-300 rounded p-1.5 text-xs font-bold text-emerald-800 font-mono outline-none focus:ring-1 focus:ring-emerald-500 bg-white min-w-[250px]"
+                      className="border border-stone-800 rounded p-1.5 text-xs font-bold text-emerald-300 font-mono outline-none focus:ring-1 focus:ring-emerald-500 bg-stone-900 min-w-[250px]"
                     >
                       <option value="TODAS">-- MOSTRAR TODAS LAS CUENTAS --</option>
                       {mayorPorCuenta.map(mayor => (
@@ -3032,8 +3032,8 @@ export default function SistemaContableYanaloma() {
                     </select>
                   </div>
                 </div>
-                
-                {mayorPorCuenta.length === 0 && <p className="text-gray-500 text-center py-10">No hay movimientos registrados en ninguna cuenta.</p>}
+
+                {mayorPorCuenta.length === 0 && <p className="text-stone-500 text-center py-10">No hay movimientos registrados en ninguna cuenta.</p>}
                 
                 {mayorPorCuenta
                   .filter(m => cuentaMayorActiva === 'TODAS' || m.codigo === cuentaMayorActiva)
@@ -3043,8 +3043,8 @@ export default function SistemaContableYanaloma() {
                     const finalSaldo = mayor.movimientos.length > 0 ? mayor.movimientos[mayor.movimientos.length - 1].saldoAcumulado : 0;
 
                     return (
-                      <div key={mayor.codigo} className="mb-10 bg-white border rounded-lg shadow-sm overflow-hidden">
-                        <h3 className="text-sm font-bold text-stone-800 bg-gray-100 p-2.5 border-l-4 border-stone-800 shadow-sm flex items-center gap-2 font-mono uppercase">
+                      <div key={mayor.codigo} className="mb-10 bg-stone-900 border border-stone-800 rounded-lg shadow-sm overflow-hidden">
+                        <h3 className="text-sm font-bold text-stone-100 bg-stone-850 p-2.5 border-l-4 border-stone-600 shadow-sm flex items-center gap-2 font-mono uppercase">
                           <Layers size={16} />
                           {mayor.nombre}
                         </h3>
@@ -3060,15 +3060,15 @@ export default function SistemaContableYanaloma() {
                                 <th className="px-4 py-2 border-b border-stone-700 text-right">SALDO</th>
                               </tr>
                             </thead>
-                            <tbody className="font-mono divide-y text-gray-700 bg-white">
+                            <tbody className="font-mono divide-y divide-stone-850 text-stone-300 bg-stone-900">
                               {mayor.movimientos.length === 0 ? (
-                                <tr className="hover:bg-gray-50 text-gray-400 italic">
-                                  <td className="px-4 py-2 border-b">-</td>
-                                  <td className="px-4 py-2 border-b text-center">-</td>
-                                  <td className="px-4 py-2 border-b">Sin movimientos en este periodo.</td>
-                                  <td className="px-4 py-2 border-b text-right">-</td>
-                                  <td className="px-4 py-2 border-b text-right">-</td>
-                                  <td className="px-4 py-2 border-b text-right bg-gray-50 font-bold">{formatNumber(0)}</td>
+                                <tr className="hover:bg-stone-850 text-stone-500 italic">
+                                  <td className="px-4 py-2 border-b border-stone-850">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-850 text-center">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-850">Sin movimientos en este periodo.</td>
+                                  <td className="px-4 py-2 border-b border-stone-850 text-right">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-850 text-right">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-850 text-right bg-stone-950 font-bold">{formatNumber(0)}</td>
                                 </tr>
                               ) : (
                                 mayor.movimientos.map((mov: any, idx: number) => {
@@ -3090,19 +3090,19 @@ export default function SistemaContableYanaloma() {
                                   };
 
                                   return (
-                                    <tr key={mov.id || idx} className="hover:bg-gray-50">
-                                      <td className="px-4 py-2 border-b">{formatDateCSV(mov.fecha || mov.created_at)}</td>
-                                      <td className="px-4 py-2 border-b text-center font-bold">{renderRef()}</td>
-                                      <td className="px-4 py-2 border-b">{renderDetalle()}</td>
-                                      <td className="px-4 py-2 border-b text-right">{Number(mov.debe || 0) > 0 ? formatNumber(mov.debe) : ''}</td>
-                                      <td className="px-4 py-2 border-b text-right">{Number(mov.haber || 0) > 0 ? formatNumber(mov.haber) : ''}</td>
-                                      <td className="px-4 py-2 border-b text-right bg-gray-50 font-bold">{formatNumber(mov.saldoAcumulado)}</td>
+                                    <tr key={mov.id || idx} className="hover:bg-stone-850">
+                                      <td className="px-4 py-2 border-b border-stone-850">{formatDateCSV(mov.fecha || mov.created_at)}</td>
+                                      <td className="px-4 py-2 border-b border-stone-850 text-center font-bold">{renderRef()}</td>
+                                      <td className="px-4 py-2 border-b border-stone-850">{renderDetalle()}</td>
+                                      <td className="px-4 py-2 border-b border-stone-850 text-right">{Number(mov.debe || 0) > 0 ? formatNumber(mov.debe) : ''}</td>
+                                      <td className="px-4 py-2 border-b border-stone-850 text-right">{Number(mov.haber || 0) > 0 ? formatNumber(mov.haber) : ''}</td>
+                                      <td className="px-4 py-2 border-b border-stone-850 text-right bg-stone-950 font-bold">{formatNumber(mov.saldoAcumulado)}</td>
                                     </tr>
                                   );
                                 })
                               )}
                               {/* CIERRE ROW */}
-                              <tr className="bg-gray-100 font-bold border-t-2 border-stone-850">
+                              <tr className="bg-stone-850 font-bold border-t-2 border-stone-600">
                                 <td className="px-4 py-2 uppercase" colSpan={3}>CIERRE MES DE {periodoActual}</td>
                                 <td className="px-4 py-2 text-right">{formatNumber(totalDebe)}</td>
                                 <td className="px-4 py-2 text-right">{formatNumber(totalHaber)}</td>
@@ -3121,17 +3121,17 @@ export default function SistemaContableYanaloma() {
             {/* 4. PESTAÑA: COMPRAS Y VENTAS */}
             {activeTab === 'compras_ventas' && (
               <div>
-                <div className="flex justify-between items-center mb-6 pb-2 border-b">
-                  <h2 className="text-lg font-bold text-gray-700">CUADRO DIARIO DE INGRESOS Y EGRESOS OPERATIVOS</h2>
+                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+                  <h2 className="text-lg font-bold text-stone-300">CUADRO DIARIO DE INGRESOS Y EGRESOS OPERATIVOS</h2>
                   <div className="flex items-center gap-4">
                     <div className="relative">
-                      <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Buscar N°, Fecha, Detalle..." 
+                      <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500" />
+                      <input
+                        type="text"
+                        placeholder="Buscar N°, Fecha, Detalle..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 pr-4 py-1.5 border border-gray-300 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-64"
+                        className="pl-9 pr-4 py-1.5 border border-stone-800 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-64 bg-stone-900 text-stone-200"
                       />
                     </div>
                     <button onClick={() => setShowCVModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1">
@@ -3143,36 +3143,36 @@ export default function SistemaContableYanaloma() {
                 {/* RESUMEN KPI (Conclusiones) */}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-8">
                   {/* Total Ventas */}
-                  <div className="bg-white border rounded-lg p-5 shadow-sm border-l-4 border-l-emerald-500">
-                    <p className="text-xs font-bold text-gray-500 uppercase">Total de Ventas</p>
-                    <p className="text-2xl font-mono font-bold text-emerald-700 mt-1">Bs {formatNumber(plData.ingresosVentas)}</p>
-                    <div className="mt-3 text-sm text-gray-500 font-mono">
+                  <div className="bg-stone-900 border border-stone-800 rounded-lg p-5 shadow-sm border-l-4 border-l-emerald-500">
+                    <p className="text-xs font-bold text-stone-500 uppercase">Total de Ventas</p>
+                    <p className="text-2xl font-mono font-bold text-emerald-400 mt-1">Bs {formatNumber(plData.ingresosVentas)}</p>
+                    <div className="mt-3 text-sm text-stone-500 font-mono">
                       Prom. Diario: {formatNumber(plData.ingresosVentas / 23)}<br/>
                       Prom. Semanal: {formatNumber(plData.ingresosVentas / 4)}
                     </div>
                   </div>
                   {/* Total Gastos */}
-                  <div className="bg-white border rounded-lg p-5 shadow-sm border-l-4 border-l-orange-500">
-                    <p className="text-xs font-bold text-gray-500 uppercase">Total de Gastos</p>
-                    <p className="text-2xl font-mono font-bold text-orange-700 mt-1">Bs {formatNumber(plData.totalCostos)}</p>
-                    <div className="mt-3 text-sm text-gray-500 font-mono">
+                  <div className="bg-stone-900 border border-stone-800 rounded-lg p-5 shadow-sm border-l-4 border-l-orange-500">
+                    <p className="text-xs font-bold text-stone-500 uppercase">Total de Gastos</p>
+                    <p className="text-2xl font-mono font-bold text-orange-400 mt-1">Bs {formatNumber(plData.totalCostos)}</p>
+                    <div className="mt-3 text-sm text-stone-500 font-mono">
                       Prom. Diario: {formatNumber(plData.totalCostos / 23)}<br/>
                       Prom. Semanal: {formatNumber(plData.totalCostos / 4.5)}
                     </div>
                   </div>
                   {/* EERR & Impuestos */}
-                  <div className="bg-white border rounded-lg p-5 shadow-sm border-l-4 border-l-purple-500">
-                    <p className="text-xs font-bold text-gray-500 uppercase">E.E.R.R. (Utilidad)</p>
-                    <p className="text-2xl font-mono font-bold text-purple-700 mt-1">Bs {formatNumber(plData.utilidad)}</p>
-                    <div className="mt-3 text-sm text-gray-500 font-mono">
+                  <div className="bg-stone-900 border border-stone-800 rounded-lg p-5 shadow-sm border-l-4 border-l-purple-500">
+                    <p className="text-xs font-bold text-stone-500 uppercase">E.E.R.R. (Utilidad)</p>
+                    <p className="text-2xl font-mono font-bold text-purple-400 mt-1">Bs {formatNumber(plData.utilidad)}</p>
+                    <div className="mt-3 text-sm text-stone-500 font-mono">
                       Impuestos: {formatNumber(plData.totalImpuestos)}<br/>
                       Días Trabajados: 23
                     </div>
                   </div>
                   {/* Cajas Totales */}
-                  <div className="bg-white border rounded-lg p-5 shadow-sm border-l-4 border-l-blue-500">
-                    <p className="text-xs font-bold text-gray-500 uppercase">Distribución Estimada</p>
-                    <div className="mt-3 text-sm font-mono text-gray-600 leading-relaxed">
+                  <div className="bg-stone-900 border border-stone-800 rounded-lg p-5 shadow-sm border-l-4 border-l-blue-500">
+                    <p className="text-xs font-bold text-stone-500 uppercase">Distribución Estimada</p>
+                    <div className="mt-3 text-sm font-mono text-stone-400 leading-relaxed">
                       C. Chica: {formatNumber(plData.ingresosVentas * 0.4)}<br/>
                       Banco: {formatNumber(plData.ingresosVentas * 0.5)}<br/>
                       POS: {formatNumber(plData.ingresosVentas * 0.1)}
@@ -3181,7 +3181,7 @@ export default function SistemaContableYanaloma() {
                 </div>
 
                 {/* TABLA PRINCIPAL DE DATOS REDISEÑADA */}
-                <div className="border rounded-xl shadow-sm bg-white overflow-hidden">
+                <div className="border border-stone-800 rounded-xl shadow-sm bg-stone-900 overflow-hidden">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-stone-800 text-white font-mono text-[11px] uppercase tracking-wider">
                       <tr>
@@ -3200,9 +3200,9 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 text-center w-[110px]">Acción</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono divide-y text-gray-700 bg-white">
+                    <tbody className="font-mono divide-y divide-stone-850 text-stone-300 bg-stone-900">
                       {(() => {
-                        if (paginatedTx.length === 0) return <tr><td colSpan={9} className="p-8 text-center text-gray-400 italic bg-gray-50">No se encontraron resultados para tu búsqueda.</td></tr>;
+                        if (paginatedTx.length === 0) return <tr><td colSpan={9} className="p-8 text-center text-stone-500 italic bg-stone-950">No se encontraron resultados para tu búsqueda.</td></tr>;
                         
                         return paginatedTx.map((tx, idx) => {
                           const isIngreso = tx.tipo_movimiento === 'INGRESO';
@@ -3227,87 +3227,87 @@ export default function SistemaContableYanaloma() {
 
                           return (
                             <React.Fragment key={tx.id}>
-                              <tr className={`hover:bg-emerald-50/20 transition-colors border-b ${isExpanded ? 'bg-emerald-50/10' : ''}`}>
-                                <td className="p-3 text-center font-bold text-gray-550">{rowNumber}</td>
-                                <td className="p-3 text-gray-600">{formatDate(tx.fecha || tx.created_at)}</td>
+                              <tr className={`hover:bg-emerald-950/20 transition-colors border-b border-stone-850 ${isExpanded ? 'bg-emerald-950/10' : ''}`}>
+                                <td className="p-3 text-center font-bold text-stone-400">{rowNumber}</td>
+                                <td className="p-3 text-stone-400">{formatDate(tx.fecha || tx.created_at)}</td>
                                 <td className="p-3">
-                                  <div className="font-bold text-stone-850 font-sans break-words max-w-[240px] whitespace-normal" title={tx.detalle}>
+                                  <div className="font-bold text-stone-100 font-sans break-words max-w-[240px] whitespace-normal" title={tx.detalle}>
                                     {tx.detalle || 'Operación'}
                                   </div>
                                   {(tx.mesa || tx.hora || tx.responsable) && (
-                                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[9px] text-gray-500 font-mono">
-                                      {tx.mesa && <span className="bg-stone-100 px-1 rounded font-semibold text-stone-700">M: {tx.mesa}</span>}
-                                      {tx.hora && <span className="bg-stone-100 px-1 rounded text-stone-600">{tx.hora}</span>}
-                                      {tx.responsable && <span className="bg-stone-100 px-1 rounded max-w-[85px] truncate" title={tx.responsable}>{tx.responsable}</span>}
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[9px] text-stone-500 font-mono">
+                                      {tx.mesa && <span className="bg-stone-800 px-1 rounded font-semibold text-stone-300">M: {tx.mesa}</span>}
+                                      {tx.hora && <span className="bg-stone-800 px-1 rounded text-stone-400">{tx.hora}</span>}
+                                      {tx.responsable && <span className="bg-stone-800 px-1 rounded max-w-[85px] truncate" title={tx.responsable}>{tx.responsable}</span>}
                                     </div>
                                   )}
                                   {(tx.codigo_debe || tx.codigo_haber) && (
                                     <div className="flex flex-wrap items-center gap-1 mt-1 text-[8.5px] font-mono leading-none">
                                       {tx.codigo_debe && (
-                                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-150 px-1 py-0.5 rounded font-bold" title={planCuentas.find(c => c.codigo === tx.codigo_debe)?.nombre || ''}>
+                                        <span className="bg-emerald-950/40 text-emerald-300 border border-emerald-900/50 px-1 py-0.5 rounded font-bold" title={planCuentas.find(c => c.codigo === tx.codigo_debe)?.nombre || ''}>
                                           DEB: {tx.codigo_debe}
                                         </span>
                                       )}
                                       {tx.codigo_haber && (
-                                        <span className="bg-orange-50 text-amber-900 border border-orange-200 px-1 py-0.5 rounded font-bold" title={planCuentas.find(c => c.codigo === tx.codigo_haber)?.nombre || ''}>
+                                        <span className="bg-orange-950/40 text-amber-300 border border-orange-900/50 px-1 py-0.5 rounded font-bold" title={planCuentas.find(c => c.codigo === tx.codigo_haber)?.nombre || ''}>
                                           HAB: {tx.codigo_haber}
                                         </span>
                                       )}
                                     </div>
                                   )}
                                 </td>
-                                <td className="p-3 text-right bg-stone-50/30">
+                                <td className="p-3 text-right bg-stone-950/40">
                                   {isIngreso ? (
-                                    <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded text-[11px] inline-block font-mono">
+                                    <span className="text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-900/50 px-1.5 py-0.5 rounded text-[11px] inline-block font-mono">
                                       +Bs {formatNumber(val)}
                                     </span>
                                   ) : (
-                                    <span className="text-orange-700 font-bold bg-orange-50 border border-orange-100 px-1.5 py-0.5 rounded text-[11px] inline-block font-mono">
+                                    <span className="text-orange-400 font-bold bg-orange-950/40 border border-orange-900/50 px-1.5 py-0.5 rounded text-[11px] inline-block font-mono">
                                       -Bs {formatNumber(val)}
                                     </span>
                                   )}
                                 </td>
-                                
+
                                 <td className="p-3">
                                   <div className="flex flex-wrap gap-1 max-w-[210px] whitespace-normal">
-                                    {cCaja > 0 && <span className="inline-flex bg-teal-50 border border-teal-100 text-teal-700 text-[9px] px-1 rounded font-bold">Caja: {formatNumber(cCaja)}</span>}
-                                    {cCChica > 0 && <span className="inline-flex bg-stone-100 border border-stone-200 text-stone-700 text-[9px] px-1 rounded font-bold">C.Chica: {formatNumber(cCChica)}</span>}
-                                    {cBanco > 0 && <span className="inline-flex bg-blue-50 border border-blue-100 text-blue-700 text-[9px] px-1 rounded font-bold">Banco: {formatNumber(cBanco)}</span>}
-                                    {cPos > 0 && <span className="inline-flex bg-purple-50 border border-purple-100 text-purple-700 text-[9px] px-1 rounded font-bold">POS: {formatNumber(cPos)}</span>}
-                                    {cCaja === 0 && cCChica === 0 && cBanco === 0 && cPos === 0 && <span className="text-gray-300">-</span>}
+                                    {cCaja > 0 && <span className="inline-flex bg-teal-950/40 border border-teal-900/50 text-teal-400 text-[9px] px-1 rounded font-bold">Caja: {formatNumber(cCaja)}</span>}
+                                    {cCChica > 0 && <span className="inline-flex bg-stone-800 border border-stone-700 text-stone-300 text-[9px] px-1 rounded font-bold">C.Chica: {formatNumber(cCChica)}</span>}
+                                    {cBanco > 0 && <span className="inline-flex bg-blue-950/40 border border-blue-900/50 text-blue-400 text-[9px] px-1 rounded font-bold">Banco: {formatNumber(cBanco)}</span>}
+                                    {cPos > 0 && <span className="inline-flex bg-purple-950/40 border border-purple-900/50 text-purple-400 text-[9px] px-1 rounded font-bold">POS: {formatNumber(cPos)}</span>}
+                                    {cCaja === 0 && cCChica === 0 && cBanco === 0 && cPos === 0 && <span className="text-stone-600">-</span>}
                                   </div>
                                 </td>
-                                
+
                                 <td className="p-3 text-center">
                                   {tx.tiene_factura ? (
-                                    <span className="inline-flex items-center gap-0.5 bg-emerald-50 text-emerald-700 border border-emerald-150 px-1.5 py-0.5 rounded-[4px] font-mono font-bold text-[9px]">
-                                      <CheckCircle2 size={10} className="text-emerald-600" /> CON/F
+                                    <span className="inline-flex items-center gap-0.5 bg-emerald-950/40 text-emerald-400 border border-emerald-900/50 px-1.5 py-0.5 rounded-[4px] font-mono font-bold text-[9px]">
+                                      <CheckCircle2 size={10} className="text-emerald-400" /> CON/F
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-0.5 bg-gray-50 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded-[4px] font-mono font-bold text-[9px]">
-                                      <XCircle size={10} className="text-gray-400" /> SIN/F
+                                    <span className="inline-flex items-center gap-0.5 bg-stone-850 text-stone-500 border border-stone-800 px-1.5 py-0.5 rounded-[4px] font-mono font-bold text-[9px]">
+                                      <XCircle size={10} className="text-stone-500" /> SIN/F
                                     </span>
                                   )}
                                 </td>
-                                
+
                                 <td className="p-3">
                                   {(vSfCch > 0 || vBanco > 0 || cCh > 0 || cBancoCost > 0) ? (
                                     <div className="space-y-0.5 text-[9px]">
-                                      {vSfCch > 0 && <div className="text-gray-650">V.S/F C.Ch: <span className="font-bold text-gray-800">{formatNumber(vSfCch)}</span></div>}
-                                      {vBanco > 0 && <div className="text-gray-650">V.S/F Bco: <span className="font-bold text-gray-800">{formatNumber(vBanco)}</span></div>}
-                                      {cCh > 0 && <div className="text-purple-700 bg-purple-50 px-1 rounded inline-block">Costo C.Ch: <span className="font-bold">{formatNumber(cCh)}</span></div>}
-                                      {cBancoCost > 0 && <div className="text-purple-700 bg-purple-50 px-1 rounded inline-block">Costo Bco: <span className="font-bold">{formatNumber(cBancoCost)}</span></div>}
+                                      {vSfCch > 0 && <div className="text-stone-400">V.S/F C.Ch: <span className="font-bold text-stone-200">{formatNumber(vSfCch)}</span></div>}
+                                      {vBanco > 0 && <div className="text-stone-400">V.S/F Bco: <span className="font-bold text-stone-200">{formatNumber(vBanco)}</span></div>}
+                                      {cCh > 0 && <div className="text-purple-400 bg-purple-950/40 px-1 rounded inline-block">Costo C.Ch: <span className="font-bold">{formatNumber(cCh)}</span></div>}
+                                      {cBancoCost > 0 && <div className="text-purple-400 bg-purple-950/40 px-1 rounded inline-block">Costo Bco: <span className="font-bold">{formatNumber(cBancoCost)}</span></div>}
                                     </div>
                                   ) : (
-                                    <span className="text-gray-300">-</span>
+                                    <span className="text-stone-600">-</span>
                                   )}
                                 </td>
 
                                 <td className="p-3">
                                   <div className="text-[10px]">
-                                    <span className="font-bold text-gray-700 bg-gray-100 px-1 rounded">{tx.metodo_pago || '-'}</span>
+                                    <span className="font-bold text-stone-300 bg-stone-800 px-1 rounded">{tx.metodo_pago || '-'}</span>
                                     {(Number(tx.pago || 0) > 0 || Number(tx.cambio || 0) !== 0) && (
-                                      <div className="text-[9px] text-gray-500 mt-0.5">
+                                      <div className="text-[9px] text-stone-500 mt-0.5">
                                         P: {formatNumber(tx.pago || 0)} / C: {formatNumber(tx.cambio || 0)}
                                       </div>
                                     )}
@@ -3318,7 +3318,7 @@ export default function SistemaContableYanaloma() {
                                   <div className="flex items-center justify-center gap-1.5 mx-auto">
                                     <button
                                       onClick={() => toggleRow(tx.id)}
-                                      className="p-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 transition-all focus:outline-none flex items-center justify-center"
+                                      className="p-1 rounded bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-stone-100 transition-all focus:outline-none flex items-center justify-center"
                                       title="Ver Detalles"
                                     >
                                       {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -3328,14 +3328,14 @@ export default function SistemaContableYanaloma() {
                                       <>
                                         <button
                                           onClick={() => handleEditTransaction(tx)}
-                                          className="p-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-850 transition-all flex items-center justify-center"
+                                          className="p-1 rounded bg-amber-950/40 hover:bg-amber-900/50 text-amber-400 hover:text-amber-300 transition-all flex items-center justify-center"
                                           title="Modificar Transacción"
                                         >
                                           <Edit3 size={14} />
                                         </button>
                                         <button
                                           onClick={() => handleDeleteTransaction(tx.id)}
-                                          className="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-800 transition-all flex items-center justify-center"
+                                          className="p-1 rounded bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 hover:text-rose-300 transition-all flex items-center justify-center"
                                           title="Eliminar Transacción"
                                         >
                                           <Trash2 size={14} />
@@ -3347,94 +3347,94 @@ export default function SistemaContableYanaloma() {
                               </tr>
                               {/* FILA DE EXPANSIÓN DETALLADA */}
                               {isExpanded && (
-                                <tr className="bg-stone-50/60 border-b transition-all duration-350">
+                                <tr className="bg-stone-900/60 border-b border-stone-850 transition-all duration-350">
                                   <td colSpan={9} className="p-4 border-l-4 border-l-emerald-600">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-mono">
                                       {/* Columna 1: Info Operativa */}
-                                      <div className="bg-white p-3 rounded-lg border shadow-sm">
-                                        <h4 className="font-bold text-[10px] text-emerald-800 uppercase tracking-wider mb-2 font-mono border-b pb-1">Info Operativa</h4>
+                                      <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 shadow-sm">
+                                        <h4 className="font-bold text-[10px] text-emerald-300 uppercase tracking-wider mb-2 font-mono border-b border-stone-800 pb-1">Info Operativa</h4>
                                         <div className="space-y-1.5">
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">ID BD:</span><span className="font-bold text-stone-700">{tx.id}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Fecha completa:</span><span className="font-bold">{formatDate(tx.fecha || tx.created_at)}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Hora:</span><span>{tx.hora || '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Mesa/Ubicación:</span><span className="font-bold text-gray-800">{tx.mesa || '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Responsable:</span><span>{tx.responsable || '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">ID BD:</span><span className="font-bold text-stone-300">{tx.id}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Fecha completa:</span><span className="font-bold text-stone-200">{formatDate(tx.fecha || tx.created_at)}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Hora:</span><span className="text-stone-300">{tx.hora || '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Mesa/Ubicación:</span><span className="font-bold text-stone-200">{tx.mesa || '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Responsable:</span><span className="text-stone-300">{tx.responsable || '-'}</span></div>
                                         </div>
                                       </div>
                                       {/* Columna 2: Cuentas y Pago */}
-                                      <div className="bg-white p-3 rounded-lg border shadow-sm">
-                                        <h4 className="font-bold text-[10px] text-emerald-800 uppercase tracking-wider mb-2 font-mono border-b pb-1">Distribución de Cuentas</h4>
+                                      <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 shadow-sm">
+                                        <h4 className="font-bold text-[10px] text-emerald-300 uppercase tracking-wider mb-2 font-mono border-b border-stone-800 pb-1">Distribución de Cuentas</h4>
                                         <div className="space-y-1.5">
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Caja:</span><span>{cCaja > 0 ? `Bs ${formatNumber(cCaja)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Caja Chica:</span><span>{cCChica > 0 ? `Bs ${formatNumber(cCChica)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Banco:</span><span>{cBanco > 0 ? `Bs ${formatNumber(cBanco)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">POS:</span><span>{cPos > 0 ? `Bs ${formatNumber(cPos)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Pago Recibido:</span><span className="text-gray-700">{Number(tx.pago || 0) > 0 ? `Bs ${formatNumber(tx.pago)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Cambio Devuelto:</span><span className="text-orange-700 font-bold">{Number(tx.cambio || 0) !== 0 ? `Bs ${formatNumber(tx.cambio)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Caja:</span><span className="text-stone-300">{cCaja > 0 ? `Bs ${formatNumber(cCaja)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Caja Chica:</span><span className="text-stone-300">{cCChica > 0 ? `Bs ${formatNumber(cCChica)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Banco:</span><span className="text-stone-300">{cBanco > 0 ? `Bs ${formatNumber(cBanco)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">POS:</span><span className="text-stone-300">{cPos > 0 ? `Bs ${formatNumber(cPos)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Pago Recibido:</span><span className="text-stone-300">{Number(tx.pago || 0) > 0 ? `Bs ${formatNumber(tx.pago)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Cambio Devuelto:</span><span className="text-orange-400 font-bold">{Number(tx.cambio || 0) !== 0 ? `Bs ${formatNumber(tx.cambio)}` : '-'}</span></div>
                                         </div>
                                       </div>
                                       {/* Columna 3: Internos y Obs */}
-                                      <div className="bg-white p-3 rounded-lg border shadow-sm">
-                                        <h4 className="font-bold text-[10px] text-emerald-800 uppercase tracking-wider mb-2 font-mono border-b pb-1">Datos S/F y Categoría</h4>
+                                      <div className="bg-stone-950 p-3 rounded-lg border border-stone-800 shadow-sm">
+                                        <h4 className="font-bold text-[10px] text-emerald-300 uppercase tracking-wider mb-2 font-mono border-b border-stone-800 pb-1">Datos S/F y Categoría</h4>
                                         <div className="space-y-1.5">
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">V.S/F C.Chica:</span><span>{vSfCch > 0 ? `Bs ${formatNumber(vSfCch)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">V.S/F Banco:</span><span>{vBanco > 0 ? `Bs ${formatNumber(vBanco)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-purple-600 font-semibold">Costo C.Chica S/F:</span><span>{cCh > 0 ? `Bs ${formatNumber(cCh)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-purple-600 font-semibold">Costo Banco S/F:</span><span>{cBancoCost > 0 ? `Bs ${formatNumber(cBancoCost)}` : '-'}</span></div>
-                                          <div className="flex justify-between border-b border-dashed py-0.5"><span className="text-gray-500">Categoría EERR:</span><span className="font-bold text-emerald-700">{tx.categoria || 'Otros'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">V.S/F C.Chica:</span><span className="text-stone-300">{vSfCch > 0 ? `Bs ${formatNumber(vSfCch)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">V.S/F Banco:</span><span className="text-stone-300">{vBanco > 0 ? `Bs ${formatNumber(vBanco)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-purple-400 font-semibold">Costo C.Chica S/F:</span><span className="text-stone-300">{cCh > 0 ? `Bs ${formatNumber(cCh)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-purple-400 font-semibold">Costo Banco S/F:</span><span className="text-stone-300">{cBancoCost > 0 ? `Bs ${formatNumber(cBancoCost)}` : '-'}</span></div>
+                                          <div className="flex justify-between border-b border-dashed border-stone-800 py-0.5"><span className="text-stone-500">Categoría EERR:</span><span className="font-bold text-emerald-400">{tx.categoria || 'Otros'}</span></div>
                                         </div>
                                       </div>
                                       {/* Fila de Asiento de Partida Doble */}
-                                      <div className="col-span-1 md:col-span-3 bg-white border border-stone-200 rounded-xl p-4 shadow-sm">
-                                        <h4 className="font-bold text-[10px] text-emerald-800 uppercase tracking-wider mb-3 font-mono border-b pb-1">
+                                      <div className="col-span-1 md:col-span-3 bg-stone-950 border border-stone-800 rounded-xl p-4 shadow-sm">
+                                        <h4 className="font-bold text-[10px] text-emerald-300 uppercase tracking-wider mb-3 font-mono border-b border-stone-800 pb-1">
                                           📖 Asiento Contable - Partida Doble (Auditoría)
                                         </h4>
-                                        <div className="grid grid-cols-2 gap-0 border rounded-lg overflow-hidden divide-x font-mono text-[11px]">
+                                        <div className="grid grid-cols-2 gap-0 border border-stone-800 rounded-lg overflow-hidden divide-x divide-stone-800 font-mono text-[11px]">
                                           {/* DEBE Column */}
-                                          <div className="p-3 bg-emerald-50/10">
-                                            <div className="font-bold text-emerald-800 border-b border-emerald-100 pb-1 mb-2 text-center text-[10px] uppercase">
+                                          <div className="p-3 bg-emerald-950/20">
+                                            <div className="font-bold text-emerald-300 border-b border-emerald-900/50 pb-1 mb-2 text-center text-[10px] uppercase">
                                               DEBE (Cuentas Destino)
                                             </div>
                                             {tx.codigo_debe ? (
                                               <div className="flex justify-between items-center py-1">
                                                 <div>
-                                                  <span className="font-bold text-emerald-800 mr-2">{tx.codigo_debe}</span>
-                                                  <span className="text-gray-600 font-sans">{planCuentas.find(c => c.codigo === tx.codigo_debe)?.nombre || 'Cuenta'}</span>
+                                                  <span className="font-bold text-emerald-300 mr-2">{tx.codigo_debe}</span>
+                                                  <span className="text-stone-400 font-sans">{planCuentas.find(c => c.codigo === tx.codigo_debe)?.nombre || 'Cuenta'}</span>
                                                 </div>
-                                                <span className="font-bold text-emerald-700">Bs. {formatNumber(val)}</span>
+                                                <span className="font-bold text-emerald-400">Bs. {formatNumber(val)}</span>
                                               </div>
                                             ) : (
-                                              <div className="text-gray-400 italic text-center py-2">Sin cuenta DEBE asignada (Histórico)</div>
+                                              <div className="text-stone-500 italic text-center py-2">Sin cuenta DEBE asignada (Histórico)</div>
                                             )}
                                           </div>
                                           {/* HABER Column */}
-                                          <div className="p-3 bg-orange-50/5">
-                                            <div className="font-bold text-orange-850 border-b border-orange-100 pb-1 mb-2 text-center text-[10px] uppercase">
+                                          <div className="p-3 bg-orange-950/10">
+                                            <div className="font-bold text-orange-300 border-b border-orange-900/50 pb-1 mb-2 text-center text-[10px] uppercase">
                                               HABER (Cuentas Origen)
                                             </div>
                                             {tx.codigo_haber ? (
                                               <div className="flex justify-between items-center py-1">
                                                 <div className="pl-4">
-                                                  <span className="font-bold text-amber-800 mr-2">{tx.codigo_haber}</span>
-                                                  <span className="text-gray-600 font-sans">{planCuentas.find(c => c.codigo === tx.codigo_haber)?.nombre || 'Cuenta'}</span>
+                                                  <span className="font-bold text-amber-400 mr-2">{tx.codigo_haber}</span>
+                                                  <span className="text-stone-400 font-sans">{planCuentas.find(c => c.codigo === tx.codigo_haber)?.nombre || 'Cuenta'}</span>
                                                 </div>
-                                                <span className="font-bold text-orange-700">Bs. {formatNumber(val)}</span>
+                                                <span className="font-bold text-orange-400">Bs. {formatNumber(val)}</span>
                                               </div>
                                             ) : (
-                                              <div className="text-gray-400 italic text-center py-2">Sin cuenta HABER asignada (Histórico)</div>
+                                              <div className="text-stone-500 italic text-center py-2">Sin cuenta HABER asignada (Histórico)</div>
                                             )}
                                           </div>
                                         </div>
-                                        <div className="flex justify-between text-[9px] text-gray-500 mt-2 font-mono px-1">
+                                        <div className="flex justify-between text-[9px] text-stone-500 mt-2 font-mono px-1">
                                           <span>Glosa del Asiento: {tx.detalle || 'Registro general'}</span>
-                                          <span className="font-bold text-stone-700">Total Asiento: Bs. {formatNumber(val)} (Balanceado ✓)</span>
+                                          <span className="font-bold text-stone-300">Total Asiento: Bs. {formatNumber(val)} (Balanceado ✓)</span>
                                         </div>
                                       </div>
                                       {/* Fila inferior para Observaciones */}
                                       {(tx.observacion || tx.detalle) && (
-                                        <div className="col-span-1 md:col-span-3 bg-stone-100 p-2.5 rounded border text-[11px] font-sans flex flex-col gap-1">
-                                          <div><span className="font-bold font-mono text-[9px] text-gray-500 uppercase tracking-wider">Detalle Completo:</span> <span className="text-gray-800">{tx.detalle || '-'}</span></div>
-                                          {tx.observacion && <div><span className="font-bold font-mono text-[9px] text-gray-500 uppercase tracking-wider">Observación:</span> <span className="text-stone-750 italic">{tx.observacion}</span></div>}
+                                        <div className="col-span-1 md:col-span-3 bg-stone-900 p-2.5 rounded border border-stone-800 text-[11px] font-sans flex flex-col gap-1">
+                                          <div><span className="font-bold font-mono text-[9px] text-stone-500 uppercase tracking-wider">Detalle Completo:</span> <span className="text-stone-200">{tx.detalle || '-'}</span></div>
+                                          {tx.observacion && <div><span className="font-bold font-mono text-[9px] text-stone-500 uppercase tracking-wider">Observación:</span> <span className="text-stone-300 italic">{tx.observacion}</span></div>}
                                         </div>
                                       )}
                                     </div>
@@ -3451,27 +3451,27 @@ export default function SistemaContableYanaloma() {
 
                 {/* CONTROLES DE PAGINACIÓN PREMIUM */}
                 {sortedTx.length > pageSize && (
-                  <div className="flex flex-col sm:flex-row justify-between items-center mt-6 bg-stone-50 border border-stone-200 rounded-xl p-4 gap-3">
-                    <div className="text-xs text-gray-500 font-mono">
-                      Mostrando registros <span className="font-bold text-stone-850">{(currentPage - 1) * pageSize + 1}</span> a{' '}
-                      <span className="font-bold text-stone-850">{Math.min(currentPage * pageSize, sortedTx.length)}</span> de{' '}
-                      <span className="font-bold text-emerald-700">{sortedTx.length}</span> en total
+                  <div className="flex flex-col sm:flex-row justify-between items-center mt-6 bg-stone-900 border border-stone-800 rounded-xl p-4 gap-3">
+                    <div className="text-xs text-stone-500 font-mono">
+                      Mostrando registros <span className="font-bold text-stone-100">{(currentPage - 1) * pageSize + 1}</span> a{' '}
+                      <span className="font-bold text-stone-100">{Math.min(currentPage * pageSize, sortedTx.length)}</span> de{' '}
+                      <span className="font-bold text-emerald-400">{sortedTx.length}</span> en total
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 text-xs font-bold text-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
+                        className="px-3 py-1.5 rounded-lg border border-stone-800 bg-stone-950 hover:bg-stone-850 text-xs font-bold text-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
                       >
                         « Anterior
                       </button>
-                      <span className="text-xs font-mono font-bold text-stone-600 bg-white border border-stone-200 px-3 py-1.5 rounded-lg shadow-sm">
+                      <span className="text-xs font-mono font-bold text-stone-400 bg-stone-950 border border-stone-800 px-3 py-1.5 rounded-lg shadow-sm">
                         Pág. {currentPage} de {Math.ceil(sortedTx.length / pageSize)}
                       </span>
                       <button
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(sortedTx.length / pageSize)))}
                         disabled={currentPage >= Math.ceil(sortedTx.length / pageSize)}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 text-xs font-bold text-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
+                        className="px-3 py-1.5 rounded-lg border border-stone-800 bg-stone-950 hover:bg-stone-850 text-xs font-bold text-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
                       >
                         Siguiente »
                       </button>
@@ -3484,17 +3484,17 @@ export default function SistemaContableYanaloma() {
             {/* 5. PESTAÑA: INVENTARIO (PEPS) */}
             {activeTab === 'inventario_peps' && (
               <div>
-                <div className="flex justify-between items-center mb-6 pb-2 border-b">
-                  <h2 className="text-lg font-bold text-gray-700">VALORACIÓN DE INVENTARIO PEPS Y CONTROL DE PLANTA</h2>
+                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+                  <h2 className="text-lg font-bold text-stone-300">VALORACIÓN DE INVENTARIO PEPS Y CONTROL DE PLANTA</h2>
                   <div className="flex items-center gap-4">
                     <div className="relative">
-                      <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input 
-                        type="text" 
-                        placeholder="Buscar N°, Fecha, Detalle..." 
+                      <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500" />
+                      <input
+                        type="text"
+                        placeholder="Buscar N°, Fecha, Detalle..."
                         value={invSearchTerm}
                         onChange={(e) => setInvSearchTerm(e.target.value)}
-                        className="pl-9 pr-4 py-1.5 border border-gray-300 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-64"
+                        className="pl-9 pr-4 py-1.5 border border-stone-800 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-64 bg-stone-900 text-stone-200"
                       />
                     </div>
                     <button onClick={() => setShowInvModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1">
@@ -3503,7 +3503,7 @@ export default function SistemaContableYanaloma() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto border rounded shadow-sm">
+                <div className="overflow-x-auto border border-stone-800 rounded shadow-sm">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-stone-800 text-white font-mono whitespace-nowrap text-sm">
                       <tr>
@@ -3531,7 +3531,7 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 border-b border-stone-700 text-center w-[90px]">ACCIÓN</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono divide-y text-gray-700 bg-white">
+                    <tbody className="font-mono divide-y divide-stone-850 text-stone-300 bg-stone-900">
                       {(() => {
                         const filteredInv = movimientosInv.filter(mov => {
                           if (!invSearchTerm) return true;
@@ -3552,7 +3552,7 @@ export default function SistemaContableYanaloma() {
                           }
                         });
                         
-                        if (sortedInv.length === 0) return <tr><td colSpan={17} className="p-4 text-center text-gray-400">No se encontraron resultados para tu búsqueda.</td></tr>;
+                        if (sortedInv.length === 0) return <tr><td colSpan={17} className="p-4 text-center text-stone-500">No se encontraron resultados para tu búsqueda.</td></tr>;
                         
                         return sortedInv.map((mov) => {
                           const entradas = Number(mov.entradas || 0);
@@ -3567,41 +3567,41 @@ export default function SistemaContableYanaloma() {
                           const tuesteFinal = Number(mov.tueste_final || 0);
 
                           return (
-                            <tr key={mov.id} className="hover:bg-gray-50">
-                              <td className="p-3 text-center font-bold text-gray-550">{mov.id}</td>
+                            <tr key={mov.id} className="hover:bg-stone-850">
+                              <td className="p-3 text-center font-bold text-stone-400">{mov.id}</td>
                               <td className="p-3">{formatDate(mov.fecha || mov.created_at)}</td>
                               <td className="p-3 truncate max-w-xs">{mov.detalle || '-'}</td>
-                              
-                              <td className="p-3 text-right font-bold text-emerald-600 bg-emerald-50/30">{entradas > 0 ? formatNumber(entradas) : '-'}</td>
-                              <td className="p-3 text-right font-bold text-orange-600 bg-orange-50/30">{salidas > 0 ? formatNumber(salidas) : '-'}</td>
-                              <td className="p-3 text-right font-bold bg-stone-50">{saldoUnidades > 0 ? formatNumber(saldoUnidades) : '-'}</td>
-                              
+
+                              <td className="p-3 text-right font-bold text-emerald-400 bg-emerald-950/30">{entradas > 0 ? formatNumber(entradas) : '-'}</td>
+                              <td className="p-3 text-right font-bold text-orange-400 bg-orange-950/30">{salidas > 0 ? formatNumber(salidas) : '-'}</td>
+                              <td className="p-3 text-right font-bold bg-stone-950">{saldoUnidades > 0 ? formatNumber(saldoUnidades) : '-'}</td>
+
                               <td className="p-3 text-right">{costoUni > 0 ? formatNumber(costoUni) : '-'}</td>
-                              <td className="p-3 text-right text-emerald-700 bg-emerald-50/30">{debe > 0 ? formatNumber(debe) : '-'}</td>
-                              <td className="p-3 text-right text-orange-700 bg-orange-50/30">{haber > 0 ? formatNumber(haber) : '-'}</td>
-                              <td className="p-3 text-right font-bold bg-stone-50">{saldoValor > 0 ? formatNumber(saldoValor) : '-'}</td>
-                              
-                              <td className="p-3 text-center text-gray-600">{mov.tipo_cafe || '-'}</td>
-                              <td className="p-3 text-center text-gray-600">{mov.tipo_tueste || '-'}</td>
-                              <td className="p-3 text-center text-gray-600">{mov.clima || '-'}</td>
-                              
-                              <td className="p-3 text-right text-gray-500">{mermaPorcentaje > 0 ? `${formatNumber(mermaPorcentaje)}%` : '-'}</td>
-                              <td className="p-3 text-right text-gray-500">{mermaTueste > 0 ? formatNumber(mermaTueste) : '-'}</td>
-                              <td className="p-3 text-right font-bold text-emerald-700 bg-emerald-50/30">{tuesteFinal > 0 ? formatNumber(tuesteFinal) : '-'}</td>
+                              <td className="p-3 text-right text-emerald-400 bg-emerald-950/30">{debe > 0 ? formatNumber(debe) : '-'}</td>
+                              <td className="p-3 text-right text-orange-400 bg-orange-950/30">{haber > 0 ? formatNumber(haber) : '-'}</td>
+                              <td className="p-3 text-right font-bold bg-stone-950">{saldoValor > 0 ? formatNumber(saldoValor) : '-'}</td>
+
+                              <td className="p-3 text-center text-stone-400">{mov.tipo_cafe || '-'}</td>
+                              <td className="p-3 text-center text-stone-400">{mov.tipo_tueste || '-'}</td>
+                              <td className="p-3 text-center text-stone-400">{mov.clima || '-'}</td>
+
+                              <td className="p-3 text-right text-stone-500">{mermaPorcentaje > 0 ? `${formatNumber(mermaPorcentaje)}%` : '-'}</td>
+                              <td className="p-3 text-right text-stone-500">{mermaTueste > 0 ? formatNumber(mermaTueste) : '-'}</td>
+                              <td className="p-3 text-right font-bold text-emerald-400 bg-emerald-950/30">{tuesteFinal > 0 ? formatNumber(tuesteFinal) : '-'}</td>
 
                               <td className="p-3 text-center">
                                 {currentUser?.role === 'admin' && (
                                   <div className="flex items-center justify-center gap-1.5 mx-auto">
                                     <button
                                       onClick={() => handleEditInventory(mov)}
-                                      className="p-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-850 transition-all flex items-center justify-center"
+                                      className="p-1 rounded bg-amber-950/40 hover:bg-amber-900/50 text-amber-400 hover:text-amber-300 transition-all flex items-center justify-center"
                                       title="Modificar Movimiento"
                                     >
                                       <Edit3 size={12} />
                                     </button>
                                     <button
                                       onClick={() => handleDeleteInventory(mov.id)}
-                                      className="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-805 transition-all flex items-center justify-center"
+                                      className="p-1 rounded bg-rose-950/40 hover:bg-rose-900/50 text-rose-400 hover:text-rose-300 transition-all flex items-center justify-center"
                                       title="Eliminar Movimiento"
                                     >
                                       <Trash2 size={12} />
@@ -3622,23 +3622,23 @@ export default function SistemaContableYanaloma() {
             {/* 6. PESTAÑA: PLAN DE CUENTAS */}
             {activeTab === 'plan_cuentas' && (
               <div>
-                <h2 className="text-lg font-bold text-gray-700 mb-4 pb-2 border-b">PLAN ÚNICO DE CUENTAS</h2>
-                <div className="max-w-xl border rounded">
+                <h2 className="text-lg font-bold text-stone-300 mb-4 pb-2 border-b border-stone-800">PLAN ÚNICO DE CUENTAS</h2>
+                <div className="max-w-xl border border-stone-800 rounded">
                   <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-100 font-mono text-xs">
+                    <thead className="bg-stone-900 font-mono text-xs">
                       <tr>
-                        <th className="px-4 py-2 border-b w-1/3">CÓDIGO NOMENCLATURA</th>
-                        <th className="px-4 py-2 border-b">DENOMINACIÓN DE CUENTA</th>
+                        <th className="px-4 py-2 border-b border-stone-800 w-1/3 text-stone-400">CÓDIGO NOMENCLATURA</th>
+                        <th className="px-4 py-2 border-b border-stone-800 text-stone-400">DENOMINACIÓN DE CUENTA</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono text-gray-700 divide-y">
-                      {planCuentas.length === 0 && <tr><td colSpan={2} className="px-4 py-6 text-center text-gray-400">El catálogo está vacío.</td></tr>}
+                    <tbody className="font-mono text-stone-300 divide-y divide-stone-850">
+                      {planCuentas.length === 0 && <tr><td colSpan={2} className="px-4 py-6 text-center text-stone-500">El catálogo está vacío.</td></tr>}
                       {planCuentas.map((cuenta) => {
                         const isMain = cuenta.codigo.length <= 3 || cuenta.codigo.endsWith('00');
                         return (
-                          <tr key={cuenta.codigo} className={isMain ? "bg-emerald-50/30 font-bold" : ""}>
-                            <td className="px-4 py-1.5 border-b">{cuenta.codigo}</td>
-                            <td className={`px-4 py-1.5 border-b ${!isMain ? "pl-10" : ""}`}>{cuenta.nombre}</td>
+                          <tr key={cuenta.codigo} className={isMain ? "bg-emerald-950/30 font-bold" : ""}>
+                            <td className="px-4 py-1.5 border-b border-stone-850">{cuenta.codigo}</td>
+                            <td className={`px-4 py-1.5 border-b border-stone-850 ${!isMain ? "pl-10" : ""}`}>{cuenta.nombre}</td>
                           </tr>
                         );
                       })}
@@ -3651,26 +3651,26 @@ export default function SistemaContableYanaloma() {
             {/* 7. PESTAÑA: ESTADÍSTICAS */}
             {activeTab === 'estadisticas' && (
               <div>
-                <h2 className="text-lg font-bold text-gray-700 mb-4 pb-2 border-b">MATRIZ CONTROL DE UNIDADES VENDIDAS AL DÍA</h2>
-                <div className="overflow-x-auto border rounded">
+                <h2 className="text-lg font-bold text-stone-300 mb-4 pb-2 border-b border-stone-800">MATRIZ CONTROL DE UNIDADES VENDIDAS AL DÍA</h2>
+                <div className="overflow-x-auto border border-stone-800 rounded">
                   <table className="w-full text-[10px] text-left">
                     <thead className="bg-stone-800 text-white font-mono whitespace-nowrap">
                       <tr>
-                        <th className="p-2 border text-center">Nº</th>
-                        <th className="p-2 border">DESCRIPCIÓN DE ITEM</th>
-                        <th className="p-2 border text-center bg-emerald-700">TOTAL MES</th>
-                        {Array.from({ length: 31 }, (_, i) => <th key={i} className="p-1 border text-center w-8">{i + 1}</th>)}
+                        <th className="p-2 border border-stone-700 text-center">Nº</th>
+                        <th className="p-2 border border-stone-700">DESCRIPCIÓN DE ITEM</th>
+                        <th className="p-2 border border-stone-700 text-center bg-emerald-700">TOTAL MES</th>
+                        {Array.from({ length: 31 }, (_, i) => <th key={i} className="p-1 border border-stone-700 text-center w-8">{i + 1}</th>)}
                       </tr>
                     </thead>
-                    <tbody className="font-mono text-gray-700 divide-y">
-                      {estadisticas.length === 0 && <tr><td colSpan={34} className="p-4 text-center">No hay ventas en este periodo.</td></tr>}
+                    <tbody className="font-mono text-stone-300 divide-y divide-stone-850">
+                      {estadisticas.length === 0 && <tr><td colSpan={34} className="p-4 text-center text-stone-500">No hay ventas en este periodo.</td></tr>}
                       {estadisticas.map((est: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-gray-50">
-                          <td className="p-2 border text-center">{idx + 1}</td>
-                          <td className="p-2 border font-medium whitespace-nowrap">{est.nombre}</td>
-                          <td className="p-2 border text-center font-bold bg-emerald-50 text-emerald-800">{est.total}</td>
+                        <tr key={idx} className="hover:bg-stone-850">
+                          <td className="p-2 border border-stone-850 text-center">{idx + 1}</td>
+                          <td className="p-2 border border-stone-850 font-medium whitespace-nowrap">{est.nombre}</td>
+                          <td className="p-2 border border-stone-850 text-center font-bold bg-emerald-950/40 text-emerald-300">{est.total}</td>
                           {est.days.map((qty: number, i: number) => (
-                            <td key={i} className={`p-1 border text-center ${qty > 0 ? 'font-bold text-gray-800' : 'text-gray-300'}`}>
+                            <td key={i} className={`p-1 border border-stone-850 text-center ${qty > 0 ? 'font-bold text-stone-200' : 'text-stone-600'}`}>
                               {qty > 0 ? qty : ''}
                             </td>
                           ))}
@@ -3685,8 +3685,8 @@ export default function SistemaContableYanaloma() {
             {/* 8. PESTAÑA: COSTOS */}
             {activeTab === 'costos' && (
               <div>
-                <h2 className="text-lg font-bold text-gray-700 mb-4 pb-2 border-b">ESCANDALLOS Y COSTEO DE RECETAS POR BEBIDA</h2>
-                <div className="overflow-x-auto border rounded shadow-sm">
+                <h2 className="text-lg font-bold text-stone-300 mb-4 pb-2 border-b border-stone-800">ESCANDALLOS Y COSTEO DE RECETAS POR BEBIDA</h2>
+                <div className="overflow-x-auto border border-stone-800 rounded shadow-sm">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-emerald-950 text-white font-mono whitespace-nowrap text-sm">
                       <tr>
@@ -3703,21 +3703,21 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 border-b border-emerald-900 text-right bg-emerald-600 text-white font-bold">GANANCIA NETA</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono text-gray-700 divide-y bg-white">
-                      {costosData.length === 0 && <tr><td colSpan={11} className="p-6 text-center text-gray-400">No hay productos ni recetas activas.</td></tr>}
+                    <tbody className="font-mono text-stone-300 divide-y divide-stone-850 bg-stone-900">
+                      {costosData.length === 0 && <tr><td colSpan={11} className="p-6 text-center text-stone-500">No hay productos ni recetas activas.</td></tr>}
                       {costosData.map((c: any) => (
-                        <tr key={c.id} className="hover:bg-gray-50">
-                          <td className="p-3 border-b font-bold text-gray-900">{c.producto}</td>
-                          <td className="p-3 border-b text-right">Bs {formatNumber(c.costo_cafe)}</td>
-                          <td className="p-3 border-b text-right">Bs {formatNumber(c.costo_agua)}</td>
-                          <td className="p-3 border-b text-right">Bs {formatNumber(c.costo_leche)}</td>
-                          <td className="p-3 border-b text-right">Bs {formatNumber(c.costo_endulzante)}</td>
-                          <td className="p-3 border-b text-right">Bs {formatNumber(c.costo_insumos)}</td>
-                          <td className="p-3 border-b text-right">Bs {formatNumber(c.mano_obra)}</td>
-                          <td className="p-3 border-b text-right bg-stone-50 font-bold">Bs {formatNumber(c.costo_total)}</td>
-                          <td className="p-3 border-b text-right bg-emerald-50/50 text-emerald-800 font-bold">Bs {formatNumber(c.precio_venta)}</td>
-                          <td className="p-3 border-b text-right text-red-600">Bs {formatNumber(c.impuestos)}</td>
-                          <td className="p-3 border-b text-right bg-emerald-50 text-emerald-700 font-bold text-sm">Bs {formatNumber(c.ganancia_neta)}</td>
+                        <tr key={c.id} className="hover:bg-stone-850">
+                          <td className="p-3 border-b border-stone-850 font-bold text-white">{c.producto}</td>
+                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_cafe)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_agua)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_leche)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_endulzante)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_insumos)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.mano_obra)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right bg-stone-950 font-bold">Bs {formatNumber(c.costo_total)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right bg-emerald-950/40 text-emerald-300 font-bold">Bs {formatNumber(c.precio_venta)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right text-red-400">Bs {formatNumber(c.impuestos)}</td>
+                          <td className="p-3 border-b border-stone-850 text-right bg-emerald-950/40 text-emerald-400 font-bold text-sm">Bs {formatNumber(c.ganancia_neta)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3728,23 +3728,23 @@ export default function SistemaContableYanaloma() {
 
             {activeTab === 'pasteleria_panaderia' && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-200">
+                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
                   <div>
-                    <h2 className="text-xl font-black text-stone-850 tracking-tight">CONTROL DE PRODUCCIÓN Y MASAS</h2>
+                    <h2 className="text-xl font-black text-stone-100 tracking-tight">CONTROL DE PRODUCCIÓN Y MASAS</h2>
                     <p className="text-xs text-stone-500 font-medium">Panadería y Pastelería de Especialidad</p>
                   </div>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => {
                         setEditingMasa(null);
                         setShowMasaModal(true);
-                      }} 
+                      }}
                       className="bg-stone-800 hover:bg-stone-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
                     >
                       <Plus size={14} /> Añadir Tipo de Masa
                     </button>
-                    <button 
-                      onClick={() => setShowMovMasaModal(true)} 
+                    <button
+                      onClick={() => setShowMovMasaModal(true)}
                       className="bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
                     >
                       <Plus size={14} /> Registrar Entrada/Salida
@@ -3754,47 +3754,47 @@ export default function SistemaContableYanaloma() {
 
                 {/* Tarjetas Resumen */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-white border border-stone-150 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
-                    <div className="p-3 rounded-xl bg-amber-50 text-amber-700">
+                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                    <div className="p-3 rounded-xl bg-amber-950/40 text-amber-400">
                       <Cookie size={24} />
                     </div>
                     <div>
                       <p className="text-[10px] uppercase font-bold text-stone-400 font-mono leading-none mb-1">Tipos de Masa</p>
-                      <h4 className="text-lg font-black text-stone-800 leading-none">{masas.length} Activas</h4>
+                      <h4 className="text-lg font-black text-stone-100 leading-none">{masas.length} Activas</h4>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-stone-150 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
-                    <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700">
+                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                    <div className="p-3 rounded-xl bg-emerald-950/40 text-emerald-400">
                       <Layers size={24} />
                     </div>
                     <div>
                       <p className="text-[10px] uppercase font-bold text-stone-400 font-mono leading-none mb-1">Stock Total</p>
-                      <h4 className="text-lg font-black text-stone-800 leading-none">
+                      <h4 className="text-lg font-black text-stone-100 leading-none">
                         {masas.reduce((acc, m) => acc + (m.unidad_medida === 'kg' ? m.stock_actual : 0), 0).toFixed(2)} kg
                       </h4>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-stone-150 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
-                    <div className="p-3 rounded-xl bg-red-50 text-red-650">
+                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                    <div className="p-3 rounded-xl bg-red-950/40 text-red-400">
                       <XCircle size={24} />
                     </div>
                     <div>
                       <p className="text-[10px] uppercase font-bold text-stone-400 font-mono leading-none mb-1">Stock de Alerta</p>
-                      <h4 className="text-lg font-black text-red-650 leading-none">
+                      <h4 className="text-lg font-black text-red-400 leading-none">
                         {masas.filter(m => m.stock_actual <= m.stock_minimo).length} por Reponer
                       </h4>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-stone-150 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
-                    <div className="p-3 rounded-xl bg-stone-100 text-stone-700">
+                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                    <div className="p-3 rounded-xl bg-stone-800 text-stone-300">
                       <DollarSign size={24} />
                     </div>
                     <div>
                       <p className="text-[10px] uppercase font-bold text-stone-400 font-mono leading-none mb-1">Valor Estimado</p>
-                      <h4 className="text-lg font-black text-emerald-800 leading-none">
+                      <h4 className="text-lg font-black text-emerald-300 leading-none">
                         Bs. {formatNumber(masas.reduce((acc, m) => acc + (m.stock_actual * m.costo_unitario), 0))}
                       </h4>
                     </div>
@@ -3804,25 +3804,25 @@ export default function SistemaContableYanaloma() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
                   
                   {/* Catálogo de Masas */}
-                  <div className="lg:col-span-7 bg-white border border-stone-150 rounded-2xl p-5 shadow-sm space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b">
-                      <h3 className="font-bold text-sm text-stone-800 uppercase tracking-wide">Catálogo de Masas</h3>
+                  <div className="lg:col-span-7 bg-stone-900 border border-stone-850 rounded-2xl p-5 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-stone-800">
+                      <h3 className="font-bold text-sm text-stone-100 uppercase tracking-wide">Catálogo de Masas</h3>
                       <div className="relative">
-                        <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-stone-450" />
-                        <input 
-                          type="text" 
-                          placeholder="Filtrar masas..." 
+                        <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-stone-500" />
+                        <input
+                          type="text"
+                          placeholder="Filtrar masas..."
                           value={masaSearchTerm}
                           onChange={(e) => setMasaSearchTerm(e.target.value)}
-                          className="pl-8 pr-3 py-1 border border-stone-200 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-44 bg-stone-50"
+                          className="pl-8 pr-3 py-1 border border-stone-800 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-44 bg-stone-950 text-stone-200"
                         />
                       </div>
                     </div>
 
                     {loadingMasas ? (
-                      <div className="py-12 text-center text-stone-450 text-xs font-mono">Cargando catálogo de masas...</div>
+                      <div className="py-12 text-center text-stone-500 text-xs font-mono">Cargando catálogo de masas...</div>
                     ) : masas.length === 0 ? (
-                      <div className="py-12 text-center text-stone-400 text-xs">No hay masas registradas en el catálogo.</div>
+                      <div className="py-12 text-center text-stone-500 text-xs">No hay masas registradas en el catálogo.</div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {masas
@@ -3831,40 +3831,40 @@ export default function SistemaContableYanaloma() {
                             const isAlert = m.stock_actual <= m.stock_minimo;
                             return (
                               <div key={m.id} className={`p-4 border rounded-xl flex flex-col justify-between h-36 transition-all ${
-                                isAlert ? 'bg-red-50/50 border-red-200 shadow-sm' : 'bg-stone-50/40 border-stone-200 hover:border-stone-300 shadow-xs'
+                                isAlert ? 'bg-red-950/30 border-red-900/50 shadow-sm' : 'bg-stone-950/60 border-stone-800 hover:border-stone-700 shadow-xs'
                               }`}>
                                 <div className="flex justify-between items-start gap-2">
                                   <div>
-                                    <h4 className="font-bold text-xs text-stone-850 line-clamp-2">{m.nombre}</h4>
-                                    <p className="text-[10px] text-stone-450 font-mono mt-0.5">C/U: Bs. {m.costo_unitario.toFixed(2)} / {m.unidad_medida}</p>
+                                    <h4 className="font-bold text-xs text-stone-100 line-clamp-2">{m.nombre}</h4>
+                                    <p className="text-[10px] text-stone-500 font-mono mt-0.5">C/U: Bs. {m.costo_unitario.toFixed(2)} / {m.unidad_medida}</p>
                                   </div>
                                   {isAlert && (
-                                    <span className="bg-red-100 text-red-700 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-red-200">
+                                    <span className="bg-red-900/50 text-red-300 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-red-800">
                                       Bajo Stock
                                     </span>
                                   )}
                                 </div>
 
-                                <div className="flex justify-between items-end pt-3 border-t border-dashed border-stone-200">
+                                <div className="flex justify-between items-end pt-3 border-t border-dashed border-stone-800">
                                   <div>
                                     <span className="text-[8px] uppercase font-bold text-stone-400 block font-mono">Stock Disponible</span>
-                                    <span className={`text-base font-black font-mono leading-none ${isAlert ? 'text-red-650' : 'text-emerald-800'}`}>
+                                    <span className={`text-base font-black font-mono leading-none ${isAlert ? 'text-red-400' : 'text-emerald-300'}`}>
                                       {m.stock_actual} {m.unidad_medida}
                                     </span>
                                   </div>
 
                                   <div className="flex gap-1.5">
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         setEditingMasa(m);
                                         setShowMasaModal(true);
                                       }}
-                                      className="p-1.5 border border-stone-250 hover:border-emerald-600 hover:bg-emerald-50 text-stone-500 hover:text-emerald-700 rounded-lg transition-colors cursor-pointer"
+                                      className="p-1.5 border border-stone-800 hover:border-emerald-600 hover:bg-emerald-950/40 text-stone-500 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer"
                                       title="Editar Masa"
                                     >
                                       <Edit3 size={13} />
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={async () => {
                                         if (window.confirm(`¿Está seguro de eliminar "${m.nombre}" del catálogo? Se borrarán sus movimientos asociados.`)) {
                                           await MasasService.deleteMasa(m.id);
@@ -3872,7 +3872,7 @@ export default function SistemaContableYanaloma() {
                                           fetchMasasData();
                                         }
                                       }}
-                                      className="p-1.5 border border-stone-250 hover:border-red-650 hover:bg-red-50 text-stone-500 hover:text-red-750 rounded-lg transition-colors cursor-pointer"
+                                      className="p-1.5 border border-stone-800 hover:border-red-500 hover:bg-red-950/40 text-stone-500 hover:text-red-400 rounded-lg transition-colors cursor-pointer"
                                       title="Eliminar Masa"
                                     >
                                       <Trash2 size={13} />
@@ -3887,27 +3887,27 @@ export default function SistemaContableYanaloma() {
                   </div>
 
                   {/* Historial de Movimientos */}
-                  <div className="lg:col-span-5 bg-white border border-stone-150 rounded-2xl p-5 shadow-sm space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b">
-                      <h3 className="font-bold text-sm text-stone-800 uppercase tracking-wide">Movimientos Recientes</h3>
+                  <div className="lg:col-span-5 bg-stone-900 border border-stone-850 rounded-2xl p-5 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-stone-800">
+                      <h3 className="font-bold text-sm text-stone-100 uppercase tracking-wide">Movimientos Recientes</h3>
                       <div className="relative">
-                        <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-stone-450" />
-                        <input 
-                          type="text" 
-                          placeholder="Buscar movimientos..." 
+                        <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-stone-500" />
+                        <input
+                          type="text"
+                          placeholder="Buscar movimientos..."
                           value={movMasaSearchTerm}
                           onChange={(e) => setMovMasaSearchTerm(e.target.value)}
-                          className="pl-8 pr-3 py-1 border border-stone-200 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-36 bg-stone-50"
+                          className="pl-8 pr-3 py-1 border border-stone-800 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-36 bg-stone-950 text-stone-200"
                         />
                       </div>
                     </div>
 
                     {loadingMasas ? (
-                      <div className="py-12 text-center text-stone-450 text-xs font-mono">Cargando movimientos...</div>
+                      <div className="py-12 text-center text-stone-500 text-xs font-mono">Cargando movimientos...</div>
                     ) : movimientosMasas.length === 0 ? (
-                      <div className="py-12 text-center text-stone-400 text-xs">No hay movimientos registrados.</div>
+                      <div className="py-12 text-center text-stone-500 text-xs">No hay movimientos registrados.</div>
                     ) : (
-                      <div className="overflow-y-auto max-h-[500px] pr-1 divide-y divide-stone-100">
+                      <div className="overflow-y-auto max-h-[500px] pr-1 divide-y divide-stone-850">
                         {movimientosMasas
                           .filter(mov => {
                             const term = movMasaSearchTerm.toLowerCase();
@@ -3921,9 +3921,9 @@ export default function SistemaContableYanaloma() {
                               <div key={mov.id} className="py-3 flex justify-between gap-3 text-xs">
                                 <div>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-stone-800">{mov.masa_nombre}</span>
+                                    <span className="font-bold text-stone-100">{mov.masa_nombre}</span>
                                     <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded font-mono ${
-                                      isEntrada ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-850 border border-amber-250'
+                                      isEntrada ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-800' : 'bg-amber-900/50 text-amber-300 border border-amber-800'
                                     }`}>
                                       {mov.tipo_movimiento}
                                     </span>
@@ -3932,7 +3932,7 @@ export default function SistemaContableYanaloma() {
                                   <p className="text-[10px] text-stone-400 font-mono mt-0.5">Fecha: {mov.fecha} • Por: {mov.creado_por}</p>
                                 </div>
                                 <div className="text-right font-mono font-black text-sm shrink-0">
-                                  <span className={isEntrada ? 'text-emerald-700' : 'text-amber-850'}>
+                                  <span className={isEntrada ? 'text-emerald-400' : 'text-amber-400'}>
                                     {isEntrada ? '+' : '-'}{mov.cantidad} {mov.masa_unidad}
                                   </span>
                                   <p className="text-[9px] text-stone-400 font-normal mt-0.5">
@@ -3952,9 +3952,9 @@ export default function SistemaContableYanaloma() {
 
             {activeTab === 'usuarios' && currentUser?.role === 'admin' && (
               <div>
-                <div className="flex justify-between items-center mb-6 pb-2 border-b">
-                  <h2 className="text-lg font-bold text-gray-700">GESTIÓN DE USUARIOS DEL SISTEMA</h2>
-                  <button 
+                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+                  <h2 className="text-lg font-bold text-stone-300">GESTIÓN DE USUARIOS DEL SISTEMA</h2>
+                  <button
                     onClick={() => {
                       setEditingUser(null);
                       setUserFormName('');
@@ -3969,7 +3969,7 @@ export default function SistemaContableYanaloma() {
                   </button>
                 </div>
 
-                <div className="overflow-x-auto bg-white border border-stone-200 shadow-sm rounded-xl p-6">
+                <div className="overflow-x-auto bg-stone-900 border border-stone-800 shadow-sm rounded-xl p-6">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-emerald-950 text-white font-mono whitespace-nowrap text-sm">
                       <tr>
@@ -3980,29 +3980,29 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 border-b border-emerald-900 text-center font-bold">ACCIONES</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white text-gray-700 font-sans">
+                    <tbody className="divide-y divide-stone-850 bg-stone-900 text-stone-300 font-sans">
                       {usuariosList.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="p-6 text-center text-gray-400 font-mono">No hay usuarios cargados.</td>
+                          <td colSpan={5} className="p-6 text-center text-stone-500 font-mono">No hay usuarios cargados.</td>
                         </tr>
                       )}
                       {usuariosList.map((usr) => (
-                        <tr key={usr.id || usr.username} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-3 font-semibold text-gray-900">{usr.nombre}</td>
-                          <td className="p-3 font-mono font-bold text-stone-600">{usr.username}</td>
+                        <tr key={usr.id || usr.username} className="hover:bg-stone-850 transition-colors">
+                          <td className="p-3 font-semibold text-white">{usr.nombre}</td>
+                          <td className="p-3 font-mono font-bold text-stone-400">{usr.username}</td>
                           <td className="p-3 font-mono">{usr.password}</td>
                           <td className="p-3 text-center">
                             <span className={`px-2.5 py-0.5 rounded-full text-[8.5pt] font-semibold tracking-wide border shadow-sm ${
-                              usr.role === 'admin' ? 'bg-red-50 text-red-700 border-red-100' :
-                              usr.role === 'cajero' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                              'bg-stone-100 text-stone-700 border-stone-200'
+                              usr.role === 'admin' ? 'bg-red-950/40 text-red-300 border-red-900/50' :
+                              usr.role === 'cajero' ? 'bg-emerald-950/40 text-emerald-300 border-emerald-900/50' :
+                              'bg-stone-800 text-stone-300 border-stone-700'
                             }`}>
                               {usr.role.toUpperCase()}
                             </span>
                           </td>
                           <td className="p-3 text-center">
                             <div className="flex justify-center items-center gap-2">
-                              <button 
+                              <button
                                 onClick={() => {
                                   setEditingUser(usr);
                                   setUserFormName(usr.nombre);
@@ -4011,14 +4011,14 @@ export default function SistemaContableYanaloma() {
                                   setUserFormRole(usr.role);
                                   setShowUserModal(true);
                                 }}
-                                className="px-2.5 py-1 text-[11px] font-bold text-stone-700 bg-white border border-stone-200 hover:bg-stone-50 rounded transition-colors shadow-sm cursor-pointer"
+                                className="px-2.5 py-1 text-[11px] font-bold text-stone-300 bg-stone-900 border border-stone-700 hover:bg-stone-800 rounded transition-colors shadow-sm cursor-pointer"
                               >
                                 Editar
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleDeleteUser(usr.id, usr.username)}
                                 disabled={currentUser?.username === usr.username}
-                                className="px-2.5 py-1 text-[11px] font-bold text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed rounded border border-red-100 hover:border-red-200 transition-colors shadow-sm cursor-pointer"
+                                className="px-2.5 py-1 text-[11px] font-bold text-red-400 bg-red-950/40 hover:bg-red-900/50 disabled:opacity-40 disabled:cursor-not-allowed rounded border border-red-900/50 hover:border-red-800 transition-colors shadow-sm cursor-pointer"
                               >
                                 Eliminar
                               </button>
@@ -4078,16 +4078,16 @@ export default function SistemaContableYanaloma() {
 
       {showUserModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-2xl w-full max-w-md relative overflow-hidden animate-in fade-in zoom-in-95 duration-200 font-sans">
+          <div className="bg-stone-900 border border-stone-800 rounded-2xl p-6 shadow-2xl w-full max-w-md relative overflow-hidden animate-in fade-in zoom-in-95 duration-200 font-sans">
             <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-600 to-teal-400"></div>
 
-            <div className="flex justify-between items-center mb-6 pb-2 border-b">
-              <h3 className="text-base font-bold text-stone-850">
+            <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+              <h3 className="text-base font-bold text-stone-100">
                 {editingUser ? `Editar Usuario: ${editingUser.username}` : 'Registrar Nuevo Usuario'}
               </h3>
-              <button 
+              <button
                 onClick={() => setShowUserModal(false)}
-                className="text-stone-400 hover:text-stone-700 text-sm font-bold p-1 rounded hover:bg-stone-50 cursor-pointer"
+                className="text-stone-400 hover:text-stone-200 text-sm font-bold p-1 rounded hover:bg-stone-850 cursor-pointer"
               >
                 ✕
               </button>
@@ -4096,11 +4096,11 @@ export default function SistemaContableYanaloma() {
             <form onSubmit={handleSaveUser} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1.5 font-mono">Nombre Completo</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={userFormName}
                   onChange={(e) => setUserFormName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-stone-800 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 bg-stone-950 text-stone-200"
                   placeholder="Ej. Marco Luis Soto"
                   required
                 />
@@ -4108,11 +4108,11 @@ export default function SistemaContableYanaloma() {
 
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1.5 font-mono">Nombre de Usuario (Login)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={userFormUsername}
                   onChange={(e) => setUserFormUsername(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                  className="w-full px-3 py-2 border border-stone-800 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-mono bg-stone-950 text-stone-200"
                   placeholder="Ej. msoto"
                   required
                 />
@@ -4120,11 +4120,11 @@ export default function SistemaContableYanaloma() {
 
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1.5 font-mono">Contraseña</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={userFormPassword}
                   onChange={(e) => setUserFormPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                  className="w-full px-3 py-2 border border-stone-800 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-mono bg-stone-950 text-stone-200"
                   placeholder="Ej. pass123"
                   required
                 />
@@ -4132,10 +4132,10 @@ export default function SistemaContableYanaloma() {
 
               <div>
                 <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1.5 font-mono">Rol del Sistema</label>
-                <select 
+                <select
                   value={userFormRole}
                   onChange={(e) => setUserFormRole(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  className="w-full px-3 py-2 border border-stone-800 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 bg-stone-950 text-stone-200"
                 >
                   <option value="cajero">Cajero (Solo Punto de Venta)</option>
                   <option value="otro">Otro (ERP Consulta)</option>
@@ -4143,15 +4143,15 @@ export default function SistemaContableYanaloma() {
                 </select>
               </div>
 
-              <div className="pt-4 flex justify-end gap-2 border-t mt-6">
-                <button 
+              <div className="pt-4 flex justify-end gap-2 border-t border-stone-800 mt-6">
+                <button
                   type="button"
                   onClick={() => setShowUserModal(false)}
-                  className="px-3.5 py-1.5 border border-stone-200 hover:bg-stone-50 text-xs font-bold rounded-lg transition-colors cursor-pointer text-stone-700"
+                  className="px-3.5 py-1.5 border border-stone-800 hover:bg-stone-850 text-xs font-bold rounded-lg transition-colors cursor-pointer text-stone-300"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm cursor-pointer"
                 >

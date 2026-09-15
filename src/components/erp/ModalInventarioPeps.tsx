@@ -111,101 +111,101 @@ export default function ModalInventarioPeps({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-stone-900 border border-stone-800 rounded-xl shadow-2xl shadow-black/40 w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="bg-emerald-800 p-4 text-white flex justify-between items-center">
           <h3 className="font-bold">Registrar Movimiento de Inventario / Tueste</h3>
           <button onClick={onClose} className="hover:bg-emerald-700 p-1 rounded"><X size={20}/></button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 text-sm text-gray-800">
+
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 text-sm text-stone-200">
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block font-bold mb-1">Fecha</label>
-              <input type="date" name="fecha" required value={formData.fecha} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block font-bold mb-1 text-stone-300">Fecha</label>
+              <input type="date" name="fecha" required value={formData.fecha} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div className="col-span-2">
-              <label className="block font-bold mb-1">Detalle</label>
-              <input type="text" name="detalle" required value={formData.detalle} onChange={handleChange} className="w-full border rounded p-2" placeholder="Ej: INVENTARIO INICIAL o TUESTE 1" />
+              <label className="block font-bold mb-1 text-stone-300">Detalle</label>
+              <input type="text" name="detalle" required value={formData.detalle} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Ej: INVENTARIO INICIAL o TUESTE 1" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 mb-4">
             {/* Columna Izquierda: Entradas y Salidas */}
             <div>
-              <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800">Cantidades (Unidades)</h4>
+              <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400">Cantidades (Unidades)</h4>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1">ENTRADAS</label>
-                  <input type="number" step="any" name="entradas" value={formData.entradas} onChange={handleChange} className="w-full border rounded p-2" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">ENTRADAS</label>
+                  <input type="number" step="any" name="entradas" value={formData.entradas} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">SALIDAS</label>
-                  <input type="number" step="any" name="salidas" value={formData.salidas} onChange={handleChange} className="w-full border rounded p-2" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">SALIDAS</label>
+                  <input type="number" step="any" name="salidas" value={formData.salidas} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold mb-1">SALDO UNIDADES (Calcular manual o auto)</label>
-                  <input type="number" step="any" name="saldo_unidades" value={formData.saldo_unidades} onChange={handleChange} className="w-full border rounded p-2 bg-gray-50" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">SALDO UNIDADES (Calcular manual o auto)</label>
+                  <input type="number" step="any" name="saldo_unidades" value={formData.saldo_unidades} onChange={handleChange} className="w-full bg-stone-900 border border-stone-800 rounded-lg p-2 text-amber-400" />
                 </div>
               </div>
 
-              <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800">Valores (Bs)</h4>
+              <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400">Valores (Bs)</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold mb-1">COSTO UNITARIO (C/U)</label>
-                  <input type="number" step="any" name="costo_unitario" value={formData.costo_unitario} onChange={handleChange} className="w-full border rounded p-2" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">COSTO UNITARIO (C/U)</label>
+                  <input type="number" step="any" name="costo_unitario" value={formData.costo_unitario} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">DEBE</label>
-                  <input type="number" step="any" name="debe" value={formData.debe} onChange={handleChange} className="w-full border rounded p-2" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">DEBE</label>
+                  <input type="number" step="any" name="debe" value={formData.debe} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">HABER</label>
-                  <input type="number" step="any" name="haber" value={formData.haber} onChange={handleChange} className="w-full border rounded p-2" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">HABER</label>
+                  <input type="number" step="any" name="haber" value={formData.haber} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold mb-1">SALDO VALOR (Bs)</label>
-                  <input type="number" step="any" name="saldo_valor" value={formData.saldo_valor} onChange={handleChange} className="w-full border rounded p-2 bg-gray-50" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">SALDO VALOR (Bs)</label>
+                  <input type="number" step="any" name="saldo_valor" value={formData.saldo_valor} onChange={handleChange} className="w-full bg-stone-900 border border-stone-800 rounded-lg p-2 text-amber-400" />
                 </div>
               </div>
             </div>
 
             {/* Columna Derecha: Tuestes */}
             <div>
-              <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800">Datos de Tueste</h4>
+              <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400">Datos de Tueste</h4>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1">TIPO DE CAFÉ</label>
-                  <input type="text" name="tipo_cafe" value={formData.tipo_cafe} onChange={handleChange} className="w-full border rounded p-2" placeholder="BLEND, JAVA..." />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">TIPO DE CAFÉ</label>
+                  <input type="text" name="tipo_cafe" value={formData.tipo_cafe} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="BLEND, JAVA..." />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">TIPO DE TUESTE</label>
-                  <input type="text" name="tipo_tueste" value={formData.tipo_tueste} onChange={handleChange} className="w-full border rounded p-2" placeholder="MEDIO, OSCURO..." />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">TIPO DE TUESTE</label>
+                  <input type="text" name="tipo_tueste" value={formData.tipo_tueste} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="MEDIO, OSCURO..." />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">CLIMA</label>
-                  <input type="text" name="clima" value={formData.clima} onChange={handleChange} className="w-full border rounded p-2" placeholder="Soleado..." />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">CLIMA</label>
+                  <input type="text" name="clima" value={formData.clima} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Soleado..." />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold mb-1">MERMA %</label>
-                    <input type="number" step="any" name="merma_porcentaje" value={formData.merma_porcentaje} onChange={handleChange} className="w-full border rounded p-2" />
+                    <label className="block text-xs font-bold mb-1 text-stone-300">MERMA %</label>
+                    <input type="number" step="any" name="merma_porcentaje" value={formData.merma_porcentaje} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1">MERMA TUESTE (Kg)</label>
-                    <input type="number" step="any" name="merma_tueste" value={formData.merma_tueste} onChange={handleChange} className="w-full border rounded p-2" />
+                    <label className="block text-xs font-bold mb-1 text-stone-300">MERMA TUESTE (Kg)</label>
+                    <input type="number" step="any" name="merma_tueste" value={formData.merma_tueste} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1">TUESTE FINAL</label>
-                  <input type="number" step="any" name="tueste_final" value={formData.tueste_final} onChange={handleChange} className="w-full border rounded p-2" />
+                  <label className="block text-xs font-bold mb-1 text-stone-300">TUESTE FINAL</label>
+                  <input type="number" step="any" name="tueste_final" value={formData.tueste_final} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                 </div>
               </div>
             </div>
           </div>
 
           <div className="mt-8 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-stone-700 rounded font-bold text-stone-300 hover:bg-stone-800">Cancelar</button>
             <button type="submit" disabled={loading} className="px-6 py-2 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700 flex items-center gap-2">
               <Save size={16} /> {loading ? 'Guardando...' : 'Guardar Movimiento'}
             </button>

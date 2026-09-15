@@ -339,30 +339,30 @@ export default function ModalComprasVentas({
   const availableAccounts = planCuentas.filter(c => c.codigo && c.nombre);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-stone-900 border border-stone-800 rounded-xl shadow-2xl shadow-black/40 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="bg-emerald-800 p-4 text-white flex justify-between items-center">
           <h3 className="font-bold">Registrar Transacción (Partida Doble)</h3>
           <button onClick={onClose} className="hover:bg-emerald-700 p-1 rounded"><X size={20}/></button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 text-sm text-gray-800">
+
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 text-sm text-stone-200">
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block font-bold mb-1">Fecha</label>
-              <input type="date" name="fecha" required value={formData.fecha} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block font-bold mb-1 text-stone-300">Fecha</label>
+              <input type="date" name="fecha" required value={formData.fecha} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block font-bold mb-1">Tipo de Movimiento</label>
-              <select name="tipo_movimiento" value={formData.tipo_movimiento} onChange={handleChange} className="w-full border rounded p-2">
+              <label className="block font-bold mb-1 text-stone-300">Tipo de Movimiento</label>
+              <select name="tipo_movimiento" value={formData.tipo_movimiento} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
                 <option value="INGRESO">INGRESO</option>
                 <option value="EGRESO">EGRESO</option>
               </select>
             </div>
             <div className="col-span-2 grid grid-cols-2 gap-4">
               <div>
-                <label className="block font-bold mb-1">Categoría (Estado de Resultados)</label>
-                <select name="categoria" value={formData.categoria} onChange={handleChange} className="w-full border rounded p-2 bg-emerald-50">
+                <label className="block font-bold mb-1 text-stone-300">Categoría (Estado de Resultados)</label>
+                <select name="categoria" value={formData.categoria} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
                   <optgroup label="INGRESOS">
                     <option value="Ventas">Ventas</option>
                     <option value="Servicios">Servicios</option>
@@ -384,139 +384,139 @@ export default function ModalComprasVentas({
                 </select>
               </div>
               <div>
-                <label className="block font-bold mb-1">Detalle / Glosa</label>
-                <input type="text" name="detalle" required value={formData.detalle} onChange={handleChange} className="w-full border rounded p-2" placeholder="Ej: Venta de café molido, Pago energía..." />
+                <label className="block font-bold mb-1 text-stone-300">Detalle / Glosa</label>
+                <input type="text" name="detalle" required value={formData.detalle} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Ej: Venta de café molido, Pago energía..." />
               </div>
             </div>
           </div>
 
-          <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800">Detalles Operativos</h4>
+          <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400">Detalles Operativos</h4>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block font-bold mb-1">Mesa / Ubicación</label>
-              <input type="text" name="mesa" value={formData.mesa} onChange={handleChange} className="w-full border rounded p-2" placeholder="Ej: Mesa 3, Llevar, -" />
+              <label className="block font-bold mb-1 text-stone-300">Mesa / Ubicación</label>
+              <input type="text" name="mesa" value={formData.mesa} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Ej: Mesa 3, Llevar, -" />
             </div>
             <div>
-              <label className="block font-bold mb-1">Hora</label>
-              <input type="text" name="hora" value={formData.hora} onChange={handleChange} className="w-full border rounded p-2" placeholder="Ej: 07:48, 14:30" />
+              <label className="block font-bold mb-1 text-stone-300">Hora</label>
+              <input type="text" name="hora" value={formData.hora} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Ej: 07:48, 14:30" />
             </div>
             <div>
-              <label className="block font-bold mb-1">Responsable</label>
-              <input type="text" name="responsable" value={formData.responsable} onChange={handleChange} className="w-full border rounded p-2" placeholder="Ej: Turno Mañana, Marco Luis" />
+              <label className="block font-bold mb-1 text-stone-300">Responsable</label>
+              <input type="text" name="responsable" value={formData.responsable} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Ej: Turno Mañana, Marco Luis" />
             </div>
           </div>
 
-          <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800">Cuentas Receptoras / Emisoras (Bs)</h4>
+          <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400">Cuentas Receptoras / Emisoras (Bs)</h4>
           <div className="grid grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-xs font-bold mb-1">CAJA</label>
-              <input type="number" step="0.01" name="caja" value={formData.caja} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">CAJA</label>
+              <input type="number" step="0.01" name="caja" value={formData.caja} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">C. CHICA</label>
-              <input type="number" step="0.01" name="c_chica" value={formData.c_chica} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">C. CHICA</label>
+              <input type="number" step="0.01" name="c_chica" value={formData.c_chica} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">BANCO</label>
-              <input type="number" step="0.01" name="banco" value={formData.banco} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">BANCO</label>
+              <input type="number" step="0.01" name="banco" value={formData.banco} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">POS</label>
-              <input type="number" step="0.01" name="pos" value={formData.pos} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">POS</label>
+              <input type="number" step="0.01" name="pos" value={formData.pos} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
           </div>
 
-          <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800 flex items-center gap-1.5">
+          <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400 flex items-center gap-1.5">
             Partida Doble (Cuentas Contables Obligatorias)
           </h4>
-          <div className="grid grid-cols-2 gap-4 mb-4 bg-emerald-50/30 border border-emerald-150 p-4 rounded-xl">
+          <div className="grid grid-cols-2 gap-4 mb-4 bg-emerald-950/20 border border-emerald-900/40 p-4 rounded-xl">
             <div>
-              <label className="block text-xs font-black text-emerald-800 mb-1.5 uppercase tracking-wide">
+              <label className="block text-xs font-black text-emerald-400 mb-1.5 uppercase tracking-wide">
                 Cuenta Destino (DEBE / A dónde va) *
               </label>
-              <select 
-                name="codigo_debe" 
-                required 
-                value={formData.codigo_debe} 
-                onChange={handleChange} 
-                className="w-full border rounded-lg p-2.5 font-mono text-xs bg-white border-emerald-250 hover:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+              <select
+                name="codigo_debe"
+                required
+                value={formData.codigo_debe}
+                onChange={handleChange}
+                className="w-full bg-stone-950 border border-emerald-900/60 rounded-lg p-2.5 font-mono text-xs text-white hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
                 <option value="">Seleccione cuenta destino (DEBE)...</option>
                 {availableAccounts.map(c => (
                   <option key={c.codigo} value={c.codigo}>{c.codigo} - {c.nombre}</option>
                 ))}
               </select>
-              <p className="text-[9.5px] text-gray-500 mt-1">Representa el destino del dinero (Activo/Gasto).</p>
+              <p className="text-[9.5px] text-stone-500 mt-1">Representa el destino del dinero (Activo/Gasto).</p>
             </div>
             <div>
-              <label className="block text-xs font-black text-amber-800 mb-1.5 uppercase tracking-wide">
+              <label className="block text-xs font-black text-amber-400 mb-1.5 uppercase tracking-wide">
                 Cuenta Origen (HABER / De dónde viene) *
               </label>
-              <select 
-                name="codigo_haber" 
-                required 
-                value={formData.codigo_haber} 
-                onChange={handleChange} 
-                className="w-full border rounded-lg p-2.5 font-mono text-xs bg-white border-amber-200 hover:border-amber-400 focus:ring-2 focus:ring-amber-500/20"
+              <select
+                name="codigo_haber"
+                required
+                value={formData.codigo_haber}
+                onChange={handleChange}
+                className="w-full bg-stone-950 border border-amber-900/60 rounded-lg p-2.5 font-mono text-xs text-white hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
               >
                 <option value="">Seleccione cuenta origen (HABER)...</option>
                 {availableAccounts.map(c => (
                   <option key={c.codigo} value={c.codigo}>{c.codigo} - {c.nombre}</option>
                 ))}
               </select>
-              <p className="text-[9.5px] text-gray-500 mt-1">Representa el origen de los fondos (Caja/Ingreso/Pasivo).</p>
+              <p className="text-[9.5px] text-stone-500 mt-1">Representa el origen de los fondos (Caja/Ingreso/Pasivo).</p>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block font-bold mb-1">Monto Total Oficial</label>
-              <input type="number" step="0.01" name="monto_total" value={formData.monto_total} onChange={handleChange} className="w-full border rounded p-2 bg-gray-50 font-bold" />
+              <label className="block font-bold mb-1 text-stone-300">Monto Total Oficial</label>
+              <input type="number" step="0.01" name="monto_total" value={formData.monto_total} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-amber-400 placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-bold" />
             </div>
             <div>
-              <label className="block font-bold mb-1">Método de Pago</label>
-              <input type="text" name="metodo_pago" value={formData.metodo_pago} onChange={handleChange} className="w-full border rounded p-2" placeholder="EFECTIVO, QR..." />
+              <label className="block font-bold mb-1 text-stone-300">Método de Pago</label>
+              <input type="text" name="metodo_pago" value={formData.metodo_pago} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="EFECTIVO, QR..." />
             </div>
             <div className="flex items-center mt-6">
-              <input type="checkbox" id="tiene_factura" name="tiene_factura" checked={formData.tiene_factura} onChange={handleChange} className="mr-2 h-4 w-4" />
-              <label htmlFor="tiene_factura" className="font-bold cursor-pointer">¿Tiene Factura?</label>
+              <input type="checkbox" id="tiene_factura" name="tiene_factura" checked={formData.tiene_factura} onChange={handleChange} className="mr-2 h-4 w-4 accent-emerald-600" />
+              <label htmlFor="tiene_factura" className="font-bold cursor-pointer text-stone-300">¿Tiene Factura?</label>
             </div>
             <div>
-              <label className="block font-bold mb-1">Pago (Dinero Recibido)</label>
-              <input type="number" step="0.01" name="pago" value={formData.pago} onChange={handleChange} className="w-full border rounded p-2" placeholder="Ej: 100" />
+              <label className="block font-bold mb-1 text-stone-300">Pago (Dinero Recibido)</label>
+              <input type="number" step="0.01" name="pago" value={formData.pago} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Ej: 100" />
             </div>
             <div>
-              <label className="block font-bold mb-1">Cambio (Devuelto)</label>
-              <input type="number" step="0.01" name="cambio" value={formData.cambio} onChange={handleChange} className="w-full border rounded p-2 bg-gray-50" readOnly />
+              <label className="block font-bold mb-1 text-stone-300">Cambio (Devuelto)</label>
+              <input type="number" step="0.01" name="cambio" value={formData.cambio} onChange={handleChange} className="w-full bg-stone-900 border border-stone-800 rounded-lg p-2 text-amber-400" readOnly />
             </div>
             <div>
-              <label className="block font-bold mb-1">Observación</label>
-              <input type="text" name="observacion" value={formData.observacion} onChange={handleChange} className="w-full border rounded p-2" placeholder="Ej: Ninguna" />
+              <label className="block font-bold mb-1 text-stone-300">Observación</label>
+              <input type="text" name="observacion" value={formData.observacion} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" placeholder="Ej: Ninguna" />
             </div>
           </div>
 
-          <h4 className="font-bold border-b pb-1 mb-3 text-emerald-800">Datos Internos / Costos (Bs)</h4>
+          <h4 className="font-bold border-b border-stone-800 pb-1 mb-3 text-emerald-400">Datos Internos / Costos (Bs)</h4>
           <div className="grid grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-xs font-bold mb-1">V.S/F C.CHICA</label>
-              <input type="number" step="0.01" name="v_sf_cchica" value={formData.v_sf_cchica} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">V.S/F C.CHICA</label>
+              <input type="number" step="0.01" name="v_sf_cchica" value={formData.v_sf_cchica} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">V. BANCO</label>
-              <input type="number" step="0.01" name="v_sf_banco" value={formData.v_sf_banco} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">V. BANCO</label>
+              <input type="number" step="0.01" name="v_sf_banco" value={formData.v_sf_banco} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">COSTO C.CHICA</label>
-              <input type="number" step="0.01" name="costo_cchica" value={formData.costo_cchica} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">COSTO C.CHICA</label>
+              <input type="number" step="0.01" name="costo_cchica" value={formData.costo_cchica} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">COSTO BANCO</label>
-              <input type="number" step="0.01" name="costo_banco" value={formData.costo_banco} onChange={handleChange} className="w-full border rounded p-2" />
+              <label className="block text-xs font-bold mb-1 text-stone-300">COSTO BANCO</label>
+              <input type="number" step="0.01" name="costo_banco" value={formData.costo_banco} onChange={handleChange} className="w-full bg-stone-950 border border-stone-800 rounded-lg p-2 text-white placeholder-stone-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
             </div>
           </div>
 
           <div className="mt-8 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-stone-700 rounded font-bold text-stone-300 hover:bg-stone-800">Cancelar</button>
             <button type="submit" disabled={loading} className="px-6 py-2 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700 flex items-center gap-2">
               <Save size={16} /> {loading ? 'Guardando...' : 'Guardar Registro'}
             </button>
