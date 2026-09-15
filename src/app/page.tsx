@@ -1900,7 +1900,7 @@ export default function SistemaContableYanaloma() {
       }}>
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
         <div className="w-full max-w-md mx-4 z-10">
-          <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-850 rounded-2xl p-8 shadow-2xl relative">
+          <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-700 rounded-2xl p-8 shadow-2xl relative">
             <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-t-2xl"></div>
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-gradient-to-tr from-emerald-700 to-emerald-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg border border-emerald-400/25 mb-4">
@@ -1948,7 +1948,7 @@ export default function SistemaContableYanaloma() {
                 ) : 'Iniciar Sesión'}
               </button>
             </form>
-            <div className="mt-8 pt-6 border-t border-stone-850 text-center">
+            <div className="mt-8 pt-6 border-t border-stone-700 text-center">
               <p className="text-[10px] text-stone-500 font-mono">© 2026 The Roasting Lab S.R.L.</p>
             </div>
           </div>
@@ -2042,7 +2042,7 @@ export default function SistemaContableYanaloma() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-6 py-4 text-xs font-bold tracking-wider uppercase border-b-4 transition-all ${
-                  isActive ? 'border-emerald-600 text-emerald-400 bg-emerald-950/40' : 'border-transparent text-stone-500 hover:bg-stone-850 hover:text-stone-200'
+                  isActive ? 'border-emerald-600 text-emerald-400 bg-emerald-950/40' : 'border-transparent text-stone-500 hover:bg-stone-800 hover:text-stone-200'
                 }`}
               >
                 <Icon size={16} className={isActive ? 'text-emerald-400' : 'text-stone-500'} />
@@ -2077,17 +2077,17 @@ export default function SistemaContableYanaloma() {
                       </div>
 
                       <table className="w-full text-sm text-left">
-                        <tbody className="divide-y divide-stone-850 font-medium text-stone-300">
+                        <tbody className="divide-y divide-stone-700 font-medium text-stone-300">
                           {/* INGRESOS TOTALES */}
-                          <tr className="bg-stone-850 font-bold font-mono">
+                          <tr className="bg-stone-800 font-bold font-mono">
                             <td className="px-6 py-2.5" colSpan={3}>INGRESOS TOTALES</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Ventas</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.vVentas)}</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Servicios</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.vServicios)}</td>
@@ -2099,25 +2099,25 @@ export default function SistemaContableYanaloma() {
                           </tr>
 
                           {/* COSTOS TOTALES */}
-                          <tr className="bg-stone-850 font-bold font-mono">
+                          <tr className="bg-stone-800 font-bold font-mono">
                             <td className="px-6 py-2.5" colSpan={3}>COSTOS TOTALES</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Inventario</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cInventario)}</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Insumos alimenticios</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cInsumos)}</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Mano de obra</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cManoObra)}</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">Costos secundarios</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.cSecundarios)}</td>
@@ -2129,15 +2129,15 @@ export default function SistemaContableYanaloma() {
                           </tr>
 
                           {/* IMPUESTOS */}
-                          <tr className="bg-stone-850 font-bold font-mono">
+                          <tr className="bg-stone-800 font-bold font-mono">
                             <td className="px-6 py-2.5" colSpan={3}>IMPUESTOS</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">IT</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.iIT)}</td>
                           </tr>
-                          <tr className="border-b border-stone-850 font-mono">
+                          <tr className="border-b border-stone-700 font-mono">
                             <td className="px-6 py-2 pl-10 font-normal">IVA</td>
                             <td></td>
                             <td className="px-6 py-2 text-right">{formatNumber(plData.iIVA)}</td>
@@ -2166,7 +2166,7 @@ export default function SistemaContableYanaloma() {
                             <tr><td colSpan={3} className="px-6 py-3 text-center text-stone-500 italic font-normal font-mono">No hay gastos destacados en este periodo.</td></tr>
                           )}
                           {plData.destacado.map((d: any) => (
-                            <tr key={d.id} className="border-b border-stone-850 font-mono">
+                            <tr key={d.id} className="border-b border-stone-700 font-mono">
                               <td className="px-6 py-2 pl-10 font-normal">{d.detalle}</td>
                               <td></td>
                               <td className="px-6 py-2 text-right text-purple-400">
@@ -2335,7 +2335,7 @@ export default function SistemaContableYanaloma() {
                       </div>
 
                       {/* Desglose */}
-                      <div className="mt-6 border-t border-stone-850 pt-4">
+                      <div className="mt-6 border-t border-stone-700 pt-4">
                         <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider font-mono mb-3">Resumen de Ventas</h4>
                         <div className="grid grid-cols-7 text-center gap-1">
                           {ventasDiaSemana.datos.map((d, index) => {
@@ -2343,7 +2343,7 @@ export default function SistemaContableYanaloma() {
                               ? d.dia === ventasDiaSemana.maxVentaDia.dia
                               : d.dia === ventasDiaSemana.maxCantDia.dia;
                             return (
-                              <div key={index} className={`p-1.5 rounded-lg ${isMax ? 'bg-emerald-950/40 border border-emerald-900/50 text-emerald-300' : 'bg-stone-850 text-stone-400'}`}>
+                              <div key={index} className={`p-1.5 rounded-lg ${isMax ? 'bg-emerald-950/40 border border-emerald-900/50 text-emerald-300' : 'bg-stone-800 text-stone-400'}`}>
                                 <p className="text-[9px] font-extrabold font-mono uppercase leading-none">{d.dia.slice(0, 3)}</p>
                                 <p className="text-xs font-bold font-mono mt-1 leading-none">
                                   {graficoMetrica === 'monto' ? `${Math.round(d.total)}` : d.cantidad}
@@ -2559,7 +2559,7 @@ export default function SistemaContableYanaloma() {
                     <button
                       onClick={() => handleDiarioSort('nro_asiento')}
                       className={`px-2.5 py-1 rounded border transition-all flex items-center gap-1 font-mono font-bold ${
-                        diarioSortKey === 'nro_asiento' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-850'
+                        diarioSortKey === 'nro_asiento' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-800'
                       }`}
                     >
                       N° Asiento {diarioSortKey === 'nro_asiento' && (diarioSortDirection === 'asc' ? '▲' : '▼')}
@@ -2567,7 +2567,7 @@ export default function SistemaContableYanaloma() {
                     <button
                       onClick={() => handleDiarioSort('fecha')}
                       className={`px-2.5 py-1 rounded border transition-all flex items-center gap-1 font-mono font-bold ${
-                        diarioSortKey === 'fecha' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-850'
+                        diarioSortKey === 'fecha' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-800'
                       }`}
                     >
                       Fecha {diarioSortKey === 'fecha' && (diarioSortDirection === 'asc' ? '▲' : '▼')}
@@ -2575,7 +2575,7 @@ export default function SistemaContableYanaloma() {
                     <button
                       onClick={() => handleDiarioSort('monto')}
                       className={`px-2.5 py-1 rounded border transition-all flex items-center gap-1 font-mono font-bold ${
-                        diarioSortKey === 'monto' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-850'
+                        diarioSortKey === 'monto' ? 'bg-emerald-950/40 border-emerald-500 text-emerald-400' : 'bg-stone-900 border-stone-800 hover:bg-stone-800'
                       }`}
                     >
                       Importe {diarioSortKey === 'monto' && (diarioSortDirection === 'asc' ? '▲' : '▼')}
@@ -3046,7 +3046,7 @@ export default function SistemaContableYanaloma() {
 
                     return (
                       <div key={mayor.codigo} className="mb-10 bg-stone-900 border border-stone-800 rounded-lg shadow-sm overflow-hidden">
-                        <h3 className="text-sm font-bold text-stone-100 bg-stone-850 p-2.5 border-l-4 border-stone-600 shadow-sm flex items-center gap-2 font-mono uppercase">
+                        <h3 className="text-sm font-bold text-stone-100 bg-stone-800 p-2.5 border-l-4 border-stone-600 shadow-sm flex items-center gap-2 font-mono uppercase">
                           <Layers size={16} />
                           {mayor.nombre}
                         </h3>
@@ -3062,15 +3062,15 @@ export default function SistemaContableYanaloma() {
                                 <th className="px-4 py-2 border-b border-stone-700 text-right">SALDO</th>
                               </tr>
                             </thead>
-                            <tbody className="font-mono divide-y divide-stone-850 text-stone-300 bg-stone-900">
+                            <tbody className="font-mono divide-y divide-stone-700 text-stone-300 bg-stone-900">
                               {mayor.movimientos.length === 0 ? (
-                                <tr className="hover:bg-stone-850 text-stone-500 italic">
-                                  <td className="px-4 py-2 border-b border-stone-850">-</td>
-                                  <td className="px-4 py-2 border-b border-stone-850 text-center">-</td>
-                                  <td className="px-4 py-2 border-b border-stone-850">Sin movimientos en este periodo.</td>
-                                  <td className="px-4 py-2 border-b border-stone-850 text-right">-</td>
-                                  <td className="px-4 py-2 border-b border-stone-850 text-right">-</td>
-                                  <td className="px-4 py-2 border-b border-stone-850 text-right bg-stone-950 font-bold">{formatNumber(0)}</td>
+                                <tr className="hover:bg-stone-800 text-stone-500 italic">
+                                  <td className="px-4 py-2 border-b border-stone-700">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-700 text-center">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-700">Sin movimientos en este periodo.</td>
+                                  <td className="px-4 py-2 border-b border-stone-700 text-right">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-700 text-right">-</td>
+                                  <td className="px-4 py-2 border-b border-stone-700 text-right bg-stone-950 font-bold">{formatNumber(0)}</td>
                                 </tr>
                               ) : (
                                 mayor.movimientos.map((mov: any, idx: number) => {
@@ -3092,19 +3092,19 @@ export default function SistemaContableYanaloma() {
                                   };
 
                                   return (
-                                    <tr key={mov.id || idx} className="hover:bg-stone-850">
-                                      <td className="px-4 py-2 border-b border-stone-850">{formatDateCSV(mov.fecha || mov.created_at)}</td>
-                                      <td className="px-4 py-2 border-b border-stone-850 text-center font-bold">{renderRef()}</td>
-                                      <td className="px-4 py-2 border-b border-stone-850">{renderDetalle()}</td>
-                                      <td className="px-4 py-2 border-b border-stone-850 text-right">{Number(mov.debe || 0) > 0 ? formatNumber(mov.debe) : ''}</td>
-                                      <td className="px-4 py-2 border-b border-stone-850 text-right">{Number(mov.haber || 0) > 0 ? formatNumber(mov.haber) : ''}</td>
-                                      <td className="px-4 py-2 border-b border-stone-850 text-right bg-stone-950 font-bold">{formatNumber(mov.saldoAcumulado)}</td>
+                                    <tr key={mov.id || idx} className="hover:bg-stone-800">
+                                      <td className="px-4 py-2 border-b border-stone-700">{formatDateCSV(mov.fecha || mov.created_at)}</td>
+                                      <td className="px-4 py-2 border-b border-stone-700 text-center font-bold">{renderRef()}</td>
+                                      <td className="px-4 py-2 border-b border-stone-700">{renderDetalle()}</td>
+                                      <td className="px-4 py-2 border-b border-stone-700 text-right">{Number(mov.debe || 0) > 0 ? formatNumber(mov.debe) : ''}</td>
+                                      <td className="px-4 py-2 border-b border-stone-700 text-right">{Number(mov.haber || 0) > 0 ? formatNumber(mov.haber) : ''}</td>
+                                      <td className="px-4 py-2 border-b border-stone-700 text-right bg-stone-950 font-bold">{formatNumber(mov.saldoAcumulado)}</td>
                                     </tr>
                                   );
                                 })
                               )}
                               {/* CIERRE ROW */}
-                              <tr className="bg-stone-850 font-bold border-t-2 border-stone-600">
+                              <tr className="bg-stone-800 font-bold border-t-2 border-stone-600">
                                 <td className="px-4 py-2 uppercase" colSpan={3}>CIERRE MES DE {periodoActual}</td>
                                 <td className="px-4 py-2 text-right">{formatNumber(totalDebe)}</td>
                                 <td className="px-4 py-2 text-right">{formatNumber(totalHaber)}</td>
@@ -3202,7 +3202,7 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 text-center w-[110px]">Acción</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono divide-y divide-stone-850 text-stone-300 bg-stone-900">
+                    <tbody className="font-mono divide-y divide-stone-700 text-stone-300 bg-stone-900">
                       {(() => {
                         if (paginatedTx.length === 0) return <tr><td colSpan={9} className="p-8 text-center text-stone-500 italic bg-stone-950">No se encontraron resultados para tu búsqueda.</td></tr>;
                         
@@ -3229,7 +3229,7 @@ export default function SistemaContableYanaloma() {
 
                           return (
                             <React.Fragment key={tx.id}>
-                              <tr className={`hover:bg-emerald-950/20 transition-colors border-b border-stone-850 ${isExpanded ? 'bg-emerald-950/10' : ''}`}>
+                              <tr className={`hover:bg-emerald-950/20 transition-colors border-b border-stone-700 ${isExpanded ? 'bg-emerald-950/10' : ''}`}>
                                 <td className="p-3 text-center font-bold text-stone-400">{rowNumber}</td>
                                 <td className="p-3 text-stone-400">{formatDate(tx.fecha || tx.created_at)}</td>
                                 <td className="p-3">
@@ -3286,7 +3286,7 @@ export default function SistemaContableYanaloma() {
                                       <CheckCircle2 size={10} className="text-emerald-400" /> CON/F
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-0.5 bg-stone-850 text-stone-500 border border-stone-800 px-1.5 py-0.5 rounded-[4px] font-mono font-bold text-[9px]">
+                                    <span className="inline-flex items-center gap-0.5 bg-stone-800 text-stone-500 border border-stone-800 px-1.5 py-0.5 rounded-[4px] font-mono font-bold text-[9px]">
                                       <XCircle size={10} className="text-stone-500" /> SIN/F
                                     </span>
                                   )}
@@ -3349,7 +3349,7 @@ export default function SistemaContableYanaloma() {
                               </tr>
                               {/* FILA DE EXPANSIÓN DETALLADA */}
                               {isExpanded && (
-                                <tr className="bg-stone-900/60 border-b border-stone-850 transition-all duration-350">
+                                <tr className="bg-stone-900/60 border-b border-stone-700 transition-all duration-350">
                                   <td colSpan={9} className="p-4 border-l-4 border-l-emerald-600">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-mono">
                                       {/* Columna 1: Info Operativa */}
@@ -3463,7 +3463,7 @@ export default function SistemaContableYanaloma() {
                       <button
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-1.5 rounded-lg border border-stone-800 bg-stone-950 hover:bg-stone-850 text-xs font-bold text-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
+                        className="px-3 py-1.5 rounded-lg border border-stone-800 bg-stone-950 hover:bg-stone-800 text-xs font-bold text-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
                       >
                         « Anterior
                       </button>
@@ -3473,7 +3473,7 @@ export default function SistemaContableYanaloma() {
                       <button
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(sortedTx.length / pageSize)))}
                         disabled={currentPage >= Math.ceil(sortedTx.length / pageSize)}
-                        className="px-3 py-1.5 rounded-lg border border-stone-800 bg-stone-950 hover:bg-stone-850 text-xs font-bold text-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
+                        className="px-3 py-1.5 rounded-lg border border-stone-800 bg-stone-950 hover:bg-stone-800 text-xs font-bold text-stone-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-mono shadow-sm"
                       >
                         Siguiente »
                       </button>
@@ -3533,7 +3533,7 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 border-b border-stone-700 text-center w-[90px]">ACCIÓN</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono divide-y divide-stone-850 text-stone-300 bg-stone-900">
+                    <tbody className="font-mono divide-y divide-stone-700 text-stone-300 bg-stone-900">
                       {(() => {
                         const filteredInv = movimientosInv.filter(mov => {
                           if (!invSearchTerm) return true;
@@ -3569,7 +3569,7 @@ export default function SistemaContableYanaloma() {
                           const tuesteFinal = Number(mov.tueste_final || 0);
 
                           return (
-                            <tr key={mov.id} className="hover:bg-stone-850">
+                            <tr key={mov.id} className="hover:bg-stone-800">
                               <td className="p-3 text-center font-bold text-stone-400">{mov.id}</td>
                               <td className="p-3">{formatDate(mov.fecha || mov.created_at)}</td>
                               <td className="p-3 truncate max-w-xs">{mov.detalle || '-'}</td>
@@ -3633,14 +3633,14 @@ export default function SistemaContableYanaloma() {
                         <th className="px-4 py-2 border-b border-stone-800 text-stone-400">DENOMINACIÓN DE CUENTA</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono text-stone-300 divide-y divide-stone-850">
+                    <tbody className="font-mono text-stone-300 divide-y divide-stone-700">
                       {planCuentas.length === 0 && <tr><td colSpan={2} className="px-4 py-6 text-center text-stone-500">El catálogo está vacío.</td></tr>}
                       {planCuentas.map((cuenta) => {
                         const isMain = cuenta.codigo.length <= 3 || cuenta.codigo.endsWith('00');
                         return (
                           <tr key={cuenta.codigo} className={isMain ? "bg-emerald-950/30 font-bold" : ""}>
-                            <td className="px-4 py-1.5 border-b border-stone-850">{cuenta.codigo}</td>
-                            <td className={`px-4 py-1.5 border-b border-stone-850 ${!isMain ? "pl-10" : ""}`}>{cuenta.nombre}</td>
+                            <td className="px-4 py-1.5 border-b border-stone-700">{cuenta.codigo}</td>
+                            <td className={`px-4 py-1.5 border-b border-stone-700 ${!isMain ? "pl-10" : ""}`}>{cuenta.nombre}</td>
                           </tr>
                         );
                       })}
@@ -3664,15 +3664,15 @@ export default function SistemaContableYanaloma() {
                         {Array.from({ length: 31 }, (_, i) => <th key={i} className="p-1 border border-stone-700 text-center w-8">{i + 1}</th>)}
                       </tr>
                     </thead>
-                    <tbody className="font-mono text-stone-300 divide-y divide-stone-850">
+                    <tbody className="font-mono text-stone-300 divide-y divide-stone-700">
                       {estadisticas.length === 0 && <tr><td colSpan={34} className="p-4 text-center text-stone-500">No hay ventas en este periodo.</td></tr>}
                       {estadisticas.map((est: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-stone-850">
-                          <td className="p-2 border border-stone-850 text-center">{idx + 1}</td>
-                          <td className="p-2 border border-stone-850 font-medium whitespace-nowrap">{est.nombre}</td>
-                          <td className="p-2 border border-stone-850 text-center font-bold bg-emerald-950/40 text-emerald-300">{est.total}</td>
+                        <tr key={idx} className="hover:bg-stone-800">
+                          <td className="p-2 border border-stone-700 text-center">{idx + 1}</td>
+                          <td className="p-2 border border-stone-700 font-medium whitespace-nowrap">{est.nombre}</td>
+                          <td className="p-2 border border-stone-700 text-center font-bold bg-emerald-950/40 text-emerald-300">{est.total}</td>
                           {est.days.map((qty: number, i: number) => (
-                            <td key={i} className={`p-1 border border-stone-850 text-center ${qty > 0 ? 'font-bold text-stone-200' : 'text-stone-600'}`}>
+                            <td key={i} className={`p-1 border border-stone-700 text-center ${qty > 0 ? 'font-bold text-stone-200' : 'text-stone-600'}`}>
                               {qty > 0 ? qty : ''}
                             </td>
                           ))}
@@ -3705,21 +3705,21 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 border-b border-emerald-900 text-right bg-emerald-600 text-white font-bold">GANANCIA NETA</th>
                       </tr>
                     </thead>
-                    <tbody className="font-mono text-stone-300 divide-y divide-stone-850 bg-stone-900">
+                    <tbody className="font-mono text-stone-300 divide-y divide-stone-700 bg-stone-900">
                       {costosData.length === 0 && <tr><td colSpan={11} className="p-6 text-center text-stone-500">No hay productos ni recetas activas.</td></tr>}
                       {costosData.map((c: any) => (
-                        <tr key={c.id} className="hover:bg-stone-850">
-                          <td className="p-3 border-b border-stone-850 font-bold text-white">{c.producto}</td>
-                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_cafe)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_agua)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_leche)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_endulzante)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.costo_insumos)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right">Bs {formatNumber(c.mano_obra)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right bg-stone-950 font-bold">Bs {formatNumber(c.costo_total)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right bg-emerald-950/40 text-emerald-300 font-bold">Bs {formatNumber(c.precio_venta)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right text-red-400">Bs {formatNumber(c.impuestos)}</td>
-                          <td className="p-3 border-b border-stone-850 text-right bg-emerald-950/40 text-emerald-400 font-bold text-sm">Bs {formatNumber(c.ganancia_neta)}</td>
+                        <tr key={c.id} className="hover:bg-stone-800">
+                          <td className="p-3 border-b border-stone-700 font-bold text-white">{c.producto}</td>
+                          <td className="p-3 border-b border-stone-700 text-right">Bs {formatNumber(c.costo_cafe)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right">Bs {formatNumber(c.costo_agua)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right">Bs {formatNumber(c.costo_leche)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right">Bs {formatNumber(c.costo_endulzante)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right">Bs {formatNumber(c.costo_insumos)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right">Bs {formatNumber(c.mano_obra)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right bg-stone-950 font-bold">Bs {formatNumber(c.costo_total)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right bg-emerald-950/40 text-emerald-300 font-bold">Bs {formatNumber(c.precio_venta)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right text-red-400">Bs {formatNumber(c.impuestos)}</td>
+                          <td className="p-3 border-b border-stone-700 text-right bg-emerald-950/40 text-emerald-400 font-bold text-sm">Bs {formatNumber(c.ganancia_neta)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3756,7 +3756,7 @@ export default function SistemaContableYanaloma() {
 
                 {/* Tarjetas Resumen */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                  <div className="bg-stone-900 border border-stone-700 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
                     <div className="p-3 rounded-xl bg-amber-950/40 text-amber-400">
                       <Cookie size={24} />
                     </div>
@@ -3766,7 +3766,7 @@ export default function SistemaContableYanaloma() {
                     </div>
                   </div>
 
-                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                  <div className="bg-stone-900 border border-stone-700 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
                     <div className="p-3 rounded-xl bg-emerald-950/40 text-emerald-400">
                       <Layers size={24} />
                     </div>
@@ -3778,7 +3778,7 @@ export default function SistemaContableYanaloma() {
                     </div>
                   </div>
 
-                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                  <div className="bg-stone-900 border border-stone-700 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
                     <div className="p-3 rounded-xl bg-red-950/40 text-red-400">
                       <XCircle size={24} />
                     </div>
@@ -3790,7 +3790,7 @@ export default function SistemaContableYanaloma() {
                     </div>
                   </div>
 
-                  <div className="bg-stone-900 border border-stone-850 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
+                  <div className="bg-stone-900 border border-stone-700 rounded-2xl p-4 shadow-sm flex items-center gap-3.5">
                     <div className="p-3 rounded-xl bg-stone-800 text-stone-300">
                       <DollarSign size={24} />
                     </div>
@@ -3806,7 +3806,7 @@ export default function SistemaContableYanaloma() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
                   
                   {/* Catálogo de Masas */}
-                  <div className="lg:col-span-7 bg-stone-900 border border-stone-850 rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="lg:col-span-7 bg-stone-900 border border-stone-700 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex justify-between items-center pb-2 border-b border-stone-800">
                       <h3 className="font-bold text-sm text-stone-100 uppercase tracking-wide">Catálogo de Masas</h3>
                       <div className="relative">
@@ -3889,7 +3889,7 @@ export default function SistemaContableYanaloma() {
                   </div>
 
                   {/* Historial de Movimientos */}
-                  <div className="lg:col-span-5 bg-stone-900 border border-stone-850 rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="lg:col-span-5 bg-stone-900 border border-stone-700 rounded-2xl p-5 shadow-sm space-y-4">
                     <div className="flex justify-between items-center pb-2 border-b border-stone-800">
                       <h3 className="font-bold text-sm text-stone-100 uppercase tracking-wide">Movimientos Recientes</h3>
                       <div className="relative">
@@ -3909,7 +3909,7 @@ export default function SistemaContableYanaloma() {
                     ) : movimientosMasas.length === 0 ? (
                       <div className="py-12 text-center text-stone-500 text-xs">No hay movimientos registrados.</div>
                     ) : (
-                      <div className="overflow-y-auto max-h-[500px] pr-1 divide-y divide-stone-850">
+                      <div className="overflow-y-auto max-h-[500px] pr-1 divide-y divide-stone-700">
                         {movimientosMasas
                           .filter(mov => {
                             const term = movMasaSearchTerm.toLowerCase();
@@ -3982,14 +3982,14 @@ export default function SistemaContableYanaloma() {
                         <th className="p-3 border-b border-emerald-900 text-center font-bold">ACCIONES</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-stone-850 bg-stone-900 text-stone-300 font-sans">
+                    <tbody className="divide-y divide-stone-700 bg-stone-900 text-stone-300 font-sans">
                       {usuariosList.length === 0 && (
                         <tr>
                           <td colSpan={5} className="p-6 text-center text-stone-500 font-mono">No hay usuarios cargados.</td>
                         </tr>
                       )}
                       {usuariosList.map((usr) => (
-                        <tr key={usr.id || usr.username} className="hover:bg-stone-850 transition-colors">
+                        <tr key={usr.id || usr.username} className="hover:bg-stone-800 transition-colors">
                           <td className="p-3 font-semibold text-white">{usr.nombre}</td>
                           <td className="p-3 font-mono font-bold text-stone-400">{usr.username}</td>
                           <td className="p-3 font-mono">{usr.password}</td>
@@ -4089,7 +4089,7 @@ export default function SistemaContableYanaloma() {
               </h3>
               <button
                 onClick={() => setShowUserModal(false)}
-                className="text-stone-400 hover:text-stone-200 text-sm font-bold p-1 rounded hover:bg-stone-850 cursor-pointer"
+                className="text-stone-400 hover:text-stone-200 text-sm font-bold p-1 rounded hover:bg-stone-800 cursor-pointer"
               >
                 ✕
               </button>
@@ -4149,7 +4149,7 @@ export default function SistemaContableYanaloma() {
                 <button
                   type="button"
                   onClick={() => setShowUserModal(false)}
-                  className="px-3.5 py-1.5 border border-stone-800 hover:bg-stone-850 text-xs font-bold rounded-lg transition-colors cursor-pointer text-stone-300"
+                  className="px-3.5 py-1.5 border border-stone-800 hover:bg-stone-800 text-xs font-bold rounded-lg transition-colors cursor-pointer text-stone-300"
                 >
                   Cancelar
                 </button>

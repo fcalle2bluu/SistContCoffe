@@ -97,7 +97,7 @@ const getProductTheme = (producto: Producto) => {
   
   return {
     emoji: "✨",
-    gradient: "from-stone-600 to-stone-850",
+    gradient: "from-stone-600 to-stone-800",
     bgLight: "bg-stone-900/60 text-stone-200 border-stone-700/60 hover:border-stone-500",
     iconColor: "text-stone-700",
     desc: "Varios"
@@ -1101,12 +1101,12 @@ export default function POSPage() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-stone-955 flex items-center justify-center font-sans relative overflow-hidden" style={{
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center font-sans relative overflow-hidden" style={{
         backgroundImage: 'radial-gradient(circle at center, #064e3b 0%, #0c0a09 100%)'
       }}>
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
         <div className="w-full max-w-md mx-4 z-10">
-          <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-850 rounded-2xl p-8 shadow-2xl relative">
+          <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-700 rounded-2xl p-8 shadow-2xl relative">
             <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-t-2xl"></div>
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-gradient-to-tr from-emerald-700 to-emerald-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg border border-emerald-400/25 mb-4">
@@ -1154,7 +1154,7 @@ export default function POSPage() {
                 ) : 'Iniciar Sesión'}
               </button>
             </form>
-            <div className="mt-8 pt-6 border-t border-stone-850 text-center">
+            <div className="mt-8 pt-6 border-t border-stone-700 text-center">
               <p className="text-[10px] text-stone-500 font-mono">© 2026 The Roasting Lab S.R.L.</p>
             </div>
           </div>
@@ -1166,7 +1166,7 @@ export default function POSPage() {
   // Guard: Prevent 'otro' (consultor) role users from accessing the POS screen
   if (currentUser.role === 'otro') {
     return (
-      <div className="min-h-screen bg-stone-955 flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center font-sans">
         <div className="text-center text-stone-200">
           <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="font-mono text-sm tracking-wider uppercase">Acceso Denegado. Redirigiendo...</p>
@@ -1177,12 +1177,12 @@ export default function POSPage() {
 
   if (!activeShift && currentUser?.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-stone-955 flex items-center justify-center font-sans relative overflow-hidden" style={{
+      <div className="min-h-screen bg-stone-950 flex items-center justify-center font-sans relative overflow-hidden" style={{
         backgroundImage: 'radial-gradient(circle at center, #064e3b 0%, #0c0a09 100%)'
       }}>
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
         <div className="w-full max-w-md mx-4 z-10">
-          <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-850 rounded-2xl p-8 shadow-2xl relative">
+          <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-700 rounded-2xl p-8 shadow-2xl relative">
             <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-t-2xl"></div>
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-gradient-to-tr from-emerald-700 to-emerald-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg border border-emerald-400/25 mb-4">
@@ -1279,7 +1279,7 @@ export default function POSPage() {
                   toast.info("Sesión cerrada");
                   window.location.reload();
                 }}
-                className="w-full py-2.5 px-4 bg-stone-850 hover:bg-stone-750 text-stone-300 rounded-xl text-xs font-bold transition-all text-center border border-stone-850 mt-2 cursor-pointer"
+                className="w-full py-2.5 px-4 bg-stone-800 hover:bg-stone-800 text-stone-300 rounded-xl text-xs font-bold transition-all text-center border border-stone-700 mt-2 cursor-pointer"
               >
                 Cerrar Sesión Cajero
               </button>
@@ -1310,12 +1310,12 @@ export default function POSPage() {
           
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {activeShift ? (
-              <div className="hidden lg:flex flex-col bg-emerald-955/80 border border-emerald-700 px-3 py-1 rounded-xl font-mono text-[10px] leading-tight text-white select-none">
+              <div className="hidden lg:flex flex-col bg-emerald-950/80 border border-emerald-700 px-3 py-1 rounded-xl font-mono text-[10px] leading-tight text-white select-none">
                 <span className="text-[8px] uppercase font-bold text-emerald-300">Caja: {activeShift.turno}</span>
                 <span className="font-bold text-amber-300">Bs. {(activeShift.monto_inicial + activeShift.ventas_efectivo - activeShift.egresos_efectivo).toFixed(2)}</span>
               </div>
             ) : currentUser?.role === 'admin' ? (
-              <div className="hidden lg:flex flex-col bg-emerald-955/80 border border-emerald-700 px-3 py-1 rounded-xl font-mono text-[10px] leading-tight text-white select-none">
+              <div className="hidden lg:flex flex-col bg-emerald-950/80 border border-emerald-700 px-3 py-1 rounded-xl font-mono text-[10px] leading-tight text-white select-none">
                 <span className="text-[8px] uppercase font-bold text-emerald-300">Rol: {currentUser.role.toUpperCase()}</span>
                 <span className="font-bold text-amber-300">Sin Turno Activo</span>
               </div>
@@ -1342,14 +1342,14 @@ export default function POSPage() {
                 fetchTodayTickets();
                 setShowReprintModal(true);
               }}
-              className="bg-zinc-700 hover:bg-zinc-650 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-1.5 transition-all w-full sm:w-auto justify-center"
+              className="bg-zinc-700 hover:bg-zinc-600 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-1.5 transition-all w-full sm:w-auto justify-center"
             >
               <Receipt size={15} /> 🖨️ Re-imprimir Ticket
             </button>
             <button 
               type="button"
               onClick={() => setShowEgresoModal(true)}
-              className="bg-red-700 hover:bg-red-650 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-1.5 transition-all w-full sm:w-auto justify-center"
+              className="bg-red-700 hover:bg-red-600 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-1.5 transition-all w-full sm:w-auto justify-center"
             >
               💸 Registrar Egreso
             </button>
@@ -1357,7 +1357,7 @@ export default function POSPage() {
               <button 
                 type="button"
                 onClick={handleOpenCloseShiftModal}
-                className="bg-amber-750 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-1.5 transition-all w-full sm:w-auto justify-center"
+                className="bg-amber-800 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-1.5 transition-all w-full sm:w-auto justify-center"
               >
                 🔑 Cerrar Turno
               </button>
@@ -1375,7 +1375,7 @@ export default function POSPage() {
                 toast.info("Sesión cerrada");
                 window.location.reload();
               }}
-              className="bg-red-800 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg border border-red-750 transition-all text-center active:scale-95"
+              className="bg-red-800 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg border border-red-700 transition-all text-center active:scale-95"
             >
               Cerrar Sesión
             </button>
@@ -1439,7 +1439,7 @@ export default function POSPage() {
                   className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all active:scale-95 ${
                     isActive
                       ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm scale-102 font-extrabold'
-                      : 'bg-stone-950 text-stone-400 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
+                      : 'bg-stone-950 text-stone-400 border-stone-800 hover:bg-stone-800 hover:text-stone-100'
                   }`}
                 >
                   <span>{icon}</span>
@@ -1498,7 +1498,7 @@ export default function POSPage() {
                           : 'bg-amber-950/40 border-amber-800/60 text-amber-200 hover:bg-amber-900/50 hover:border-amber-500')
                       : (isSelected
                           ? 'bg-emerald-600 text-white border-emerald-500 scale-102 font-extrabold'
-                          : 'bg-stone-950 border-stone-800 text-stone-400 hover:bg-stone-850')
+                          : 'bg-stone-950 border-stone-800 text-stone-400 hover:bg-stone-800')
                   }`}
                 >
                   <div className="flex items-center gap-1">
@@ -1565,7 +1565,7 @@ export default function POSPage() {
                   toast.success(`Cuenta temporal '${cleanName}' activa. Agrega productos.`);
                 }
               }}
-              className="px-4 py-3 rounded-2xl border border-dashed border-stone-700 text-stone-500 hover:border-stone-500 hover:bg-stone-850/50 text-xs font-bold transition-all flex flex-col items-center justify-center min-w-[100px] h-20 active:scale-95 cursor-pointer"
+              className="px-4 py-3 rounded-2xl border border-dashed border-stone-700 text-stone-500 hover:border-stone-500 hover:bg-stone-800/50 text-xs font-bold transition-all flex flex-col items-center justify-center min-w-[100px] h-20 active:scale-95 cursor-pointer"
             >
               <span>➕</span>
               <span className="text-[9px] mt-1 font-mono leading-none">Personalizada</span>
@@ -1681,7 +1681,7 @@ export default function POSPage() {
         </div>
 
         {/* Mesa Activa Info Bar */}
-        <div className="bg-stone-850 border-b border-stone-800 px-4 py-2 flex justify-between items-center text-xs font-bold text-stone-300">
+        <div className="bg-stone-800 border-b border-stone-800 px-4 py-2 flex justify-between items-center text-xs font-bold text-stone-300">
           <span className="flex items-center gap-1.5">
             📍 Cuenta Activa: <strong className="text-emerald-400 font-extrabold uppercase">{selectedMesa}</strong>
           </span>
@@ -1721,7 +1721,7 @@ export default function POSPage() {
         <div className="flex-1 overflow-y-auto p-4 bg-stone-900 scrollbar-thin">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-stone-400 mt-20 gap-4">
-              <div className="p-5 bg-stone-850 rounded-full border border-stone-800">
+              <div className="p-5 bg-stone-800 rounded-full border border-stone-800">
                 <Receipt className="w-12 h-12 opacity-30 text-stone-500" />
               </div>
               <p className="text-xs font-bold uppercase tracking-wider text-stone-400">El ticket está vacío</p>
@@ -1732,7 +1732,7 @@ export default function POSPage() {
               {cart.map(item => {
                 const theme = getProductTheme(item);
                 return (
-                  <div key={item.id} className="flex flex-col gap-2.5 p-3.5 bg-stone-950 border border-stone-850 rounded-2xl shadow-sm hover:border-stone-700 transition-all">
+                  <div key={item.id} className="flex flex-col gap-2.5 p-3.5 bg-stone-950 border border-stone-700 rounded-2xl shadow-sm hover:border-stone-700 transition-all">
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex items-start gap-2">
                         <span className="text-base select-none mt-0.5">{theme.emoji}</span>
@@ -1753,18 +1753,18 @@ export default function POSPage() {
                     </div>
 
                     {/* Modificadores de Cantidad */}
-                    <div className="flex items-center justify-between border-t border-stone-850 pt-2.5 mt-1.5">
+                    <div className="flex items-center justify-between border-t border-stone-700 pt-2.5 mt-1.5">
                       <div className="flex items-center border border-stone-800 bg-stone-900 rounded-xl overflow-hidden shadow-inner">
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
-                          className="h-7 w-8 bg-stone-800 hover:bg-stone-750 active:scale-90 text-stone-300 flex items-center justify-center font-bold transition-all"
+                          className="h-7 w-8 bg-stone-800 hover:bg-stone-800 active:scale-90 text-stone-300 flex items-center justify-center font-bold transition-all"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
                         <span className="w-8 text-center text-xs font-black text-stone-100 font-mono bg-stone-900 h-7 flex items-center justify-center border-x border-stone-800">{item.cantidad}</span>
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
-                          className="h-7 w-8 bg-stone-800 hover:bg-stone-750 active:scale-90 text-stone-300 flex items-center justify-center font-bold transition-all"
+                          className="h-7 w-8 bg-stone-800 hover:bg-stone-800 active:scale-90 text-stone-300 flex items-center justify-center font-bold transition-all"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -2022,7 +2022,7 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowCustomForm(false)}
-                className="px-4 py-2 border border-stone-800 rounded-lg font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
+                className="px-4 py-2 border border-stone-800 rounded-lg font-bold text-stone-300 hover:bg-stone-800 transition-colors text-xs"
               >
                 Cancelar
               </button>
@@ -2134,7 +2134,7 @@ export default function POSPage() {
                           type="button"
                           onClick={() => handleCheckoutDataChange('metodo_pago', method)}
                           className={`flex-1 text-center py-2.5 rounded-lg font-black text-[10px] tracking-wider transition-all active:scale-95 ${
-                            isActive ? activeStyle : 'text-stone-400 hover:bg-stone-850'
+                            isActive ? activeStyle : 'text-stone-400 hover:bg-stone-800'
                           }`}
                         >
                           {method}
@@ -2145,7 +2145,7 @@ export default function POSPage() {
                 </div>
 
                 <div className="flex flex-col justify-end">
-                  <label className="flex items-center gap-3 cursor-pointer select-none border border-stone-800 rounded-xl p-3 bg-stone-950 hover:bg-stone-850 transition-colors shadow-sm">
+                  <label className="flex items-center gap-3 cursor-pointer select-none border border-stone-800 rounded-xl p-3 bg-stone-950 hover:bg-stone-800 transition-colors shadow-sm">
                     <input
                       type="checkbox"
                       checked={checkoutData.tiene_factura}
@@ -2241,7 +2241,7 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowCheckoutModal(false)}
-                className="px-5 py-2.5 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors"
+                className="px-5 py-2.5 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-800 transition-colors"
                 disabled={procesando}
               >
                 Cancelar
@@ -2275,7 +2275,7 @@ export default function POSPage() {
               </div>
               <button
                 onClick={() => setShowReprintModal(false)}
-                className="p-1 rounded-lg hover:bg-stone-850 text-stone-400 hover:text-white transition-colors"
+                className="p-1 rounded-lg hover:bg-stone-800 text-stone-400 hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
@@ -2297,7 +2297,7 @@ export default function POSPage() {
                   {todayTickets.map((tx) => (
                     <div
                       key={tx.id}
-                      className="flex items-center justify-between p-3.5 bg-stone-950 border border-stone-800 rounded-2xl hover:border-stone-700 hover:bg-stone-850/50 transition-all text-xs font-mono"
+                      className="flex items-center justify-between p-3.5 bg-stone-950 border border-stone-800 rounded-2xl hover:border-stone-700 hover:bg-stone-800/50 transition-all text-xs font-mono"
                     >
                       <div className="flex-1 min-w-0 pr-4">
                         <div className="flex items-center gap-2 mb-1">
@@ -2337,7 +2337,7 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowReprintModal(false)}
-                className="px-5 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
+                className="px-5 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-800 transition-colors text-xs"
               >
                 Cerrar
               </button>
@@ -2426,7 +2426,7 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowEgresoModal(false)}
-                className="px-4 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
+                className="px-4 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-800 transition-colors text-xs"
               >
                 Cancelar
               </button>
@@ -2517,7 +2517,7 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowCloseShiftModal(false)}
-                className="px-4 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-850 transition-colors text-xs"
+                className="px-4 py-2 border border-stone-800 rounded-xl font-bold text-stone-300 hover:bg-stone-800 transition-colors text-xs"
               >
                 Cancelar
               </button>

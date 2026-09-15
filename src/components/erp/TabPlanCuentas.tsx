@@ -37,10 +37,10 @@ export function TabPlanCuentas({ cuentas }: TabPlanCuentasProps) {
           </TableHeader>
           <TableBody>
             {cuentas.length === 0 ? (
-              <TableRow className="border-stone-850 hover:bg-stone-850"><TableCell colSpan={3} className="text-center py-10 text-stone-500">No hay cuentas cargadas.</TableCell></TableRow>
+              <TableRow className="border-stone-700 hover:bg-stone-800"><TableCell colSpan={3} className="text-center py-10 text-stone-500">No hay cuentas cargadas.</TableCell></TableRow>
             ) : (
               cuentas.map((cuenta) => (
-                <TableRow key={cuenta.codigo} className="border-stone-850 hover:bg-stone-850">
+                <TableRow key={cuenta.codigo} className="border-stone-700 hover:bg-stone-800">
                   <TableCell className="font-mono font-medium text-stone-200">{cuenta.codigo}</TableCell>
                   <TableCell className="font-medium text-stone-200">{cuenta.nombre}</TableCell>
                   <TableCell>

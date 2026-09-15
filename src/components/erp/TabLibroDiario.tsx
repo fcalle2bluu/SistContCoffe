@@ -27,10 +27,10 @@ export function TabLibroDiario({ libroDiario }: TabLibroDiarioProps) {
           </TableHeader>
           <TableBody>
             {libroDiario.length === 0 ? (
-              <TableRow className="border-stone-850 hover:bg-stone-850"><TableCell colSpan={6} className="text-center py-10 text-stone-500">No hay asientos registrados en este periodo.</TableCell></TableRow>
+              <TableRow className="border-stone-700 hover:bg-stone-800"><TableCell colSpan={6} className="text-center py-10 text-stone-500">No hay asientos registrados en este periodo.</TableCell></TableRow>
             ) : (
               libroDiario.map((asiento, idx) => (
-                <TableRow key={asiento.id || idx} className="border-stone-850 hover:bg-stone-850">
+                <TableRow key={asiento.id || idx} className="border-stone-700 hover:bg-stone-800">
                   <TableCell className="font-mono font-medium text-stone-200">{asiento.nro_asiento}</TableCell>
                   <TableCell className="text-stone-500">{new Date(asiento.fecha || asiento.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="font-medium text-stone-200">{asiento.codigo_cuenta || asiento.cuenta_codigo}</TableCell>
