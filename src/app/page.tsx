@@ -335,7 +335,7 @@ export default function SistemaContableYanaloma() {
         const parsed = JSON.parse(storedUser);
         setCurrentUser(parsed);
         if (parsed.role === 'cajero') {
-          window.location.href = '/pos';
+          window.location.href = '/pos/';
         }
       } catch (e) {
         console.error("Error parsing user from localStorage:", e);
@@ -364,7 +364,7 @@ export default function SistemaContableYanaloma() {
         localStorage.setItem('yanaloma_user', JSON.stringify(data));
         setCurrentUser(data);
         if (data.role === 'cajero') {
-          window.location.href = '/pos';
+          window.location.href = '/pos/';
         } else {
           toast.success(`¡Bienvenido de nuevo, ${data.nombre}!`);
         }
@@ -380,7 +380,7 @@ export default function SistemaContableYanaloma() {
           localStorage.setItem('yanaloma_user', JSON.stringify(localMatch));
           setCurrentUser(localMatch);
           if (localMatch.role === 'cajero') {
-            window.location.href = '/pos';
+            window.location.href = '/pos/';
           } else {
             toast.success(`¡Bienvenido de nuevo, ${localMatch.nombre}! (Local)`);
           }
@@ -401,7 +401,7 @@ export default function SistemaContableYanaloma() {
         localStorage.setItem('yanaloma_user', JSON.stringify(localMatch));
         setCurrentUser(localMatch);
         if (localMatch.role === 'cajero') {
-          window.location.href = '/pos';
+          window.location.href = '/pos/';
         } else {
           toast.success(`¡Bienvenido de nuevo, ${localMatch.nombre}! (Local)`);
         }
@@ -2007,7 +2007,7 @@ export default function SistemaContableYanaloma() {
                 <option value="NEW" className="font-bold text-emerald-800 bg-emerald-100">+ Añadir nuevo mes...</option>
               </select>
             </div>
-            <a href="/pos" className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-1.5 rounded shadow flex items-center gap-1.5 transition-colors">
+            <a href="/pos/" className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-1.5 rounded shadow flex items-center gap-1.5 transition-colors">
               <ShoppingCart size={14} /> IR A CAJA (POS)
             </a>
             <button onClick={exportToExcel} className="bg-emerald-800/40 hover:bg-emerald-800/70 border border-emerald-600/40 text-white text-xs font-bold px-3 py-1.5 rounded shadow flex items-center gap-1.5 transition-colors">
