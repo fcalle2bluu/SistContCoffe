@@ -2059,7 +2059,7 @@ export default function SistemaContableYanaloma() {
              Calculando y Sincronizando con Base de Datos...
            </div>
         ) : (
-          <div className="bg-stone-900 border border-stone-800 rounded-lg shadow-sm p-6 overflow-x-auto">
+          <div className="bg-stone-900 border border-stone-800 rounded-lg shadow-sm p-3 sm:p-6 overflow-x-auto">
             {/* 1. PESTAÑA: ESTADO DE RESULTADOS */}
             {activeTab === 'estado_resultados' && (
               <div>
@@ -2515,9 +2515,9 @@ export default function SistemaContableYanaloma() {
 
             {activeTab === 'libro_diario' && (
               <div>
-                <div className="flex justify-between items-center mb-4 pb-2 border-b border-stone-800">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 pb-2 border-b border-stone-800 gap-3">
                   <h2 className="text-lg font-bold text-stone-300">LIBRO DIARIO DE CONTABILIDAD</h2>
-                  <button onClick={() => setShowDiarioModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1">
+                  <button onClick={() => setShowDiarioModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 self-start sm:self-auto">
                     <Plus size={14} /> Registrar Asiento
                   </button>
                 </div>
@@ -2588,7 +2588,7 @@ export default function SistemaContableYanaloma() {
                 )}
 
                 {filteredDiarioPlanillaSeats.length > 0 && (
-                  <div className="overflow-x-auto flex justify-center">
+                  <div className="overflow-x-auto flex justify-start md:justify-center">
                     <div className="w-fit bg-stone-900 border border-stone-800 shadow-sm rounded-xl p-6">
                     <div className="waffle-container">
                       <style>{`
@@ -3013,11 +3013,11 @@ export default function SistemaContableYanaloma() {
               <div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 pb-2 border-b border-stone-800 gap-4">
                   <h2 className="text-lg font-bold text-stone-300">LIBRO MAYOR - {periodoActual}</h2>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={imprimirLibroMayorPDF}
-                      className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all shadow active:scale-95 cursor-pointer text-xs mr-2"
+                      className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all shadow active:scale-95 cursor-pointer text-xs sm:mr-2"
                     >
                       🖨️ Imprimir Libro Mayor (PDF)
                     </button>
@@ -3025,7 +3025,7 @@ export default function SistemaContableYanaloma() {
                     <select
                       value={cuentaMayorActiva}
                       onChange={(e) => setCuentaMayorActiva(e.target.value)}
-                      className="border border-stone-800 rounded p-1.5 text-xs font-bold text-emerald-300 font-mono outline-none focus:ring-1 focus:ring-emerald-500 bg-stone-900 min-w-[250px]"
+                      className="border border-stone-800 rounded p-1.5 text-xs font-bold text-emerald-300 font-mono outline-none focus:ring-1 focus:ring-emerald-500 bg-stone-900 w-full sm:w-auto sm:min-w-[250px] max-w-full"
                     >
                       <option value="TODAS">-- MOSTRAR TODAS LAS CUENTAS --</option>
                       {mayorPorCuenta.map(mayor => (
@@ -3123,20 +3123,20 @@ export default function SistemaContableYanaloma() {
             {/* 4. PESTAÑA: COMPRAS Y VENTAS */}
             {activeTab === 'compras_ventas' && (
               <div>
-                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 pb-2 border-b border-stone-800 gap-3">
                   <h2 className="text-lg font-bold text-stone-300">CUADRO DIARIO DE INGRESOS Y EGRESOS OPERATIVOS</h2>
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                    <div className="relative flex-1 min-w-0 sm:flex-none">
                       <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500" />
                       <input
                         type="text"
                         placeholder="Buscar N°, Fecha, Detalle..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 pr-4 py-1.5 border border-stone-800 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-64 bg-stone-900 text-stone-200"
+                        className="pl-9 pr-4 py-1.5 border border-stone-800 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-64 bg-stone-900 text-stone-200"
                       />
                     </div>
-                    <button onClick={() => setShowCVModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1">
+                    <button onClick={() => setShowCVModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 shrink-0">
                       <Plus size={14} /> Registrar Movimiento
                     </button>
                   </div>
@@ -3486,20 +3486,20 @@ export default function SistemaContableYanaloma() {
             {/* 5. PESTAÑA: INVENTARIO (PEPS) */}
             {activeTab === 'inventario_peps' && (
               <div>
-                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 pb-2 border-b border-stone-800 gap-3">
                   <h2 className="text-lg font-bold text-stone-300">VALORACIÓN DE INVENTARIO PEPS Y CONTROL DE PLANTA</h2>
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                    <div className="relative flex-1 min-w-0 sm:flex-none">
                       <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-500" />
                       <input
                         type="text"
                         placeholder="Buscar N°, Fecha, Detalle..."
                         value={invSearchTerm}
                         onChange={(e) => setInvSearchTerm(e.target.value)}
-                        className="pl-9 pr-4 py-1.5 border border-stone-800 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-64 bg-stone-900 text-stone-200"
+                        className="pl-9 pr-4 py-1.5 border border-stone-800 rounded-lg text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-64 bg-stone-900 text-stone-200"
                       />
                     </div>
-                    <button onClick={() => setShowInvModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1">
+                    <button onClick={() => setShowInvModal(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1 shrink-0">
                       <Plus size={14} /> Registrar Movimiento
                     </button>
                   </div>
@@ -3730,12 +3730,12 @@ export default function SistemaContableYanaloma() {
 
             {activeTab === 'pasteleria_panaderia' && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 pb-2 border-b border-stone-800 gap-3">
                   <div>
                     <h2 className="text-xl font-black text-stone-100 tracking-tight">CONTROL DE PRODUCCIÓN Y MASAS</h2>
                     <p className="text-xs text-stone-500 font-medium">Panadería y Pastelería de Especialidad</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => {
                         setEditingMasa(null);
@@ -3807,16 +3807,16 @@ export default function SistemaContableYanaloma() {
                   
                   {/* Catálogo de Masas */}
                   <div className="lg:col-span-7 bg-stone-900 border border-stone-700 rounded-2xl p-5 shadow-sm space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-stone-800">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pb-2 border-b border-stone-800">
                       <h3 className="font-bold text-sm text-stone-100 uppercase tracking-wide">Catálogo de Masas</h3>
-                      <div className="relative">
+                      <div className="relative w-full sm:w-auto">
                         <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-stone-500" />
                         <input
                           type="text"
                           placeholder="Filtrar masas..."
                           value={masaSearchTerm}
                           onChange={(e) => setMasaSearchTerm(e.target.value)}
-                          className="pl-8 pr-3 py-1 border border-stone-800 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-44 bg-stone-950 text-stone-200"
+                          className="pl-8 pr-3 py-1 border border-stone-800 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-full sm:w-44 bg-stone-950 text-stone-200"
                         />
                       </div>
                     </div>
@@ -3890,16 +3890,16 @@ export default function SistemaContableYanaloma() {
 
                   {/* Historial de Movimientos */}
                   <div className="lg:col-span-5 bg-stone-900 border border-stone-700 rounded-2xl p-5 shadow-sm space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-stone-800">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pb-2 border-b border-stone-800">
                       <h3 className="font-bold text-sm text-stone-100 uppercase tracking-wide">Movimientos Recientes</h3>
-                      <div className="relative">
+                      <div className="relative w-full sm:w-auto">
                         <Search size={14} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-stone-500" />
                         <input
                           type="text"
                           placeholder="Buscar movimientos..."
                           value={movMasaSearchTerm}
                           onChange={(e) => setMovMasaSearchTerm(e.target.value)}
-                          className="pl-8 pr-3 py-1 border border-stone-800 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-36 bg-stone-950 text-stone-200"
+                          className="pl-8 pr-3 py-1 border border-stone-800 rounded-lg text-xs font-medium outline-none focus:ring-1 focus:ring-emerald-500 w-full sm:w-36 bg-stone-950 text-stone-200"
                         />
                       </div>
                     </div>
@@ -3954,7 +3954,7 @@ export default function SistemaContableYanaloma() {
 
             {activeTab === 'usuarios' && currentUser?.role === 'admin' && (
               <div>
-                <div className="flex justify-between items-center mb-6 pb-2 border-b border-stone-800">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 pb-2 border-b border-stone-800 gap-3">
                   <h2 className="text-lg font-bold text-stone-300">GESTIÓN DE USUARIOS DEL SISTEMA</h2>
                   <button
                     onClick={() => {
@@ -3965,7 +3965,7 @@ export default function SistemaContableYanaloma() {
                       setUserFormRole('cajero');
                       setShowUserModal(true);
                     }}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm self-start sm:self-auto"
                   >
                     <Plus size={14} /> Registrar Nuevo Usuario
                   </button>
