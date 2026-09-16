@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# datos de negocio (referencia local, no va al repo)
+*.xlsx
+*.xls
