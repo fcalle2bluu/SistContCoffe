@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Caja — Café Yanaloma{% endblock %}
+{% block body %}
+<div class="pos-screen">
+  <p class="eyebrow">Café Yanaloma</p>
+  <h1 class="brand-title">Caja — {{ session.nombre }}</h1>
+  <p class="pos-note">El punto de venta todavía no está construido — esta es la pantalla siguiente al login.</p>
+  <form method="post" action="/logout">
+    <button type="submit" class="btn btn-primary">Cerrar sesión</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,26 +1,15 @@
-FROM node:20-alpine AS deps
+FROM python:3.12-slim
+
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+ENV PORT=8080 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# SUPABASE_URL, SUPABASE_ANON_KEY y SESSION_SECRET se leen en runtime
-# (Fly secrets), no hacen falta acá para compilar.
-RUN npm run build
+COPY app ./app
 
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV HOSTNAME=0.0.0.0
-
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
+# DATABASE_URL y SESSION_SECRET se leen en runtime (Fly secrets), no hacen falta acá.
 EXPOSE 8080
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

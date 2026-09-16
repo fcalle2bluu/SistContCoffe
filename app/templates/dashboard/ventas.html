@@ -1,0 +1,208 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Ventas / Caja — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Ventas / Caja</h2>
+    <p class="section-subtitle">Reemplaza el cuaderno mensual del Excel: comandas, cobro y cierre de caja.</p>
+  </div>
+
+  {% if not turno %}
+  <div class="card">
+    <h3 class="card-title">No hay turno abierto</h3>
+    <p class="muted-sm">Abre caja para empezar a registrar ventas.</p>
+    <form method="post" action="/dashboard/ventas/turno/abrir" class="inline-form">
+      <div>
+        <label class="field-label">Monto inicial en caja (Bs)</label>
+        <input name="monto_inicial" type="number" step="0.01" required class="input input-w44" />
+      </div>
+      <button type="submit" class="btn btn-primary">Abrir turno</button>
+    </form>
+    {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+  </div>
+  {% else %}
+
+  <div class="card">
+    <div class="turno-header">
+      <div>
+        <h3 class="card-title">Turno abierto — {{ turno.responsable }}</h3>
+        <p class="muted-sm">Desde {{ turno.abierto_en|fechahora }}</p>
+      </div>
+    </div>
+
+    <dl class="stats-grid">
+      <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
+      <div class="stat-box"><dt>Ventas totales</dt><dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd></div>
+      <div class="stat-box"><dt>Egresos</dt><dd>Bs {{ "%.2f"|format(egresos_efectivo) }}</dd></div>
+      <div class="stat-box stat-box-highlight"><dt>Efectivo teórico</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
+    </dl>
+
+    <div class="disclosure-row">
+      <details class="disclosure">
+        <summary class="btn btn-outline">Registrar egreso</summary>
+        <form method="post" action="/dashboard/ventas/movimientos" class="inline-form">
+          <input type="hidden" name="turno_id" value="{{ turno.id }}" />
+          <div class="flex-1">
+            <label class="field-label">Motivo</label>
+            <input name="motivo" required placeholder="Ej: pago servicio de limpieza" class="input" />
+          </div>
+          <div>
+            <label class="field-label">Monto (Bs)</label>
+            <input name="monto" type="number" step="0.01" required class="input input-w32" />
+          </div>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+      </details>
+
+      <details class="disclosure">
+        <summary class="btn btn-primary">Cerrar turno</summary>
+        <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" class="inline-form">
+          <div>
+            <label class="field-label">Efectivo contado en caja (Bs)</label>
+            <input name="monto_final_declarado" type="number" step="0.01" required placeholder="{{ '%.2f'|format(efectivo_teorico) }}" class="input input-w44" />
+          </div>
+          <button type="submit" class="btn btn-primary">Confirmar cierre</button>
+        </form>
+      </details>
+    </div>
+
+    {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+  </div>
+
+  <div>
+    <h3 class="subsection-title">Nuevo pedido</h3>
+    <form method="post" action="/dashboard/ventas/ordenes" class="card stack-4">
+      <input type="hidden" name="turno_id" value="{{ turno.id }}" />
+
+      <div class="order-row">
+        <div>
+          <label class="field-label">Mesa / referencia</label>
+          <input name="mesa" required placeholder="Ej: Mesa 3, Llevar, 7 CH…" class="input input-w44" />
+        </div>
+        <div class="flex-1">
+          <label class="field-label">Producto</label>
+          <select name="producto_id_selector" class="input">
+            <option value="">— Selecciona —</option>
+            {% for categoria, items in por_categoria.items() %}
+            <optgroup label="{{ categoria }}">
+              {% for p in items %}
+              <option value="{{ p.id }}">{{ p.nombre }} — Bs {{ "%.2f"|format(p.precio_venta) }}</option>
+              {% endfor %}
+            </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Cant.</label>
+          <input name="cantidad_selector" type="number" min="1" value="1" class="input input-w20" />
+        </div>
+        <button type="button" class="btn btn-outline"
+          hx-post="/dashboard/ventas/carrito" hx-include="closest form"
+          hx-target="#carrito" hx-swap="outerHTML">+ Agregar</button>
+      </div>
+
+      {% include "partials/_carrito.html" %}
+
+      <div class="order-footer-fields">
+        <div>
+          <label class="field-label">Método de pago</label>
+          <select name="tipo_pago" class="input input-w36">
+            <option value="">—</option>
+            {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Monto pagado (Bs)</label>
+          <input name="monto_pagado" type="number" step="0.01" class="input input-w28" />
+        </div>
+        <div class="flex-1">
+          <label class="field-label">Observación</label>
+          <input name="observacion" class="input" />
+        </div>
+      </div>
+
+      <div class="order-actions">
+        <button type="submit" name="accion" value="cobrar" class="btn btn-primary">Cobrar</button>
+        <button type="submit" name="accion" value="pendiente" class="btn btn-outline">Guardar cuenta pendiente</button>
+      </div>
+
+      {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+    </form>
+  </div>
+
+  <div>
+    <h3 class="subsection-title">Cuentas pendientes ({{ ordenes_abiertas|length }})</h3>
+    {% if ordenes_abiertas|length == 0 %}
+    <p class="muted">No hay cuentas pendientes por cobrar.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Mesa</th><th class="text-right">Total</th><th>Responsable</th><th>Hora</th><th></th></tr></thead>
+        <tbody>
+          {% for o in ordenes_abiertas %}
+          {% if cobrar_id == o.id %}
+          <tr class="editing-row">
+            <td colspan="5">
+              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cobrar" class="inline-form">
+                <span class="strong">{{ o.mesa }}</span>
+                <span class="mono">Bs {{ "%.2f"|format(o.total) }}</span>
+                <select name="tipo_pago" required class="input input-w36">
+                  <option value="">Método de pago…</option>
+                  {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+                </select>
+                <input name="monto_pagado" type="number" step="0.01" placeholder="{{ '%.2f'|format(o.total) }}" class="input input-w24" />
+                <button type="submit" class="btn btn-primary btn-sm">Confirmar</button>
+                <a href="/dashboard/ventas" class="btn btn-outline btn-sm">Cancelar</a>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td class="strong">{{ o.mesa }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
+            <td class="small">{{ o.responsable }}</td>
+            <td class="small">{{ o.creado_en|hora }}</td>
+            <td class="text-right">
+              <div class="row-actions">
+                <a href="/dashboard/ventas?cobrar={{ o.id }}" class="link-muted">Cobrar</a>
+                <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cancelar" hx-confirm="¿Cancelar el pedido de &quot;{{ o.mesa }}&quot;?">
+                  <button type="submit" class="link-danger">Cancelar</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <h3 class="subsection-title">Ventas cobradas del turno ({{ ordenes_cobradas|length }})</h3>
+    {% if ordenes_cobradas|length == 0 %}
+    <p class="muted">Todavía no hay ventas cobradas en este turno.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Mesa</th><th class="text-right">Total</th><th>Pago</th><th>Responsable</th><th>Hora</th></tr></thead>
+        <tbody>
+          {% for o in ordenes_cobradas %}
+          <tr>
+            <td>{{ o.mesa }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
+            <td class="uppercase small">{{ o.tipo_pago }}</td>
+            <td class="small">{{ o.responsable }}</td>
+            <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

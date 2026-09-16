@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Café Yanaloma — Ingresar{% endblock %}
+{% block body %}
+<div class="login-screen">
+  <div class="login-card">
+    <div class="login-header">
+      <p class="eyebrow">The Roasting Lab</p>
+      <h1 class="brand-title">Café Yanaloma</h1>
+      <div class="rule"></div>
+    </div>
+
+    <form method="post" action="/login" class="stack-5">
+      <div>
+        <label class="field-label" for="username">Usuario</label>
+        <input id="username" name="username" type="text" autocomplete="username" required placeholder="admin" class="input" />
+      </div>
+      <div>
+        <label class="field-label" for="password">Contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" class="input" />
+      </div>
+
+      {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+
+      <button type="submit" class="btn btn-primary w-full">Iniciar sesión</button>
+    </form>
+
+    <p class="footnote">© 2026 The Roasting Lab S.R.L.</p>
+  </div>
+</div>
+{% endblock %}

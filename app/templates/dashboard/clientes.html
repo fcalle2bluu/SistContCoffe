@@ -1,0 +1,58 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Clientes — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Clientes</h2>
+    <p class="section-subtitle">Datos para facturación recurrente.</p>
+  </div>
+
+  <form method="post" action="/dashboard/clientes" class="card form-grid form-grid-4">
+    <div>
+      <label class="field-label">Apellido / Razón social</label>
+      <input name="nombre" required class="input" />
+    </div>
+    <div>
+      <label class="field-label">C.I. / NIT</label>
+      <input name="ci_nit" class="input" />
+    </div>
+    <div>
+      <label class="field-label">Teléfono / Cel</label>
+      <input name="telefono" class="input" />
+    </div>
+    <button type="submit" class="btn btn-primary self-end">Añadir</button>
+    {% if error %}<p class="error-box col-span-full">{{ error }}</p>{% endif %}
+  </form>
+
+  {% if clientes|length == 0 %}
+  <p class="muted">Todavía no hay clientes registrados.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Apellido / Razón social</th>
+          <th>C.I. / NIT</th>
+          <th>Teléfono</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clientes %}
+        <tr>
+          <td>{{ c.nombre }}</td>
+          <td class="mono">{{ c.ci_nit or "—" }}</td>
+          <td class="mono">{{ c.telefono or "—" }}</td>
+          <td class="text-right">
+            <form method="post" action="/dashboard/clientes/{{ c.id }}/eliminar" hx-confirm="¿Eliminar a &quot;{{ c.nombre }}&quot;?">
+              <button type="submit" class="link-danger">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

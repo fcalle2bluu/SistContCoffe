@@ -1,25 +1,27 @@
 # Café Yanaloma — ERP & POS
 
-Next.js 16 (App Router, SSR) + Supabase. Reiniciado desde cero el 2026-09-16: se conserva la base de datos (esquema) y el despliegue en Fly.io; el código de la aplicación se reconstruye desde cero con acceso a Supabase server-side en vez de directo desde el cliente.
+FastAPI + Jinja2 + htmx, sobre la misma base de datos Postgres (Supabase). Migrado desde Next.js el 2026-09-16: se conserva el esquema y los datos; la aplicación se reescribió en Python.
 
 ## Desarrollo
 
 ```bash
-npm install
-npm run dev
+python -m venv .venv
+./.venv/Scripts/pip install -r requirements.txt   # o .venv/bin/pip en Linux/Mac
+./.venv/Scripts/python -m uvicorn app.main:app --reload
 ```
 
-Variables de entorno requeridas en `.env.local` (no se versiona):
+Variables de entorno requeridas en `.env` (no se versiona):
 
 ```
-SUPABASE_URL=...
-SUPABASE_ANON_KEY=...
+DATABASE_URL=postgresql://...   # connection string del pooler de Supabase
+SESSION_SECRET=...              # firma la cookie de sesión (HMAC)
 ```
 
 ## Despliegue
 
 ```bash
-flyctl deploy --build-arg SUPABASE_URL=... --build-arg SUPABASE_ANON_KEY=...
+flyctl deploy
+flyctl secrets set DATABASE_URL=... SESSION_SECRET=...
 ```
 
 Usuarios de prueba (tabla `usuarios`): `admin` / `admin123` (rol admin), `cajero` / `cajero123` (rol cajero).

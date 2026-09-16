@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="dashboard-shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <p class="eyebrow">The Roasting Lab</p>
+      <h1 class="brand-title brand-title-sm">Café Yanaloma</h1>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-link {{ 'active' if active == 'home' else '' }}">Dashboard</a>
+      <a href="/dashboard/ventas" class="nav-link {{ 'active' if active == 'ventas' else '' }}">Ventas / Caja</a>
+      <a href="/dashboard/insumos" class="nav-link {{ 'active' if active == 'insumos' else '' }}">Control de Insumos</a>
+      <a href="/dashboard/clientes" class="nav-link {{ 'active' if active == 'clientes' else '' }}">Clientes</a>
+      <a href="/dashboard/productos" class="nav-link {{ 'active' if active == 'productos' else '' }}">Productos</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="sidebar-user">{{ session.nombre }} · {{ session.role }}</span>
+      <form method="post" action="/logout">
+        <button type="submit" class="btn btn-primary w-full">Cerrar sesión</button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="dashboard-main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Control de insumos — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Control de insumos</h2>
+    <p class="section-subtitle">Registro de abastecimiento: insumo, respaldo (factura/recibo) y costo.</p>
+  </div>
+
+  <form method="post" action="/dashboard/insumos" class="card form-grid form-grid-4">
+    <div>
+      <label class="field-label">Fecha</label>
+      <input name="fecha" type="date" required class="input" />
+    </div>
+    <div>
+      <label class="field-label">Detalle</label>
+      <input name="detalle" required placeholder="Ej: Leche deslactosada" class="input" />
+    </div>
+    <div>
+      <label class="field-label">Cantidad</label>
+      <input name="cantidad" type="number" step="0.01" required class="input" />
+    </div>
+    <div>
+      <label class="field-label">Medida</label>
+      <input name="medida" placeholder="UNIDAD, LITROS…" class="input uppercase" />
+    </div>
+    <div>
+      <label class="field-label">Precio unit. (Bs)</label>
+      <input name="precio_unitario" type="number" step="0.01" required class="input" />
+    </div>
+    <div class="col-span-2">
+      <label class="field-label">Respaldo (recibo / factura)</label>
+      <input name="respaldo" placeholder="Según factura N° … por …" class="input" />
+    </div>
+    <div>
+      <label class="field-label">Solicitante</label>
+      <input name="solicitante" class="input" />
+    </div>
+    <button type="submit" class="btn btn-primary col-span-full">Registrar compra</button>
+    {% if error %}<p class="error-box col-span-full">{{ error }}</p>{% endif %}
+  </form>
+
+  {% if insumos|length == 0 %}
+  <p class="muted">Todavía no hay compras registradas.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="data-table data-table-wide">
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Detalle</th><th class="text-right">Cant.</th><th>Medida</th>
+          <th>Respaldo</th><th class="text-right">P. Unit.</th><th class="text-right">Total</th>
+          <th>Solicitante</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in insumos %}
+        <tr>
+          <td class="mono nowrap">{{ i.fecha|fecha }}</td>
+          <td>{{ i.detalle }}</td>
+          <td class="text-right mono">{{ i.cantidad }}</td>
+          <td class="uppercase small">{{ i.medida or "—" }}</td>
+          <td class="truncate small" title="{{ i.respaldo or '' }}">{{ i.respaldo or "—" }}</td>
+          <td class="text-right mono">{{ "%.2f"|format(i.precio_unitario) }}</td>
+          <td class="text-right mono strong">{{ "%.2f"|format(i.total) }}</td>
+          <td class="small">{{ i.solicitante or "—" }}</td>
+          <td class="text-right">
+            <form method="post" action="/dashboard/insumos/{{ i.id }}/eliminar" hx-confirm="¿Eliminar la compra de &quot;{{ i.detalle }}&quot;?">
+              <button type="submit" class="link-danger">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="totals-row">
+          <td colspan="6" class="text-right">Total gastado</td>
+          <td class="text-right mono">{{ "%.2f"|format(total_general) }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

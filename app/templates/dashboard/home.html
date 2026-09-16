@@ -1,0 +1,9 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Dashboard — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="welcome-block">
+  <p class="eyebrow">Café Yanaloma</p>
+  <h1 class="brand-title">Bienvenido, {{ session.nombre }}</h1>
+  <p class="role-tag">Rol: {{ session.role }}</p>
+</div>
+{% endblock %}
