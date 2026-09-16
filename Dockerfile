@@ -8,11 +8,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG SUPABASE_URL
-ARG SUPABASE_ANON_KEY
-ENV SUPABASE_URL=$SUPABASE_URL
-ENV SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
-
+# SUPABASE_URL, SUPABASE_ANON_KEY y SESSION_SECRET se leen en runtime
+# (Fly secrets), no hacen falta acá para compilar.
 RUN npm run build
 
 FROM node:20-alpine AS runner

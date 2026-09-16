@@ -3,10 +3,16 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "yanaloma_session";
-const secret = process.env.SESSION_SECRET;
 
-if (!secret) {
-  throw new Error("Falta SESSION_SECRET en las variables de entorno.");
+// Se lee en tiempo de ejecución (no al cargar el módulo) para que el build
+// de Next.js no falle recolectando datos de página antes de que exista el
+// secret en el entorno (recién se inyecta como Fly secret en runtime).
+function getSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error("Falta SESSION_SECRET en las variables de entorno.");
+  }
+  return secret;
 }
 
 export type SessionUser = {
@@ -17,7 +23,7 @@ export type SessionUser = {
 };
 
 function sign(payload: string): string {
-  return createHmac("sha256", secret!).update(payload).digest("hex");
+  return createHmac("sha256", getSecret()).update(payload).digest("hex");
 }
 
 function encode(user: SessionUser): string {
