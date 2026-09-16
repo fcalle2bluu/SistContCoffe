@@ -15,26 +15,24 @@ export function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-b-2 border-ink bg-cream">
-      <div className="mx-auto flex max-w-6xl flex-wrap gap-1 overflow-x-auto px-2 sm:px-6">
-        {TABS.map((tab) => {
-          const isActive =
-            tab.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(tab.href);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`whitespace-nowrap border-b-4 px-3 py-3 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
-                isActive
-                  ? "border-gold text-ink"
-                  : "border-transparent text-ink/60 hover:border-gold/50 hover:text-ink"
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </div>
+    <nav className="flex overflow-x-auto md:block md:overflow-visible">
+      {TABS.map((tab) => {
+        const isActive =
+          tab.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(tab.href);
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={`block whitespace-nowrap border-b-4 md:border-b-0 md:border-l-4 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
+              isActive
+                ? "border-gold bg-gold/10 text-ink"
+                : "border-transparent text-ink/60 hover:border-gold/50 hover:bg-gold/5 hover:text-ink"
+            }`}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
