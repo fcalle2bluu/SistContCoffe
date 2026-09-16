@@ -2589,7 +2589,7 @@ export default function SistemaContableYanaloma() {
 
                 {filteredDiarioPlanillaSeats.length > 0 && (
                   <div className="overflow-x-auto flex justify-start md:justify-center">
-                    <div className="w-fit bg-stone-900 border border-stone-800 shadow-sm rounded-xl p-6">
+                    <div className="w-fit max-w-full bg-stone-900 border border-stone-800 shadow-sm rounded-xl p-3 sm:p-6">
                     <div className="waffle-container">
                       <style>{`
                         .waffle-container {
@@ -2598,6 +2598,7 @@ export default function SistemaContableYanaloma() {
                           color: #e7e5e4;
                           background-color: #0c0a09;
                           padding: 0px;
+                          zoom: min(1, calc((100vw - 96px) / 839px));
                         }
                         .waffle-table {
                           border-collapse: collapse;
