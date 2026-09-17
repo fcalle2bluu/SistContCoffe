@@ -5,6 +5,9 @@ from fastapi.templating import Jinja2Templates
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
+_style_path = BASE_DIR / "static" / "style.css"
+templates.env.globals["style_version"] = int(_style_path.stat().st_mtime)
+
 
 def formato_hora(iso: str) -> str:
     from datetime import datetime
