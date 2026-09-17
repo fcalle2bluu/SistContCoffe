@@ -22,6 +22,46 @@
     <button type="submit" class="btn btn-outline btn-sm">Ver</button>
   </form>
 
+  <div>
+    <h3 class="subsection-title">Agregar fila</h3>
+    <form method="post" action="/dashboard/contabilidad/mayor/fila" class="card stack-4">
+      <input type="hidden" name="cuenta_filtro" value="{{ cuenta_filtro or '' }}" />
+      <table class="capture-grid">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cuenta debe</th>
+            <th>Cuenta haber</th>
+            <th class="col-monto">Monto (Bs)</th>
+            <th>Glosa</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input name="fecha" type="date" required /></td>
+            <td>
+              <select name="cuenta_debe" required>
+                <option value="">— Selecciona —</option>
+                {% for c in cuentas %}<option value="{{ c.codigo }}">{{ c.nombre }} ({{ c.codigo }})</option>{% endfor %}
+              </select>
+            </td>
+            <td>
+              <select name="cuenta_haber" required>
+                <option value="">— Selecciona —</option>
+                {% for c in cuentas %}<option value="{{ c.codigo }}">{{ c.nombre }} ({{ c.codigo }})</option>{% endfor %}
+              </select>
+            </td>
+            <td class="col-monto"><input name="monto" type="number" step="0.01" required /></td>
+            <td><input name="glosa" required /></td>
+            <td><button type="submit" class="btn btn-primary btn-sm">+ Agregar</button></td>
+          </tr>
+        </tbody>
+      </table>
+      {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+    </form>
+  </div>
+
   {% if cuentas_mayor|length == 0 %}
   <p class="muted">Todavía no hay movimientos registrados.</p>
   {% else %}

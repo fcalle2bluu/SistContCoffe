@@ -258,10 +258,7 @@ async def crear_asiento(
     return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
 
 
-@router.get("/mayor", response_class=HTMLResponse)
-async def mayor_page(request: Request, session: dict = Depends(require_admin), cuenta: str | None = None):
-    cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
-
+async def _cuentas_mayor(cuenta: str | None):
     condicion = "WHERE ld.codigo_cuenta = $1" if cuenta else ""
     args = [cuenta] if cuenta else []
     filas = await pool().fetch(
@@ -296,6 +293,15 @@ async def mayor_page(request: Request, session: dict = Depends(require_admin), c
         actual["saldo_final"] = saldo
     if actual is not None:
         cuentas_mayor.append(actual)
+    return cuentas_mayor
+
+
+@router.get("/mayor", response_class=HTMLResponse)
+async def mayor_page(
+    request: Request, session: dict = Depends(require_admin), cuenta: str | None = None, error: str | None = None
+):
+    cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
+    cuentas_mayor = await _cuentas_mayor(cuenta)
 
     return templates.TemplateResponse(
         request,
@@ -306,8 +312,80 @@ async def mayor_page(request: Request, session: dict = Depends(require_admin), c
             "cuentas": cuentas,
             "cuenta_filtro": cuenta,
             "cuentas_mayor": cuentas_mayor,
+            "error": error,
         },
     )
+
+
+@router.post("/mayor/fila", response_class=HTMLResponse)
+async def agregar_fila_mayor(
+    request: Request,
+    session: dict = Depends(require_admin),
+    fecha: str = Form(""),
+    glosa: str = Form(""),
+    cuenta_debe: str = Form(""),
+    cuenta_haber: str = Form(""),
+    monto: str = Form(""),
+    cuenta_filtro: str = Form(""),
+):
+    glosa = glosa.strip()
+    try:
+        monto_num = float(monto)
+    except ValueError:
+        monto_num = 0
+
+    error = None
+    if not fecha:
+        error = "Indica la fecha."
+    elif not glosa:
+        error = "Indica la glosa (descripción)."
+    elif not cuenta_debe or not cuenta_haber:
+        error = "Selecciona la cuenta de debe y la de haber."
+    elif cuenta_debe == cuenta_haber:
+        error = "La cuenta de debe y la de haber no pueden ser la misma."
+    elif monto_num <= 0:
+        error = "El monto debe ser mayor a cero."
+
+    if error:
+        cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
+        cuentas_mayor = await _cuentas_mayor(cuenta_filtro or None)
+        return templates.TemplateResponse(
+            request,
+            "dashboard/contabilidad_mayor.html",
+            {
+                "session": session,
+                "active": "contabilidad",
+                "cuentas": cuentas,
+                "cuenta_filtro": cuenta_filtro or None,
+                "cuentas_mayor": cuentas_mayor,
+                "error": error,
+            },
+            status_code=400,
+        )
+
+    fecha_date = date.fromisoformat(fecha)
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            await conn.execute(
+                """
+                INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa)
+                VALUES ($1, $2, $3, $4, 0, $5)
+                """,
+                fecha_date, siguiente, cuenta_debe, monto_num, glosa,
+            )
+            await conn.execute(
+                """
+                INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa)
+                VALUES ($1, $2, $3, 0, $4, $5)
+                """,
+                fecha_date, siguiente, cuenta_haber, monto_num, glosa,
+            )
+
+    destino = "/dashboard/contabilidad/mayor"
+    if cuenta_filtro:
+        destino += f"?cuenta={cuenta_filtro}"
+    return RedirectResponse(destino, status_code=303)
 
 
 @router.get("/resultados", response_class=HTMLResponse)
