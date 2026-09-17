@@ -111,6 +111,7 @@ async def diario_page(request: Request, session: dict = Depends(require_admin), 
             "total_debe": 0,
             "total_haber": 0,
             "error": error,
+            "hoy": date.today().isoformat(),
         },
     )
 
@@ -233,6 +234,7 @@ async def crear_asiento(
                 "total_debe": total_debe,
                 "total_haber": total_haber,
                 "error": error,
+                "hoy": date.today().isoformat(),
             },
             status_code=400,
         )
@@ -313,6 +315,7 @@ async def mayor_page(
             "cuenta_filtro": cuenta,
             "cuentas_mayor": cuentas_mayor,
             "error": error,
+            "hoy": date.today().isoformat(),
         },
     )
 
@@ -359,6 +362,7 @@ async def agregar_fila_mayor(
                 "cuenta_filtro": cuenta_filtro or None,
                 "cuentas_mayor": cuentas_mayor,
                 "error": error,
+                "hoy": date.today().isoformat(),
             },
             status_code=400,
         )
