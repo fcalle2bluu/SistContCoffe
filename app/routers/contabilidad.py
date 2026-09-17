@@ -261,22 +261,41 @@ async def crear_asiento(
 @router.get("/mayor", response_class=HTMLResponse)
 async def mayor_page(request: Request, session: dict = Depends(require_admin), cuenta: str | None = None):
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
-    movimientos = []
-    saldo_final = 0
-    cuenta_actual = None
-    if cuenta:
-        cuenta_actual = await pool().fetchrow("SELECT codigo, nombre FROM cuentas_contables WHERE codigo = $1", cuenta)
-        filas = await pool().fetch(
-            "SELECT fecha, glosa, debe, haber FROM libro_diario WHERE codigo_cuenta = $1 ORDER BY fecha, id",
-            cuenta,
+
+    condicion = "WHERE ld.codigo_cuenta = $1" if cuenta else ""
+    args = [cuenta] if cuenta else []
+    filas = await pool().fetch(
+        f"""
+        SELECT ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.fecha, ld.glosa, ld.debe, ld.haber
+        FROM libro_diario ld
+        LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+        {condicion}
+        ORDER BY cc.nombre, ld.fecha, ld.id
+        """,
+        *args,
+    )
+
+    cuentas_mayor = []
+    actual = None
+    saldo = 0.0
+    for f in filas:
+        if actual is None or actual["codigo"] != f["codigo_cuenta"]:
+            if actual is not None:
+                cuentas_mayor.append(actual)
+            actual = {
+                "codigo": f["codigo_cuenta"],
+                "nombre": f["cuenta_nombre"] or f["codigo_cuenta"],
+                "movimientos": [],
+                "saldo_final": 0.0,
+            }
+            saldo = 0.0
+        saldo += float(f["debe"]) - float(f["haber"])
+        actual["movimientos"].append(
+            {"fecha": f["fecha"], "glosa": f["glosa"], "debe": f["debe"], "haber": f["haber"], "saldo": saldo}
         )
-        saldo = 0.0
-        for f in filas:
-            saldo += float(f["debe"]) - float(f["haber"])
-            movimientos.append(
-                {"fecha": f["fecha"], "glosa": f["glosa"], "debe": f["debe"], "haber": f["haber"], "saldo": saldo}
-            )
-        saldo_final = saldo
+        actual["saldo_final"] = saldo
+    if actual is not None:
+        cuentas_mayor.append(actual)
 
     return templates.TemplateResponse(
         request,
@@ -285,9 +304,8 @@ async def mayor_page(request: Request, session: dict = Depends(require_admin), c
             "session": session,
             "active": "contabilidad",
             "cuentas": cuentas,
-            "cuenta_actual": cuenta_actual,
-            "movimientos": movimientos,
-            "saldo_final": saldo_final,
+            "cuenta_filtro": cuenta,
+            "cuentas_mayor": cuentas_mayor,
         },
     )
 

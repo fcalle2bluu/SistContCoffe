@@ -13,44 +13,42 @@
     <span class="toolbar-group">
       <label class="field-label">Cuenta</label>
       <select name="cuenta" class="input">
-        <option value="">— Selecciona una cuenta —</option>
+        <option value="">— Todas las cuentas —</option>
         {% for c in cuentas %}
-        <option value="{{ c.codigo }}" {{ "selected" if cuenta_actual and cuenta_actual.codigo == c.codigo }}>{{ c.nombre }} ({{ c.codigo }})</option>
+        <option value="{{ c.codigo }}" {{ "selected" if cuenta_filtro == c.codigo }}>{{ c.nombre }} ({{ c.codigo }})</option>
         {% endfor %}
       </select>
     </span>
     <button type="submit" class="btn btn-outline btn-sm">Ver</button>
   </form>
 
-  {% if cuenta_actual %}
-  <div>
-    <h3 class="subsection-title">{{ cuenta_actual.nombre }} ({{ cuenta_actual.codigo }})</h3>
-    {% if movimientos|length == 0 %}
-    <p class="muted">Esta cuenta todavía no tiene movimientos.</p>
-    {% else %}
-    <div class="table-wrap">
-      <table class="ledger">
-        <thead><tr><th>Fecha</th><th>Glosa</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
-        <tbody>
-          {% for m in movimientos %}
-          <tr class="line-row">
-            <td class="mono nowrap">{{ m.fecha }}</td>
-            <td class="small">{{ m.glosa }}</td>
-            <td class="num">{{ (m.debe|bs) if m.debe and m.debe > 0 else "" }}</td>
-            <td class="num">{{ (m.haber|bs) if m.haber and m.haber > 0 else "" }}</td>
-            <td class="num">{{ m.saldo|bs }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot>
-          <tr class="total-row">
-            <td colspan="4">Saldo final</td>
-            <td class="num">{{ saldo_final|bs }}</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-    {% endif %}
+  {% if cuentas_mayor|length == 0 %}
+  <p class="muted">Todavía no hay movimientos registrados.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="ledger">
+      <thead><tr><th>Fecha</th><th>Glosa</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
+      <tbody>
+        {% for cta in cuentas_mayor %}
+        <tr class="group-row">
+          <td colspan="5">{{ cta.nombre }} ({{ cta.codigo }})</td>
+        </tr>
+        {% for m in cta.movimientos %}
+        <tr class="line-row">
+          <td class="mono nowrap">{{ m.fecha }}</td>
+          <td class="small indent">{{ m.glosa }}</td>
+          <td class="num">{{ (m.debe|bs) if m.debe and m.debe > 0 else "" }}</td>
+          <td class="num">{{ (m.haber|bs) if m.haber and m.haber > 0 else "" }}</td>
+          <td class="num">{{ m.saldo|bs }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="subtotal-row">
+          <td colspan="4">Saldo final — {{ cta.nombre }}</td>
+          <td class="num">{{ cta.saldo_final|bs }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% endif %}
 </div>
