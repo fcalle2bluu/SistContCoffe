@@ -185,16 +185,19 @@
     <p class="muted">Todavía no hay ventas cobradas en este turno.</p>
     {% else %}
     <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>Mesa</th><th class="text-right">Total</th><th>Pago</th><th>Responsable</th><th>Hora</th></tr></thead>
+      <table class="data-table data-table-wide">
+        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th></tr></thead>
         <tbody>
           {% for o in ordenes_cobradas %}
           <tr>
-            <td>{{ o.mesa }}</td>
+            <td class="strong">{{ o.mesa }}</td>
+            <td class="small">
+              {% for it in items_por_orden.get(o.id, []) %}{{ "%g"|format(it.cantidad) }}× {{ it.producto_nombre }}{{ ", " if not loop.last }}{% else %}—{% endfor %}
+            </td>
             <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
             <td class="uppercase small">{{ o.tipo_pago }}</td>
-            <td class="small">{{ o.responsable }}</td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
+            <td class="small muted-inline">{{ o.responsable }}</td>
           </tr>
           {% endfor %}
         </tbody>

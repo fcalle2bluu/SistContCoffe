@@ -38,6 +38,7 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
     )
 
     ordenes_abiertas, ordenes_cobradas, egresos_efectivo = [], [], 0.0
+    items_por_orden: dict[int, list] = {}
     if turno:
         ordenes_abiertas = await pool().fetch(
             "SELECT id, mesa, total, responsable, creado_en FROM ordenes "
@@ -49,6 +50,14 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
             "WHERE turno_id = $1 AND estado = 'cobrada' ORDER BY cobrado_en DESC",
             turno["id"],
         )
+        if ordenes_cobradas:
+            item_rows = await pool().fetch(
+                "SELECT orden_id, producto_nombre, cantidad FROM orden_items "
+                "WHERE orden_id = ANY($1::int[]) ORDER BY id",
+                [o["id"] for o in ordenes_cobradas],
+            )
+            for r in item_rows:
+                items_por_orden.setdefault(r["orden_id"], []).append(r)
         movimientos = await pool().fetch(
             "SELECT monto FROM movimientos_caja WHERE turno_id = $1 AND tipo = 'egreso'", turno["id"]
         )
@@ -69,6 +78,7 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
         "por_categoria": por_categoria,
         "ordenes_abiertas": ordenes_abiertas,
         "ordenes_cobradas": ordenes_cobradas,
+        "items_por_orden": items_por_orden,
         "ingresos_efectivo": ingresos_efectivo,
         "egresos_efectivo": egresos_efectivo,
         "ventas_totales": ventas_totales,
