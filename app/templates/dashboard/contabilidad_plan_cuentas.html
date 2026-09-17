@@ -1,7 +1,7 @@
 {% extends "dashboard/_shell.html" %}
 {% block title %}Plan de Cuentas — Café Yanaloma{% endblock %}
 {% block content %}
-<div class="stack-8">
+<div class="stack-8 report-shell">
   <div>
     <h2 class="section-title">Plan de Cuentas</h2>
     <p class="section-subtitle">Catálogo de cuentas contables — solo administración.</p>
@@ -9,32 +9,33 @@
 
   {% include "partials/_contabilidad_nav.html" %}
 
-  <form method="post" action="/dashboard/contabilidad/plan-cuentas" class="card form-grid form-grid-4">
-    <div>
-      <label class="field-label">Código</label>
-      <input name="codigo" required class="input" />
-    </div>
-    <div class="flex-1">
-      <label class="field-label">Nombre</label>
-      <input name="nombre" required class="input" />
-    </div>
-    <div>
-      <label class="field-label">Tipo</label>
-      <select name="tipo" required class="input">
-        <option value="">—</option>
-        {% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-      </select>
-    </div>
-    <button type="submit" class="btn btn-primary self-end">Añadir</button>
-    {% if error %}<p class="error-box col-span-full">{{ error }}</p>{% endif %}
-  </form>
+  <form method="post" action="/dashboard/contabilidad/plan-cuentas" id="form-nueva-cuenta"></form>
+  <table class="capture-grid">
+    <thead>
+      <tr><th style="width:140px">Código</th><th>Nombre</th><th style="width:160px">Tipo</th><th style="width:90px"></th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><input name="codigo" form="form-nueva-cuenta" required /></td>
+        <td><input name="nombre" form="form-nueva-cuenta" required /></td>
+        <td>
+          <select name="tipo" form="form-nueva-cuenta" required>
+            <option value="">—</option>
+            {% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+          </select>
+        </td>
+        <td><button type="submit" form="form-nueva-cuenta" class="btn btn-primary btn-sm w-full">Añadir</button></td>
+      </tr>
+    </tbody>
+  </table>
+  {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
 
   <div class="table-wrap">
-    <table class="data-table">
+    <table class="ledger">
       <thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th></tr></thead>
       <tbody>
         {% for c in cuentas %}
-        <tr>
+        <tr class="line-row">
           <td class="mono">{{ c.codigo }}</td>
           <td>{{ c.nombre }}</td>
           <td class="small uppercase">{{ c.tipo }}</td>

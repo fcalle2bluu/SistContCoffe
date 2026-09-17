@@ -1,13 +1,14 @@
 <div id="lineas-asiento">
   {% if lineas %}
-  <div class="cart-table-wrap">
-    <table class="cart-table">
+  <div class="table-wrap">
+    <table class="ledger">
+      <thead><tr><th>Cuenta</th><th>Lado</th><th class="num">Monto</th><th></th></tr></thead>
       <tbody>
         {% for l in lineas %}
-        <tr>
+        <tr class="line-row">
           <td>{{ l.nombre }}</td>
           <td class="uppercase small">{{ l.lado }}</td>
-          <td class="text-right mono strong">{{ "%.2f"|format(l.monto) }}</td>
+          <td class="num">{{ l.monto|bs }}</td>
           <td class="text-right">
             <button type="button" class="link-danger"
               hx-post="/dashboard/contabilidad/diario/linea/quitar"
@@ -29,6 +30,6 @@
   {% endfor %}
 
   <div class="cart-total-row">
-    <p class="cart-total-label">Debe Bs {{ "%.2f"|format(total_debe) }} · Haber Bs {{ "%.2f"|format(total_haber) }}{% if lineas and total_debe == total_haber %} · Cuadrado{% endif %}</p>
+    <p class="cart-total-label">Debe Bs {{ total_debe|bs }} · Haber Bs {{ total_haber|bs }}{% if lineas and total_debe == total_haber %} · Cuadrado{% endif %}</p>
   </div>
 </div>

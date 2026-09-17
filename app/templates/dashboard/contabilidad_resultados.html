@@ -1,7 +1,7 @@
 {% extends "dashboard/_shell.html" %}
 {% block title %}Estado de Resultados — Café Yanaloma{% endblock %}
 {% block content %}
-<div class="stack-8">
+<div class="stack-8 report-shell">
   <div>
     <h2 class="section-title">Estado de Resultados</h2>
     <p class="section-subtitle">Ingresos, costos e impuestos por período — solo administración.</p>
@@ -10,39 +10,39 @@
   {% include "partials/_contabilidad_nav.html" %}
 
   {% if periodos|length > 0 %}
-  <form method="get" action="/dashboard/contabilidad/resultados" class="card inline-form">
-    <div class="flex-1">
+  <form method="get" action="/dashboard/contabilidad/resultados" class="toolbar">
+    <span class="toolbar-group">
       <label class="field-label">Período</label>
       <select name="periodo" class="input">
         {% for p in periodos %}
         <option value="{{ p.id }}" {{ "selected" if periodo_actual and periodo_actual.id == p.id }}>{{ p.nombre }}</option>
         {% endfor %}
       </select>
-    </div>
-    <button type="submit" class="btn btn-outline">Ver</button>
+    </span>
+    <button type="submit" class="btn btn-outline btn-sm">Ver</button>
   </form>
   {% endif %}
 
   {% if periodo_actual %}
   <div class="table-wrap">
-    <table class="data-table report-table">
+    <table class="ledger">
       <tbody>
         {% for seccion, label in [("INGRESOS", "Ingresos totales"), ("COSTOS", "Costos totales"), ("IMPUESTOS", "Impuestos")] %}
-        <tr class="totals-row"><td colspan="2">{{ label }}</td></tr>
+        <tr class="group-row"><td colspan="2">{{ label }}</td></tr>
         {% for it in items_por_seccion.get(seccion, []) %}
-        <tr>
-          <td>{{ it.concepto }}</td>
-          <td class="text-right mono">{{ "%.2f"|format(it.monto) }}</td>
+        <tr class="line-row">
+          <td class="indent">{{ it.concepto }}</td>
+          <td class="num">{{ it.monto|bs }}</td>
         </tr>
         {% endfor %}
-        <tr>
-          <td class="text-right small">Subtotal {{ label|lower }}</td>
-          <td class="text-right mono strong">{{ "%.2f"|format(totales.get(seccion, 0)) }}</td>
+        <tr class="subtotal-row">
+          <td>Subtotal {{ label|lower }}</td>
+          <td class="num">{{ totales.get(seccion, 0)|bs }}</td>
         </tr>
         {% endfor %}
-        <tr class="totals-row">
-          <td class="text-right">Resultado del período</td>
-          <td class="text-right mono">{{ "%.2f"|format(total_final) }}</td>
+        <tr class="total-row">
+          <td>Resultado del período</td>
+          <td class="num">{{ total_final|bs }}</td>
         </tr>
       </tbody>
     </table>
@@ -67,28 +67,30 @@
         </div>
       </div>
 
-      <div class="stack-4">
-        {% for i in range(6) %}
-        <div class="order-row">
-          <div>
-            <label class="field-label">Sección</label>
-            <select name="seccion" class="input input-w36">
-              <option value="INGRESOS">INGRESOS</option>
-              <option value="COSTOS">COSTOS</option>
-              <option value="IMPUESTOS">IMPUESTOS</option>
-            </select>
-          </div>
-          <div class="flex-1">
-            <label class="field-label">Concepto</label>
-            <input name="concepto" class="input" />
-          </div>
-          <div>
-            <label class="field-label">Monto (Bs)</label>
-            <input name="monto" type="number" step="0.01" class="input input-w28" />
-          </div>
-        </div>
-        {% endfor %}
-      </div>
+      <table class="capture-grid">
+        <thead>
+          <tr>
+            <th class="col-seccion">Sección</th>
+            <th>Concepto</th>
+            <th class="col-monto">Monto (Bs)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in range(8) %}
+          <tr>
+            <td class="col-seccion">
+              <select name="seccion">
+                <option value="INGRESOS">INGRESOS</option>
+                <option value="COSTOS">COSTOS</option>
+                <option value="IMPUESTOS">IMPUESTOS</option>
+              </select>
+            </td>
+            <td><input name="concepto" /></td>
+            <td class="col-monto"><input name="monto" type="number" step="0.01" /></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
 
       <div class="order-actions">
         <button type="submit" class="btn btn-primary">Guardar período</button>

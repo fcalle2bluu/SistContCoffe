@@ -25,6 +25,18 @@ def formato_fecha(iso: str) -> str:
     return f"{d}/{m}/{y}"
 
 
+def formato_bs(value) -> str:
+    try:
+        num = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    signo = "-" if num < 0 else ""
+    texto = f"{abs(num):,.2f}"
+    texto = texto.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{signo}{texto}"
+
+
 templates.env.filters["hora"] = formato_hora
 templates.env.filters["fechahora"] = formato_fecha_hora
 templates.env.filters["fecha"] = formato_fecha
+templates.env.filters["bs"] = formato_bs

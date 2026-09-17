@@ -1,7 +1,7 @@
 {% extends "dashboard/_shell.html" %}
 {% block title %}Libro Diario — Café Yanaloma{% endblock %}
 {% block content %}
-<div class="stack-8">
+<div class="stack-8 report-shell">
   <div>
     <h2 class="section-title">Libro Diario</h2>
     <p class="section-subtitle">Asientos contables de doble entrada — solo administración.</p>
@@ -62,26 +62,27 @@
     {% if asientos|length == 0 %}
     <p class="muted">Todavía no hay asientos.</p>
     {% else %}
-    <div class="stack-4">
-      {% for a in asientos %}
-      <div class="card">
-        <div class="turno-header">
-          <span class="strong">N° {{ a.nro }} — {{ a.fecha }}</span>
-        </div>
-        <p class="muted-sm">{{ a.glosa }}</p>
-        <table class="data-table" style="margin-top: 8px;">
-          <tbody>
-            {% for l in a.lineas %}
-            <tr>
-              <td>{{ l.cuenta_nombre or l.codigo_cuenta }}</td>
-              <td class="text-right mono">{{ "%.2f"|format(l.debe) if l.debe and l.debe > 0 else "" }}</td>
-              <td class="text-right mono">{{ "%.2f"|format(l.haber) if l.haber and l.haber > 0 else "" }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% endfor %}
+    <div class="table-wrap">
+      <table class="ledger">
+        <thead><tr><th>N°</th><th>Fecha</th><th>Cuenta / Glosa</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
+        <tbody>
+          {% for a in asientos %}
+          <tr class="group-row">
+            <td>{{ a.nro }}</td>
+            <td>{{ a.fecha }}</td>
+            <td colspan="3">{{ a.glosa }}</td>
+          </tr>
+          {% for l in a.lineas %}
+          <tr class="line-row">
+            <td colspan="2"></td>
+            <td class="indent">{{ l.cuenta_nombre or l.codigo_cuenta }}</td>
+            <td class="num">{{ (l.debe|bs) if l.debe and l.debe > 0 else "" }}</td>
+            <td class="num">{{ (l.haber|bs) if l.haber and l.haber > 0 else "" }}</td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% endif %}
   </div>

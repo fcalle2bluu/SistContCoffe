@@ -1,7 +1,7 @@
 {% extends "dashboard/_shell.html" %}
 {% block title %}Libro Mayor — Café Yanaloma{% endblock %}
 {% block content %}
-<div class="stack-8">
+<div class="stack-8 report-shell">
   <div>
     <h2 class="section-title">Libro Mayor</h2>
     <p class="section-subtitle">Movimientos y saldo por cuenta — calculado a partir del Libro Diario.</p>
@@ -9,8 +9,8 @@
 
   {% include "partials/_contabilidad_nav.html" %}
 
-  <form method="get" action="/dashboard/contabilidad/mayor" class="card inline-form">
-    <div class="flex-1">
+  <form method="get" action="/dashboard/contabilidad/mayor" class="toolbar">
+    <span class="toolbar-group">
       <label class="field-label">Cuenta</label>
       <select name="cuenta" class="input">
         <option value="">— Selecciona una cuenta —</option>
@@ -18,8 +18,8 @@
         <option value="{{ c.codigo }}" {{ "selected" if cuenta_actual and cuenta_actual.codigo == c.codigo }}>{{ c.nombre }} ({{ c.codigo }})</option>
         {% endfor %}
       </select>
-    </div>
-    <button type="submit" class="btn btn-outline">Ver</button>
+    </span>
+    <button type="submit" class="btn btn-outline btn-sm">Ver</button>
   </form>
 
   {% if cuenta_actual %}
@@ -29,23 +29,23 @@
     <p class="muted">Esta cuenta todavía no tiene movimientos.</p>
     {% else %}
     <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>Fecha</th><th>Glosa</th><th class="text-right">Debe</th><th class="text-right">Haber</th><th class="text-right">Saldo</th></tr></thead>
+      <table class="ledger">
+        <thead><tr><th>Fecha</th><th>Glosa</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
         <tbody>
           {% for m in movimientos %}
-          <tr>
+          <tr class="line-row">
             <td class="mono nowrap">{{ m.fecha }}</td>
             <td class="small">{{ m.glosa }}</td>
-            <td class="text-right mono">{{ "%.2f"|format(m.debe) if m.debe and m.debe > 0 else "" }}</td>
-            <td class="text-right mono">{{ "%.2f"|format(m.haber) if m.haber and m.haber > 0 else "" }}</td>
-            <td class="text-right mono strong">{{ "%.2f"|format(m.saldo) }}</td>
+            <td class="num">{{ (m.debe|bs) if m.debe and m.debe > 0 else "" }}</td>
+            <td class="num">{{ (m.haber|bs) if m.haber and m.haber > 0 else "" }}</td>
+            <td class="num">{{ m.saldo|bs }}</td>
           </tr>
           {% endfor %}
         </tbody>
         <tfoot>
-          <tr class="totals-row">
-            <td colspan="4" class="text-right">Saldo final</td>
-            <td class="text-right mono">{{ "%.2f"|format(saldo_final) }}</td>
+          <tr class="total-row">
+            <td colspan="4">Saldo final</td>
+            <td class="num">{{ saldo_final|bs }}</td>
           </tr>
         </tfoot>
       </table>
