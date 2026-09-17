@@ -37,7 +37,7 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
         "SELECT id, nombre, categoria, precio_venta FROM productos ORDER BY categoria, nombre"
     )
 
-    ordenes_abiertas, ordenes_cobradas, egresos_efectivo = [], [], 0.0
+    ordenes_abiertas, ordenes_cobradas, egresos_efectivo, egresos_totales = [], [], 0.0, 0.0
     items_por_orden: dict[int, list] = {}
     if turno:
         ordenes_abiertas = await pool().fetch(
@@ -59,9 +59,10 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
             for r in item_rows:
                 items_por_orden.setdefault(r["orden_id"], []).append(r)
         movimientos = await pool().fetch(
-            "SELECT monto FROM movimientos_caja WHERE turno_id = $1 AND tipo = 'egreso'", turno["id"]
+            "SELECT monto, tipo_pago FROM movimientos_caja WHERE turno_id = $1 AND tipo = 'egreso'", turno["id"]
         )
-        egresos_efectivo = sum(float(m["monto"]) for m in movimientos)
+        egresos_totales = sum(float(m["monto"]) for m in movimientos)
+        egresos_efectivo = sum(float(m["monto"]) for m in movimientos if m["tipo_pago"] in PAGOS_EFECTIVO)
 
     ingresos_efectivo = sum(float(o["total"]) for o in ordenes_cobradas if o["tipo_pago"] in PAGOS_EFECTIVO)
     ventas_totales = sum(float(o["total"]) for o in ordenes_cobradas)
@@ -81,6 +82,7 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
         "items_por_orden": items_por_orden,
         "ingresos_efectivo": ingresos_efectivo,
         "egresos_efectivo": egresos_efectivo,
+        "egresos_totales": egresos_totales,
         "ventas_totales": ventas_totales,
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
@@ -294,22 +296,26 @@ async def registrar_movimiento_caja(
     turno_id: str = Form(""),
     monto: str = Form(""),
     motivo: str = Form(""),
+    tipo_pago: str = Form(""),
 ):
     motivo = motivo.strip()
+    tipo_pago = tipo_pago.strip()
     try:
         monto_num = float(monto)
     except ValueError:
         monto_num = 0
 
-    if not turno_id or monto_num <= 0 or not motivo:
-        ctx = await _ventas_context(session, error="Completa motivo y monto (mayor a 0).")
+    if not turno_id or monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO:
+        ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0).")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     await pool().execute(
-        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable) VALUES ($1, 'egreso', $2, $3, $4)",
+        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago) "
+        "VALUES ($1, 'egreso', $2, $3, $4, $5)",
         int(turno_id),
         monto_num,
         motivo,
         session["nombre"],
+        tipo_pago,
     )
     return RedirectResponse("/dashboard/ventas", status_code=303)
