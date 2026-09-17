@@ -1,0 +1,89 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Libro Diario — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Libro Diario</h2>
+    <p class="section-subtitle">Asientos contables de doble entrada — solo administración.</p>
+  </div>
+
+  {% include "partials/_contabilidad_nav.html" %}
+
+  <div>
+    <h3 class="subsection-title">Nuevo asiento</h3>
+    <form method="post" action="/dashboard/contabilidad/diario" class="card stack-4">
+      <div class="order-row">
+        <div>
+          <label class="field-label">Fecha</label>
+          <input name="fecha" type="date" required class="input input-w44" />
+        </div>
+        <div class="flex-1">
+          <label class="field-label">Glosa (descripción)</label>
+          <input name="glosa" required class="input" />
+        </div>
+      </div>
+
+      <div class="order-row">
+        <div class="flex-1">
+          <label class="field-label">Cuenta</label>
+          <select name="cuenta_selector" class="input">
+            <option value="">— Selecciona —</option>
+            {% for c in cuentas %}<option value="{{ c.codigo }}">{{ c.nombre }} ({{ c.codigo }})</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Lado</label>
+          <select name="lado_selector" class="input input-w36">
+            <option value="DEBE">DEBE</option>
+            <option value="HABER">HABER</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Monto (Bs)</label>
+          <input name="monto_selector" type="number" step="0.01" class="input input-w28" />
+        </div>
+        <button type="button" class="btn btn-outline"
+          hx-post="/dashboard/contabilidad/diario/linea" hx-include="closest form"
+          hx-target="#lineas-asiento" hx-swap="outerHTML">+ Agregar línea</button>
+      </div>
+
+      {% include "partials/_lineas_asiento.html" %}
+
+      <div class="order-actions">
+        <button type="submit" class="btn btn-primary">Registrar asiento</button>
+      </div>
+
+      {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+    </form>
+  </div>
+
+  <div>
+    <h3 class="subsection-title">Asientos registrados ({{ asientos|length }})</h3>
+    {% if asientos|length == 0 %}
+    <p class="muted">Todavía no hay asientos.</p>
+    {% else %}
+    <div class="stack-4">
+      {% for a in asientos %}
+      <div class="card">
+        <div class="turno-header">
+          <span class="strong">N° {{ a.nro }} — {{ a.fecha }}</span>
+        </div>
+        <p class="muted-sm">{{ a.glosa }}</p>
+        <table class="data-table" style="margin-top: 8px;">
+          <tbody>
+            {% for l in a.lineas %}
+            <tr>
+              <td>{{ l.cuenta_nombre or l.codigo_cuenta }}</td>
+              <td class="text-right mono">{{ "%.2f"|format(l.debe) if l.debe and l.debe > 0 else "" }}</td>
+              <td class="text-right mono">{{ "%.2f"|format(l.haber) if l.haber and l.haber > 0 else "" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

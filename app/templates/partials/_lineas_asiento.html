@@ -1,0 +1,34 @@
+<div id="lineas-asiento">
+  {% if lineas %}
+  <div class="cart-table-wrap">
+    <table class="cart-table">
+      <tbody>
+        {% for l in lineas %}
+        <tr>
+          <td>{{ l.nombre }}</td>
+          <td class="uppercase small">{{ l.lado }}</td>
+          <td class="text-right mono strong">{{ "%.2f"|format(l.monto) }}</td>
+          <td class="text-right">
+            <button type="button" class="link-danger"
+              hx-post="/dashboard/contabilidad/diario/linea/quitar"
+              hx-include="closest form"
+              hx-vals='{"quitar_index": "{{ loop.index0 }}"}'
+              hx-target="#lineas-asiento" hx-swap="outerHTML">Quitar</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% for l in lineas %}
+  <input type="hidden" name="cuenta" value="{{ l.codigo_cuenta }}" />
+  <input type="hidden" name="lado" value="{{ l.lado }}" />
+  <input type="hidden" name="monto" value="{{ l.monto }}" />
+  {% endfor %}
+
+  <div class="cart-total-row">
+    <p class="cart-total-label">Debe Bs {{ "%.2f"|format(total_debe) }} · Haber Bs {{ "%.2f"|format(total_haber) }}{% if lineas and total_debe == total_haber %} · Cuadrado{% endif %}</p>
+  </div>
+</div>

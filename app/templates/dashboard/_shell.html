@@ -13,6 +13,9 @@
       <a href="/dashboard/insumos" class="nav-link {{ 'active' if active == 'insumos' else '' }}">Control de Insumos</a>
       <a href="/dashboard/clientes" class="nav-link {{ 'active' if active == 'clientes' else '' }}">Clientes</a>
       <a href="/dashboard/productos" class="nav-link {{ 'active' if active == 'productos' else '' }}">Productos</a>
+      {% if session.role == 'admin' %}
+      <a href="/dashboard/contabilidad/diario" class="nav-link {{ 'active' if active == 'contabilidad' else '' }}">Contabilidad</a>
+      {% endif %}
     </nav>
 
     <div class="sidebar-footer">

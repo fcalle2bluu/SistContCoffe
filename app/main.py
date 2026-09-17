@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.db import close_pool, init_pool
 from app.deps import RedirectTo
-from app.routers import auth, clientes, insumos, pos, productos, ventas
+from app.routers import auth, clientes, contabilidad, insumos, pos, productos, ventas
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -37,4 +37,5 @@ app.include_router(ventas.router)
 app.include_router(insumos.router)
 app.include_router(clientes.router)
 app.include_router(productos.router)
+app.include_router(contabilidad.router)
 app.include_router(pos.router)

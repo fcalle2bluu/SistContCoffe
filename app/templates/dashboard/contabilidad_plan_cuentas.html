@@ -1,0 +1,47 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Plan de Cuentas — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Plan de Cuentas</h2>
+    <p class="section-subtitle">Catálogo de cuentas contables — solo administración.</p>
+  </div>
+
+  {% include "partials/_contabilidad_nav.html" %}
+
+  <form method="post" action="/dashboard/contabilidad/plan-cuentas" class="card form-grid form-grid-4">
+    <div>
+      <label class="field-label">Código</label>
+      <input name="codigo" required class="input" />
+    </div>
+    <div class="flex-1">
+      <label class="field-label">Nombre</label>
+      <input name="nombre" required class="input" />
+    </div>
+    <div>
+      <label class="field-label">Tipo</label>
+      <select name="tipo" required class="input">
+        <option value="">—</option>
+        {% for t in tipos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary self-end">Añadir</button>
+    {% if error %}<p class="error-box col-span-full">{{ error }}</p>{% endif %}
+  </form>
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th></tr></thead>
+      <tbody>
+        {% for c in cuentas %}
+        <tr>
+          <td class="mono">{{ c.codigo }}</td>
+          <td>{{ c.nombre }}</td>
+          <td class="small uppercase">{{ c.tipo }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
