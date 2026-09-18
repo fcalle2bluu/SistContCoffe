@@ -84,8 +84,15 @@
       <div class="order-row">
         <div>
           <label class="field-label">Mesa / referencia</label>
-          <input name="mesa" required placeholder="Ej: Mesa 3, Llevar, 7 CH…" class="input input-w44" />
+          {% include "partials/_mesa_select.html" %}
         </div>
+        <div>
+          <label class="field-label">Nueva mesa</label>
+          <input type="text" name="nombre_nueva" placeholder="Ej: 9, Delivery" class="input input-w28" />
+        </div>
+        <button type="button" class="btn btn-outline btn-sm"
+          hx-post="/dashboard/ventas/mesas" hx-include="closest form"
+          hx-target="#mesa-select" hx-swap="outerHTML">+ Agregar mesa</button>
       </div>
 
       <div class="table-wrap">

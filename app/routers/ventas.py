@@ -37,10 +37,13 @@ async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: lis
     return list(cart.values())
 
 
-async def _ventas_context(session: dict, cobrar_id: int | None = None, error: str | None = None) -> dict:
+async def _ventas_context(
+    session: dict, cobrar_id: int | None = None, error: str | None = None, mesa_seleccionada: str | None = None
+) -> dict:
     turno = await pool().fetchrow(
         "SELECT id, responsable, monto_inicial, abierto_en FROM turnos WHERE estado = 'abierto'"
     )
+    mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
     productos = await pool().fetch(
         "SELECT id, nombre, categoria, precio_venta FROM productos ORDER BY categoria, nombre"
     )
@@ -87,6 +90,8 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
         "session": session,
         "active": "ventas",
         "turno": turno,
+        "mesas": mesas,
+        "mesa_seleccionada": mesa_seleccionada,
         "productos": productos,
         "por_categoria": por_categoria,
         "ordenes_abiertas": ordenes_abiertas,
@@ -108,6 +113,19 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
 async def ventas_page(request: Request, session: dict = Depends(require_session), cobrar: int | None = None):
     ctx = await _ventas_context(session, cobrar_id=cobrar)
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
+
+
+@router.post("/mesas", response_class=HTMLResponse)
+async def agregar_mesa(request: Request, session: dict = Depends(require_session), nombre_nueva: str = Form("")):
+    nombre_nueva = nombre_nueva.strip().upper()
+    if nombre_nueva:
+        await pool().execute(
+            "INSERT INTO mesas_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING", nombre_nueva
+        )
+    mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
+    return templates.TemplateResponse(
+        request, "partials/_mesa_select.html", {"mesas": mesas, "mesa_seleccionada": nombre_nueva}
+    )
 
 
 @router.post("/ordenes", response_class=HTMLResponse)
@@ -137,7 +155,7 @@ async def crear_orden(
         error = "Elige el método de pago para cobrar."
 
     if error:
-        ctx = await _ventas_context(session, error=error)
+        ctx = await _ventas_context(session, error=error, mesa_seleccionada=mesa)
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     total = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
