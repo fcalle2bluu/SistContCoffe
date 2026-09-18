@@ -1,0 +1,45 @@
+name: Build desktop app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Empaquetar CafeYanaloma.exe
+        run: >
+          pyinstaller --onefile --name CafeYanaloma
+          --add-data "app/templates;app/templates"
+          --add-data "app/static;app/static"
+          --collect-all uvicorn
+          desktop/launcher.py
+
+      - name: Calcular version del release
+        id: ver
+        shell: bash
+        run: echo "tag=v$(date +%Y.%m.%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }}
+          files: dist/CafeYanaloma.exe
+          make_latest: true

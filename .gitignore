@@ -12,3 +12,8 @@ __pycache__/
 # datos de negocio (referencia local, no va al repo)
 *.xlsx
 *.xls
+
+# build del ejecutable de escritorio
+build/
+dist/
+*.spec
