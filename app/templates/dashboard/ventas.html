@@ -10,6 +10,7 @@
   {% if not turno %}
   <div class="card">
     <h3 class="card-title">No hay turno abierto</h3>
+    {% if session.role == 'admin' %}
     <p class="muted-sm">Abre caja para empezar a registrar ventas.</p>
     <form method="post" action="/dashboard/ventas/turno/abrir" class="inline-form">
       <div>
@@ -19,6 +20,9 @@
       <button type="submit" class="btn btn-primary">Abrir turno</button>
     </form>
     {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+    {% else %}
+    <p class="muted-sm">Pide a un administrador que abra la caja para empezar a registrar ventas.</p>
+    {% endif %}
   </div>
   {% else %}
 
@@ -61,6 +65,7 @@
         </form>
       </details>
 
+      {% if session.role == 'admin' %}
       <details class="disclosure">
         <summary class="btn btn-primary">Cerrar turno</summary>
         <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" class="inline-form">
@@ -71,6 +76,7 @@
           <button type="submit" class="btn btn-primary">Confirmar cierre</button>
         </form>
       </details>
+      {% endif %}
     </div>
 
     {% if error %}<p class="error-box">{{ error }}</p>{% endif %}

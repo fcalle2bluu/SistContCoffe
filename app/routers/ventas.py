@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.db import pool
-from app.deps import require_session
+from app.deps import require_admin, require_session
 from app.templating import templates
 
 router = APIRouter(prefix="/dashboard/ventas")
@@ -220,7 +220,7 @@ async def cancelar_orden(orden_id: int, session: dict = Depends(require_session)
 
 
 @router.post("/turno/abrir", response_class=HTMLResponse)
-async def abrir_turno(request: Request, session: dict = Depends(require_session), monto_inicial: str = Form("")):
+async def abrir_turno(request: Request, session: dict = Depends(require_admin), monto_inicial: str = Form("")):
     try:
         monto = float(monto_inicial)
     except ValueError:
@@ -245,7 +245,7 @@ async def abrir_turno(request: Request, session: dict = Depends(require_session)
 
 @router.post("/turno/{turno_id}/cerrar", response_class=HTMLResponse)
 async def cerrar_turno(
-    request: Request, turno_id: int, session: dict = Depends(require_session), monto_final_declarado: str = Form("")
+    request: Request, turno_id: int, session: dict = Depends(require_admin), monto_final_declarado: str = Form("")
 ):
     try:
         monto_final = float(monto_final_declarado)
