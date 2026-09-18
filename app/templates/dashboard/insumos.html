@@ -22,7 +22,7 @@
     </div>
     <div>
       <label class="field-label">Medida</label>
-      <input name="medida" placeholder="UNIDAD, LITROS…" class="input uppercase" />
+      {% include "partials/_medida_select.html" %}
     </div>
     <div>
       <label class="field-label">Precio unit. (Bs)</label>
@@ -34,11 +34,33 @@
     </div>
     <div>
       <label class="field-label">Solicitante</label>
-      <input name="solicitante" class="input" />
+      {% include "partials/_solicitante_select.html" %}
     </div>
     <button type="submit" class="btn btn-primary col-span-full">Registrar compra</button>
     {% if error %}<p class="error-box col-span-full">{{ error }}</p>{% endif %}
   </form>
+
+  <div class="card">
+    <h3 class="subsection-title">Agregar a las listas</h3>
+    <div class="order-row">
+      <div>
+        <label class="field-label">Nueva medida</label>
+        <input type="text" id="nueva-medida-input" name="nombre_nueva" placeholder="Ej: ONZAS" class="input input-w32" />
+      </div>
+      <button type="button" class="btn btn-outline btn-sm"
+        hx-post="/dashboard/insumos/medidas" hx-include="#nueva-medida-input"
+        hx-target="#medida-select" hx-swap="outerHTML">+ Agregar medida</button>
+    </div>
+    <div class="order-row">
+      <div>
+        <label class="field-label">Nuevo solicitante</label>
+        <input type="text" id="nuevo-solicitante-input" name="nombre_nueva" placeholder="Ej: Freddy" class="input input-w32" />
+      </div>
+      <button type="button" class="btn btn-outline btn-sm"
+        hx-post="/dashboard/insumos/solicitantes" hx-include="#nuevo-solicitante-input"
+        hx-target="#solicitante-select" hx-swap="outerHTML">+ Agregar solicitante</button>
+    </div>
+  </div>
 
   {% if insumos|length == 0 %}
   <p class="muted">Todavía no hay compras registradas.</p>

@@ -1,0 +1,6 @@
+<select name="solicitante" id="solicitante-select" class="input">
+  <option value="">—</option>
+  {% for s in solicitantes %}
+  <option value="{{ s.nombre }}" {{ "selected" if s.nombre == solicitante_seleccionado }}>{{ s.nombre }}</option>
+  {% endfor %}
+</select>

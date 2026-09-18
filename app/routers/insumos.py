@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -13,14 +15,61 @@ SELECT_INSUMOS = (
 )
 
 
+async def _listas_referencia():
+    medidas = await pool().fetch("SELECT id, nombre FROM medidas_referencia ORDER BY nombre")
+    solicitantes = await pool().fetch("SELECT id, nombre FROM solicitantes_referencia ORDER BY nombre")
+    return medidas, solicitantes
+
+
 @router.get("", response_class=HTMLResponse)
 async def insumos_page(request: Request, session: dict = Depends(require_dashboard), error: str | None = None):
     insumos = await pool().fetch(SELECT_INSUMOS)
     total_general = sum(float(i["total"]) for i in insumos)
+    medidas, solicitantes = await _listas_referencia()
     return templates.TemplateResponse(
         request,
         "dashboard/insumos.html",
-        {"session": session, "active": "insumos", "insumos": insumos, "total_general": total_general, "error": error},
+        {
+            "session": session,
+            "active": "insumos",
+            "insumos": insumos,
+            "total_general": total_general,
+            "medidas": medidas,
+            "solicitantes": solicitantes,
+            "medida_seleccionada": None,
+            "solicitante_seleccionado": None,
+            "error": error,
+        },
+    )
+
+
+@router.post("/medidas", response_class=HTMLResponse)
+async def agregar_medida(request: Request, session: dict = Depends(require_session), nombre_nueva: str = Form("")):
+    nombre_nueva = nombre_nueva.strip().upper()
+    if nombre_nueva:
+        await pool().execute(
+            "INSERT INTO medidas_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING", nombre_nueva
+        )
+    medidas = await pool().fetch("SELECT id, nombre FROM medidas_referencia ORDER BY nombre")
+    return templates.TemplateResponse(
+        request, "partials/_medida_select.html", {"medidas": medidas, "medida_seleccionada": nombre_nueva}
+    )
+
+
+@router.post("/solicitantes", response_class=HTMLResponse)
+async def agregar_solicitante(
+    request: Request, session: dict = Depends(require_session), nombre_nueva: str = Form("")
+):
+    nombre_nueva = nombre_nueva.strip()
+    if nombre_nueva:
+        await pool().execute(
+            "INSERT INTO solicitantes_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING", nombre_nueva
+        )
+    solicitantes = await pool().fetch("SELECT id, nombre FROM solicitantes_referencia ORDER BY nombre")
+    return templates.TemplateResponse(
+        request,
+        "partials/_solicitante_select.html",
+        {"solicitantes": solicitantes, "solicitante_seleccionado": nombre_nueva},
     )
 
 
@@ -50,6 +99,7 @@ async def crear_compra_insumo(
     if error:
         insumos = await pool().fetch(SELECT_INSUMOS)
         total_general = sum(float(i["total"]) for i in insumos)
+        medidas, solicitantes = await _listas_referencia()
         return templates.TemplateResponse(
             request,
             "dashboard/insumos.html",
@@ -58,6 +108,10 @@ async def crear_compra_insumo(
                 "active": "insumos",
                 "insumos": insumos,
                 "total_general": total_general,
+                "medidas": medidas,
+                "solicitantes": solicitantes,
+                "medida_seleccionada": medida.strip() or None,
+                "solicitante_seleccionado": solicitante.strip() or None,
                 "error": error,
             },
             status_code=400,
@@ -68,7 +122,7 @@ async def crear_compra_insumo(
         INSERT INTO compras_insumos (fecha, detalle, cantidad, medida, respaldo, precio_unitario, solicitante, responsable)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         """,
-        fecha,
+        date.fromisoformat(fecha),
         detalle,
         cantidad_num,
         medida.strip() or None,

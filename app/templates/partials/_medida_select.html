@@ -1,0 +1,6 @@
+<select name="medida" id="medida-select" class="input uppercase">
+  <option value="">—</option>
+  {% for m in medidas %}
+  <option value="{{ m.nombre }}" {{ "selected" if m.nombre == medida_seleccionada }}>{{ m.nombre }}</option>
+  {% endfor %}
+</select>
