@@ -86,29 +86,41 @@
           <label class="field-label">Mesa / referencia</label>
           <input name="mesa" required placeholder="Ej: Mesa 3, Llevar, 7 CH…" class="input input-w44" />
         </div>
-        <div class="flex-1">
-          <label class="field-label">Producto</label>
-          <select name="producto_id_selector" class="input">
-            <option value="">— Selecciona —</option>
-            {% for categoria, items in por_categoria.items() %}
-            <optgroup label="{{ categoria }}">
-              {% for p in items %}
-              <option value="{{ p.id }}">{{ p.nombre }} — Bs {{ "%.2f"|format(p.precio_venta) }}</option>
-              {% endfor %}
-            </optgroup>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="field-label">Cant.</label>
-          <input name="cantidad_selector" type="number" min="1" value="1" class="input input-w20" />
-        </div>
-        <button type="button" class="btn btn-outline"
-          hx-post="/dashboard/ventas/carrito" hx-include="closest form"
-          hx-target="#carrito" hx-swap="outerHTML">+ Agregar</button>
       </div>
 
-      {% include "partials/_carrito.html" %}
+      <div class="table-wrap">
+        <table class="capture-grid" id="items-pedido">
+          <thead>
+            <tr>
+              {% for i in range(5) %}<th>Ítem {{ i + 1 }}</th><th class="col-monto">Cant.</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {% for i in range(5) %}
+              <td>
+                <select name="cart_producto_id" class="item-select">
+                  <option value="">—</option>
+                  {% for categoria, items in por_categoria.items() %}
+                  <optgroup label="{{ categoria }}">
+                    {% for p in items %}
+                    <option value="{{ p.id }}" data-precio="{{ p.precio_venta }}">{{ p.nombre }}</option>
+                    {% endfor %}
+                  </optgroup>
+                  {% endfor %}
+                </select>
+              </td>
+              <td class="col-monto"><input name="cart_cantidad" type="number" min="1" value="1" class="item-cant" /></td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="cart-total-row">
+        <p class="cart-total-label">Total estimado</p>
+        <p class="cart-total-value" id="total-estimado">Bs 0.00</p>
+      </div>
 
       <div class="order-footer-fields">
         <div>
@@ -239,4 +251,27 @@
 
   {% endif %}
 </div>
+
+<script>
+(function () {
+  var tabla = document.getElementById("items-pedido");
+  if (!tabla) return;
+  var salida = document.getElementById("total-estimado");
+  function recalcular() {
+    var filas = tabla.querySelectorAll("tbody tr td");
+    var total = 0;
+    var selects = tabla.querySelectorAll(".item-select");
+    selects.forEach(function (sel) {
+      var opt = sel.options[sel.selectedIndex];
+      var precio = opt ? parseFloat(opt.getAttribute("data-precio") || "0") : 0;
+      var cantInput = sel.closest("td").nextElementSibling.querySelector(".item-cant");
+      var cant = cantInput ? parseFloat(cantInput.value || "0") : 0;
+      if (precio > 0 && cant > 0) total += precio * cant;
+    });
+    salida.textContent = "Bs " + total.toFixed(2);
+  }
+  tabla.addEventListener("input", recalcular);
+  tabla.addEventListener("change", recalcular);
+})();
+</script>
 {% endblock %}

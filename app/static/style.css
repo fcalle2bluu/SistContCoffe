@@ -352,10 +352,6 @@ a { color: inherit; }
 .order-footer-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
 .order-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 
-.cart-table-wrap { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-.cart-table { width: 100%; border-collapse: collapse; }
-.cart-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
-.cart-table tr:last-child td { border-bottom: none; }
 .cart-total-row { display: flex; justify-content: flex-end; gap: 12px; align-items: baseline; padding-top: 8px; }
 .cart-total-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0; }
 .cart-total-value { font-family: "SFMono-Regular", Consolas, monospace; font-size: 24px; font-weight: 800; color: var(--ink); margin: 0; }

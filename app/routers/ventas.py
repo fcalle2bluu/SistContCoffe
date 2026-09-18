@@ -13,20 +13,28 @@ PAGOS_EFECTIVO = ("EFECTIVO", "EFEC/FAC")
 TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC")
 
 
-def _parse_cart(
-    cart_producto_id: list[str], cart_nombre: list[str], cart_cantidad: list[str], cart_precio: list[str]
-) -> list[dict]:
-    items = []
-    for pid, nombre, cant, precio in zip(cart_producto_id, cart_nombre, cart_cantidad, cart_precio):
-        items.append(
-            {
-                "producto_id": int(pid),
-                "producto_nombre": nombre,
-                "cantidad": float(cant),
-                "precio_unitario": float(precio),
+async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: list[str]) -> list[dict]:
+    productos_map = {p["id"]: p for p in await pool().fetch("SELECT id, nombre, precio_venta FROM productos")}
+    cart: dict[int, dict] = {}
+    for pid_txt, cant_txt in zip(cart_producto_id, cart_cantidad):
+        try:
+            pid = int(pid_txt)
+            cantidad = float(cant_txt)
+        except ValueError:
+            continue
+        producto = productos_map.get(pid)
+        if not producto or cantidad <= 0:
+            continue
+        if pid in cart:
+            cart[pid]["cantidad"] += cantidad
+        else:
+            cart[pid] = {
+                "producto_id": pid,
+                "producto_nombre": producto["nombre"],
+                "cantidad": cantidad,
+                "precio_unitario": float(producto["precio_venta"]),
             }
-        )
-    return items
+    return list(cart.values())
 
 
 async def _ventas_context(session: dict, cobrar_id: int | None = None, error: str | None = None) -> dict:
@@ -91,8 +99,6 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
         "ventas_totales": ventas_totales,
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
-        "cart": [],
-        "total": 0,
         "tipos_pago": TIPOS_PAGO,
         "error": error,
     }
@@ -102,58 +108,6 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
 async def ventas_page(request: Request, session: dict = Depends(require_session), cobrar: int | None = None):
     ctx = await _ventas_context(session, cobrar_id=cobrar)
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
-
-
-@router.post("/carrito", response_class=HTMLResponse)
-async def agregar_al_carrito(
-    request: Request,
-    session: dict = Depends(require_session),
-    cart_producto_id: list[str] = Form([]),
-    cart_nombre: list[str] = Form([]),
-    cart_cantidad: list[str] = Form([]),
-    cart_precio: list[str] = Form([]),
-    producto_id_selector: str = Form(""),
-    cantidad_selector: str = Form("1"),
-):
-    cart = _parse_cart(cart_producto_id, cart_nombre, cart_cantidad, cart_precio)
-
-    if producto_id_selector:
-        producto = await pool().fetchrow(
-            "SELECT id, nombre, precio_venta FROM productos WHERE id = $1", int(producto_id_selector)
-        )
-        cantidad = float(cantidad_selector or "1")
-        if producto and cantidad > 0:
-            existente = next((it for it in cart if it["producto_id"] == producto["id"]), None)
-            if existente:
-                existente["cantidad"] += cantidad
-            else:
-                cart.append(
-                    {
-                        "producto_id": producto["id"],
-                        "producto_nombre": producto["nombre"],
-                        "cantidad": cantidad,
-                        "precio_unitario": float(producto["precio_venta"]),
-                    }
-                )
-
-    total = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
-    return templates.TemplateResponse(request, "partials/_carrito.html", {"cart": cart, "total": total})
-
-
-@router.post("/carrito/quitar", response_class=HTMLResponse)
-async def quitar_del_carrito(
-    request: Request,
-    session: dict = Depends(require_session),
-    cart_producto_id: list[str] = Form([]),
-    cart_nombre: list[str] = Form([]),
-    cart_cantidad: list[str] = Form([]),
-    cart_precio: list[str] = Form([]),
-    quitar_id: str = Form(""),
-):
-    cart = _parse_cart(cart_producto_id, cart_nombre, cart_cantidad, cart_precio)
-    cart = [it for it in cart if str(it["producto_id"]) != quitar_id]
-    total = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
-    return templates.TemplateResponse(request, "partials/_carrito.html", {"cart": cart, "total": total})
 
 
 @router.post("/ordenes", response_class=HTMLResponse)
@@ -167,12 +121,10 @@ async def crear_orden(
     monto_pagado: str = Form(""),
     observacion: str = Form(""),
     cart_producto_id: list[str] = Form([]),
-    cart_nombre: list[str] = Form([]),
     cart_cantidad: list[str] = Form([]),
-    cart_precio: list[str] = Form([]),
 ):
     mesa = mesa.strip()
-    cart = _parse_cart(cart_producto_id, cart_nombre, cart_cantidad, cart_precio)
+    cart = await _resolver_items_pedido(cart_producto_id, cart_cantidad)
 
     error = None
     if not turno_id:
@@ -186,8 +138,6 @@ async def crear_orden(
 
     if error:
         ctx = await _ventas_context(session, error=error)
-        ctx["cart"] = cart
-        ctx["total"] = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     total = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
