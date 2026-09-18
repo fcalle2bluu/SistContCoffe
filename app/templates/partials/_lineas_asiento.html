@@ -32,4 +32,13 @@
   <div class="cart-total-row">
     <p class="cart-total-label">Debe Bs {{ total_debe|bs }} · Haber Bs {{ total_haber|bs }}{% if lineas and total_debe == total_haber %} · Cuadrado{% endif %}</p>
   </div>
+
+  {% if advertencias %}
+  <div class="error-box">
+    <strong>Revisa estas filas pegadas:</strong>
+    <ul class="warning-list">
+      {% for a in advertencias %}<li>{{ a }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
 </div>

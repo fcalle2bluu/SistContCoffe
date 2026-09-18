@@ -47,6 +47,17 @@
           hx-target="#lineas-asiento" hx-swap="outerHTML">+ Agregar línea</button>
       </div>
 
+      <details class="disclosure">
+        <summary class="btn btn-outline btn-sm">Pegar filas desde Excel</summary>
+        <div class="disclosure-content stack-4">
+          <p class="muted-sm">Pega filas copiadas de Excel: Cuenta (nombre o código) — Debe — Haber, separadas por tabulador, una fila por línea. Deja vacía la columna que no aplique.</p>
+          <textarea name="pegado" rows="4" class="input"></textarea>
+          <button type="button" class="btn btn-primary btn-sm"
+            hx-post="/dashboard/contabilidad/diario/pegar" hx-include="closest form"
+            hx-target="#lineas-asiento" hx-swap="outerHTML">Agregar filas pegadas</button>
+        </div>
+      </details>
+
       {% include "partials/_lineas_asiento.html" %}
 
       <div class="order-actions">
@@ -87,4 +98,27 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+(function () {
+  function agregarLinea() {
+    var btn = document.querySelector('[hx-post="/dashboard/contabilidad/diario/linea"]');
+    if (btn) btn.click();
+  }
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var el = e.target;
+    if (el.matches('select[name="cuenta_selector"], select[name="lado_selector"], input[name="monto_selector"]')) {
+      e.preventDefault();
+      agregarLinea();
+    }
+  });
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (e.target && e.target.id === "lineas-asiento") {
+      var sel = document.querySelector('select[name="cuenta_selector"]');
+      if (sel) sel.focus();
+    }
+  });
+})();
+</script>
 {% endblock %}

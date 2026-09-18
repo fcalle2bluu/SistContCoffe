@@ -39,6 +39,7 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
 
     ordenes_abiertas, ordenes_cobradas, egresos_efectivo, egresos_totales = [], [], 0.0, 0.0
     items_por_orden: dict[int, list] = {}
+    egresos_lista: list = []
     if turno:
         ordenes_abiertas = await pool().fetch(
             "SELECT id, mesa, total, responsable, creado_en FROM ordenes "
@@ -59,10 +60,13 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
             for r in item_rows:
                 items_por_orden.setdefault(r["orden_id"], []).append(r)
         movimientos = await pool().fetch(
-            "SELECT monto, tipo_pago FROM movimientos_caja WHERE turno_id = $1 AND tipo = 'egreso'", turno["id"]
+            "SELECT id, monto, tipo_pago, motivo, responsable, creado_en FROM movimientos_caja "
+            "WHERE turno_id = $1 AND tipo = 'egreso' ORDER BY creado_en DESC",
+            turno["id"],
         )
         egresos_totales = sum(float(m["monto"]) for m in movimientos)
         egresos_efectivo = sum(float(m["monto"]) for m in movimientos if m["tipo_pago"] in PAGOS_EFECTIVO)
+        egresos_lista = movimientos
 
     ingresos_efectivo = sum(float(o["total"]) for o in ordenes_cobradas if o["tipo_pago"] in PAGOS_EFECTIVO)
     ventas_totales = sum(float(o["total"]) for o in ordenes_cobradas)
@@ -80,6 +84,7 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
         "ordenes_abiertas": ordenes_abiertas,
         "ordenes_cobradas": ordenes_cobradas,
         "items_por_orden": items_por_orden,
+        "egresos_lista": egresos_lista,
         "ingresos_efectivo": ingresos_efectivo,
         "egresos_efectivo": egresos_efectivo,
         "egresos_totales": egresos_totales,

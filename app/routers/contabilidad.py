@@ -25,6 +25,46 @@ def _parse_lineas(cuenta: list[str], lado: list[str], monto: list[str]) -> list[
     return lineas
 
 
+def _parse_monto_pegado(texto: str) -> float:
+    texto = texto.strip().replace(" ", "")
+    if not texto:
+        return 0.0
+    if "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    try:
+        return float(texto)
+    except ValueError:
+        return 0.0
+
+
+def _parse_pegado_diario(pegado: str, cuentas_por_codigo: dict, cuentas_por_nombre: dict) -> tuple[list[dict], list[str]]:
+    nuevas, advertencias = [], []
+    for i, fila in enumerate(pegado.splitlines(), start=1):
+        if not fila.strip():
+            continue
+        partes = fila.split("\t") if "\t" in fila else fila.split(";")
+        cuenta_txt = partes[0].strip() if partes else ""
+        debe_txt = partes[1].strip() if len(partes) > 1 else ""
+        haber_txt = partes[2].strip() if len(partes) > 2 else ""
+
+        codigo = cuenta_txt if cuenta_txt in cuentas_por_codigo else cuentas_por_nombre.get(cuenta_txt.upper())
+        if not codigo:
+            advertencias.append(f'Fila {i}: no se reconoce la cuenta "{cuenta_txt}".')
+            continue
+
+        debe_num = _parse_monto_pegado(debe_txt)
+        haber_num = _parse_monto_pegado(haber_txt)
+        if debe_num <= 0 and haber_num <= 0:
+            advertencias.append(f'Fila {i}: "{cuenta_txt}" no tiene monto en Debe ni en Haber.')
+            continue
+
+        if debe_num > 0:
+            nuevas.append({"codigo_cuenta": codigo, "lado": "DEBE", "monto": debe_num})
+        if haber_num > 0:
+            nuevas.append({"codigo_cuenta": codigo, "lado": "HABER", "monto": haber_num})
+    return nuevas, advertencias
+
+
 @router.get("/plan-cuentas", response_class=HTMLResponse)
 async def plan_cuentas_page(request: Request, session: dict = Depends(require_admin), error: str | None = None):
     cuentas = await pool().fetch("SELECT codigo, nombre, tipo FROM cuentas_contables ORDER BY codigo")
@@ -175,6 +215,35 @@ async def quitar_linea_asiento(
         request,
         "partials/_lineas_asiento.html",
         {"lineas": lineas, "total_debe": total_debe, "total_haber": total_haber},
+    )
+
+
+@router.post("/diario/pegar", response_class=HTMLResponse)
+async def pegar_lineas_asiento(
+    request: Request,
+    session: dict = Depends(require_admin),
+    cuenta: list[str] = Form([]),
+    lado: list[str] = Form([]),
+    monto: list[str] = Form([]),
+    pegado: str = Form(""),
+):
+    lineas = _parse_lineas(cuenta, lado, monto)
+    cuentas_rows = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")
+    cuentas_por_codigo = {c["codigo"]: c["nombre"] for c in cuentas_rows}
+    cuentas_por_nombre = {c["nombre"].strip().upper(): c["codigo"] for c in cuentas_rows}
+
+    nuevas, advertencias = _parse_pegado_diario(pegado, cuentas_por_codigo, cuentas_por_nombre)
+    lineas.extend(nuevas)
+
+    for l in lineas:
+        l["nombre"] = cuentas_por_codigo.get(l["codigo_cuenta"], l["codigo_cuenta"])
+    total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
+    total_haber = sum(l["monto"] for l in lineas if l["lado"] == "HABER")
+
+    return templates.TemplateResponse(
+        request,
+        "partials/_lineas_asiento.html",
+        {"lineas": lineas, "total_debe": total_debe, "total_haber": total_haber, "advertencias": advertencias},
     )
 
 

@@ -138,6 +138,9 @@ a { color: inherit; }
   color: var(--red);
   margin: 0;
 }
+.warning-list { margin: 4px 0 0; padding-left: 18px; }
+
+.disclosure-content { margin-top: 12px; }
 
 .btn {
   display: inline-block;
@@ -333,6 +336,8 @@ a { color: inherit; }
 @media (min-width: 640px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
 .stat-box { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 10px 12px; }
 .stat-box dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0; }
+.stat-box dt a { text-decoration: none; }
+.stat-box dt a:hover { text-decoration: underline; color: var(--accent-strong); }
 .stat-box dd { margin: 4px 0 0; font-family: "SFMono-Regular", Consolas, monospace; font-weight: 700; }
 .stat-box-highlight { border: 1px solid var(--accent); background: var(--accent-soft); }
 

@@ -32,8 +32,8 @@
 
     <dl class="stats-grid">
       <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
-      <div class="stat-box"><dt>Ventas totales</dt><dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd></div>
-      <div class="stat-box"><dt>Egresos</dt><dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd></div>
+      <div class="stat-box"><dt><a href="#ventas-cobradas">Ventas totales</a></dt><dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd></div>
+      <div class="stat-box"><dt><a href="#egresos-turno">Egresos</a></dt><dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd></div>
       <div class="stat-box stat-box-highlight"><dt>Efectivo teórico</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
     </dl>
 
@@ -186,7 +186,7 @@
     {% endif %}
   </div>
 
-  <div>
+  <div id="ventas-cobradas">
     <h3 class="subsection-title">Ventas cobradas del turno ({{ ordenes_cobradas|length }})</h3>
     {% if ordenes_cobradas|length == 0 %}
     <p class="muted">Todavía no hay ventas cobradas en este turno.</p>
@@ -205,6 +205,30 @@
             <td class="uppercase small">{{ o.tipo_pago }}</td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
             <td class="small muted-inline">{{ o.responsable }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="egresos-turno">
+    <h3 class="subsection-title">Egresos del turno ({{ egresos_lista|length }})</h3>
+    {% if egresos_lista|length == 0 %}
+    <p class="muted">Todavía no hay egresos registrados en este turno.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th></tr></thead>
+        <tbody>
+          {% for m in egresos_lista %}
+          <tr>
+            <td class="strong">{{ m.motivo }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(m.monto) }}</td>
+            <td class="uppercase small">{{ m.tipo_pago }}</td>
+            <td class="small">{{ m.creado_en|hora if m.creado_en else "—" }}</td>
+            <td class="small muted-inline">{{ m.responsable }}</td>
           </tr>
           {% endfor %}
         </tbody>
