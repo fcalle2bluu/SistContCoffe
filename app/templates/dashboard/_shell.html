@@ -12,8 +12,8 @@
       <a href="/dashboard" class="nav-link {{ 'active' if active == 'home' else '' }}">Dashboard</a>
       {% endif %}
       <a href="/dashboard/ventas" class="nav-link {{ 'active' if active == 'ventas' else '' }}">Ventas / Caja</a>
-      {% if session.role == 'admin' %}
       <a href="/dashboard/insumos" class="nav-link {{ 'active' if active == 'insumos' else '' }}">Control de Insumos</a>
+      {% if session.role == 'admin' %}
       <a href="/dashboard/clientes" class="nav-link {{ 'active' if active == 'clientes' else '' }}">Clientes</a>
       <a href="/dashboard/productos" class="nav-link {{ 'active' if active == 'productos' else '' }}">Productos</a>
       <a href="/dashboard/contabilidad/diario" class="nav-link {{ 'active' if active == 'contabilidad' else '' }}">Contabilidad</a>

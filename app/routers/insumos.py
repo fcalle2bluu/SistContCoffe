@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.db import pool
-from app.deps import require_dashboard, require_session
+from app.deps import require_session
 from app.templating import templates
 
 router = APIRouter(prefix="/dashboard/insumos")
@@ -22,7 +22,7 @@ async def _listas_referencia():
 
 
 @router.get("", response_class=HTMLResponse)
-async def insumos_page(request: Request, session: dict = Depends(require_dashboard), error: str | None = None):
+async def insumos_page(request: Request, session: dict = Depends(require_session), error: str | None = None):
     insumos = await pool().fetch(SELECT_INSUMOS)
     total_general = sum(float(i["total"]) for i in insumos)
     medidas, solicitantes = await _listas_referencia()
