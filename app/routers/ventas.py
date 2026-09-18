@@ -219,6 +219,21 @@ async def cancelar_orden(orden_id: int, session: dict = Depends(require_session)
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
+@router.get("/ordenes/{orden_id}/ticket", response_class=HTMLResponse)
+async def ticket_orden(request: Request, orden_id: int, session: dict = Depends(require_session)):
+    orden = await pool().fetchrow(
+        "SELECT id, mesa, total, tipo_pago, responsable, creado_en, cobrado_en FROM ordenes WHERE id = $1",
+        orden_id,
+    )
+    if not orden:
+        return RedirectResponse("/dashboard/ventas", status_code=303)
+    items = await pool().fetch(
+        "SELECT producto_nombre, cantidad, precio_unitario FROM orden_items WHERE orden_id = $1 ORDER BY id",
+        orden_id,
+    )
+    return templates.TemplateResponse(request, "ticket.html", {"orden": orden, "items": items})
+
+
 @router.post("/turno/abrir", response_class=HTMLResponse)
 async def abrir_turno(request: Request, session: dict = Depends(require_admin), monto_inicial: str = Form("")):
     try:

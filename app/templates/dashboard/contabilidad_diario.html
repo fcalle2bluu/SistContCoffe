@@ -17,10 +17,6 @@
           <label class="field-label">Fecha</label>
           <input name="fecha" type="date" value="{{ hoy }}" required class="input input-w44" />
         </div>
-        <div class="flex-1">
-          <label class="field-label">Glosa (descripción)</label>
-          <input name="glosa" required class="input" />
-        </div>
       </div>
 
       <div class="order-row">
@@ -59,6 +55,13 @@
       </details>
 
       {% include "partials/_lineas_asiento.html" %}
+
+      <div class="order-row">
+        <div class="flex-1">
+          <label class="field-label">Glosa (descripción)</label>
+          <input name="glosa" required class="input" />
+        </div>
+      </div>
 
       <div class="order-actions">
         <button type="submit" class="btn btn-primary">Registrar asiento</button>

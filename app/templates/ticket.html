@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ticket — {{ orden.mesa }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      width: 300px;
+      margin: 24px auto;
+      padding: 16px;
+      color: #111;
+      font-size: 13px;
+    }
+    h1 { font-size: 16px; text-align: center; margin: 0 0 2px; }
+    .center { text-align: center; }
+    .muted { color: #555; font-size: 11px; }
+    hr { border: none; border-top: 1px dashed #999; margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 2px 0; font-size: 12px; vertical-align: top; }
+    .num { text-align: right; white-space: nowrap; }
+    .total-row td { border-top: 1px dashed #999; font-weight: 700; font-size: 14px; padding-top: 6px; }
+    .btn-print {
+      display: block; width: 100%; margin-top: 16px; padding: 10px;
+      font-size: 13px; cursor: pointer; border: 1px solid #111; background: #fff;
+    }
+    @media print {
+      .no-print { display: none; }
+      body { width: auto; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Café Yanaloma</h1>
+  <p class="center muted">The Roasting Lab</p>
+  <hr />
+  <p>
+    Mesa: {{ orden.mesa }}<br />
+    Fecha: {{ (orden.cobrado_en|fechahora) if orden.cobrado_en else (orden.creado_en|fechahora) }}<br />
+    Atendido por: {{ orden.responsable }}
+  </p>
+  <hr />
+  <table>
+    {% for it in items %}
+    <tr>
+      <td>{{ "%g"|format(it.cantidad) }}x {{ it.producto_nombre }}</td>
+      <td class="num">{{ (it.cantidad * it.precio_unitario)|bs }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="total-row">
+      <td>TOTAL</td>
+      <td class="num">Bs {{ orden.total|bs }}</td>
+    </tr>
+  </table>
+  <hr />
+  <p class="center muted">Pago: {{ orden.tipo_pago or "—" }}</p>
+  <p class="center muted">¡Gracias por su visita!</p>
+  <button class="btn-print no-print" onclick="window.print()">Imprimir</button>
+  <script>
+    window.onload = function () { window.print(); };
+  </script>
+</body>
+</html>

@@ -104,13 +104,12 @@
       <div class="table-wrap">
         <table class="capture-grid" id="items-pedido">
           <thead>
-            <tr>
-              {% for i in range(5) %}<th>Ítem {{ i + 1 }}</th><th class="col-monto">Cant.</th>{% endfor %}
+            <tr id="items-thead-row">
+              <th>Ítem 1</th><th class="col-monto">Cant.</th><th class="col-add"></th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              {% for i in range(5) %}
+            <tr id="items-tbody-row">
               <td>
                 <select name="cart_producto_id" class="item-select">
                   <option value="">—</option>
@@ -124,11 +123,24 @@
                 </select>
               </td>
               <td class="col-monto"><input name="cart_cantidad" type="number" min="1" value="1" class="item-cant" /></td>
-              {% endfor %}
+              <td class="col-add"><button type="button" id="btn-add-item" class="btn btn-outline btn-sm">+</button></td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <template id="item-slot-template">
+        <select name="cart_producto_id" class="item-select">
+          <option value="">—</option>
+          {% for categoria, items in por_categoria.items() %}
+          <optgroup label="{{ categoria }}">
+            {% for p in items %}
+            <option value="{{ p.id }}" data-precio="{{ p.precio_venta }}">{{ p.nombre }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </template>
 
       <div class="cart-total-row">
         <p class="cart-total-label">Total estimado</p>
@@ -145,7 +157,11 @@
         </div>
         <div>
           <label class="field-label">Monto pagado (Bs)</label>
-          <input name="monto_pagado" type="number" step="0.01" class="input input-w28" />
+          <input name="monto_pagado" type="number" step="0.01" class="input input-w28" id="monto-pagado-input" />
+        </div>
+        <div>
+          <label class="field-label">Cambio</label>
+          <p class="cart-total-value" id="cambio-calculado">Bs 0.00</p>
         </div>
         <div class="flex-1">
           <label class="field-label">Observación</label>
@@ -182,7 +198,8 @@
                   <option value="">Método de pago…</option>
                   {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
                 </select>
-                <input name="monto_pagado" type="number" step="0.01" placeholder="{{ '%.2f'|format(o.total) }}" class="input input-w24" />
+                <input name="monto_pagado" type="number" step="0.01" placeholder="{{ '%.2f'|format(o.total) }}" class="input input-w24 monto-pagado-pendiente" data-total="{{ o.total }}" />
+                <span class="small muted-inline">Cambio: <span class="strong cambio-pendiente">Bs 0.00</span></span>
                 <button type="submit" class="btn btn-primary btn-sm">Confirmar</button>
                 <a href="/dashboard/ventas" class="btn btn-outline btn-sm">Cancelar</a>
               </form>
@@ -218,7 +235,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table data-table-wide">
-        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th></tr></thead>
+        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for o in ordenes_cobradas %}
           <tr>
@@ -230,6 +247,7 @@
             <td class="uppercase small">{{ o.tipo_pago }}</td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
             <td class="small muted-inline">{{ o.responsable }}</td>
+            <td class="text-right"><a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -269,9 +287,12 @@
 (function () {
   var tabla = document.getElementById("items-pedido");
   if (!tabla) return;
-  var salida = document.getElementById("total-estimado");
-  function recalcular() {
-    var filas = tabla.querySelectorAll("tbody tr td");
+  var totalOut = document.getElementById("total-estimado");
+  var cambioOut = document.getElementById("cambio-calculado");
+  var montoPagadoInput = document.getElementById("monto-pagado-input");
+  var totalActual = 0;
+
+  function calcularTotalItems() {
     var total = 0;
     var selects = tabla.querySelectorAll(".item-select");
     selects.forEach(function (sel) {
@@ -281,10 +302,73 @@
       var cant = cantInput ? parseFloat(cantInput.value || "0") : 0;
       if (precio > 0 && cant > 0) total += precio * cant;
     });
-    salida.textContent = "Bs " + total.toFixed(2);
+    return total;
   }
+
+  function recalcularCambioPedido() {
+    if (!cambioOut || !montoPagadoInput) return;
+    var pagado = parseFloat(montoPagadoInput.value || "0");
+    var cambio = pagado - totalActual;
+    cambioOut.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
+  }
+
+  function recalcular() {
+    totalActual = calcularTotalItems();
+    totalOut.textContent = "Bs " + totalActual.toFixed(2);
+    recalcularCambioPedido();
+  }
+
   tabla.addEventListener("input", recalcular);
   tabla.addEventListener("change", recalcular);
+  if (montoPagadoInput) montoPagadoInput.addEventListener("input", recalcularCambioPedido);
+
+  // Agregar ítems dinámicamente (empieza con 1, botón "+" agrega los que se necesiten)
+  var theadRow = document.getElementById("items-thead-row");
+  var tbodyRow = document.getElementById("items-tbody-row");
+  var addBtn = document.getElementById("btn-add-item");
+  var slotTemplate = document.getElementById("item-slot-template");
+  var contadorItems = 1;
+
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      contadorItems++;
+
+      var thItem = document.createElement("th");
+      thItem.textContent = "Ítem " + contadorItems;
+      var thCant = document.createElement("th");
+      thCant.className = "col-monto";
+      thCant.textContent = "Cant.";
+      theadRow.insertBefore(thItem, theadRow.lastElementChild);
+      theadRow.insertBefore(thCant, theadRow.lastElementChild);
+
+      var tdSelect = document.createElement("td");
+      tdSelect.appendChild(slotTemplate.content.querySelector("select").cloneNode(true));
+
+      var tdCant = document.createElement("td");
+      tdCant.className = "col-monto";
+      var cantInput = document.createElement("input");
+      cantInput.type = "number";
+      cantInput.min = "1";
+      cantInput.value = "1";
+      cantInput.name = "cart_cantidad";
+      cantInput.className = "item-cant";
+      tdCant.appendChild(cantInput);
+
+      tbodyRow.insertBefore(tdSelect, tbodyRow.lastElementChild);
+      tbodyRow.insertBefore(tdCant, tbodyRow.lastElementChild);
+    });
+  }
+
+  // Cambio en la fila "Cobrar" de cuentas pendientes
+  document.querySelectorAll(".monto-pagado-pendiente").forEach(function (input) {
+    var total = parseFloat(input.getAttribute("data-total") || "0");
+    var salida = input.closest("form").querySelector(".cambio-pendiente");
+    input.addEventListener("input", function () {
+      var pagado = parseFloat(input.value || "0");
+      var cambio = pagado - total;
+      salida.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
+    });
+  });
 })();
 </script>
 {% endblock %}

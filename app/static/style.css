@@ -302,6 +302,7 @@ a { color: inherit; }
 .capture-grid td { padding: 4px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .capture-grid td.col-seccion { width: 150px; }
 .capture-grid td.col-monto { width: 140px; }
+.capture-grid td.col-add, .capture-grid th.col-add { width: 44px; }
 .capture-grid input, .capture-grid select {
   width: 100%; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface);
   padding: 6px 8px; font-size: 13px; color: var(--ink); outline: none;

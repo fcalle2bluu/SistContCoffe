@@ -2,13 +2,13 @@
   {% if lineas %}
   <div class="table-wrap">
     <table class="ledger">
-      <thead><tr><th>Cuenta</th><th>Lado</th><th class="num">Monto</th><th></th></tr></thead>
+      <thead><tr><th>Cuenta</th><th class="num">Debe</th><th class="num">Haber</th><th></th></tr></thead>
       <tbody>
         {% for l in lineas %}
         <tr class="line-row">
           <td>{{ l.nombre }}</td>
-          <td class="uppercase small">{{ l.lado }}</td>
-          <td class="num">{{ l.monto|bs }}</td>
+          <td class="num">{{ l.monto|bs if l.lado == "DEBE" else "" }}</td>
+          <td class="num">{{ l.monto|bs if l.lado == "HABER" else "" }}</td>
           <td class="text-right">
             <button type="button" class="link-danger"
               hx-post="/dashboard/contabilidad/diario/linea/quitar"
@@ -18,6 +18,12 @@
           </td>
         </tr>
         {% endfor %}
+        <tr class="subtotal-row">
+          <td>Total{% if total_debe == total_haber %} — Cuadrado{% endif %}</td>
+          <td class="num">{{ total_debe|bs }}</td>
+          <td class="num">{{ total_haber|bs }}</td>
+          <td></td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -28,10 +34,6 @@
   <input type="hidden" name="lado" value="{{ l.lado }}" />
   <input type="hidden" name="monto" value="{{ l.monto }}" />
   {% endfor %}
-
-  <div class="cart-total-row">
-    <p class="cart-total-label">Debe Bs {{ total_debe|bs }} · Haber Bs {{ total_haber|bs }}{% if lineas and total_debe == total_haber %} · Cuadrado{% endif %}</p>
-  </div>
 
   {% if advertencias %}
   <div class="error-box">
