@@ -25,12 +25,12 @@ def require_session(request: Request) -> dict:
 def require_dashboard(request: Request) -> dict:
     session = require_session(request)
     if session["role"] == "cajero":
-        raise RedirectTo("/pos")
+        raise RedirectTo("/dashboard/ventas")
     return session
 
 
 def require_admin(request: Request) -> dict:
     session = require_session(request)
     if session.get("role") != "admin":
-        raise RedirectTo("/dashboard")
+        raise RedirectTo("/dashboard/ventas" if session["role"] == "cajero" else "/dashboard")
     return session

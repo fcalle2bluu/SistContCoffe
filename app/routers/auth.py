@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 def role_home(role: str) -> str:
-    return "/pos" if role == "cajero" else "/dashboard"
+    return "/dashboard/ventas" if role == "cajero" else "/dashboard"
 
 
 @router.get("/", response_class=HTMLResponse)

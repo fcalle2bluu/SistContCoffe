@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.db import pool
-from app.deps import require_dashboard, require_session
+from app.deps import require_session
 from app.templating import templates
 
 router = APIRouter(prefix="/dashboard/ventas")
@@ -99,7 +99,7 @@ async def _ventas_context(session: dict, cobrar_id: int | None = None, error: st
 
 
 @router.get("", response_class=HTMLResponse)
-async def ventas_page(request: Request, session: dict = Depends(require_dashboard), cobrar: int | None = None):
+async def ventas_page(request: Request, session: dict = Depends(require_session), cobrar: int | None = None):
     ctx = await _ventas_context(session, cobrar_id=cobrar)
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
