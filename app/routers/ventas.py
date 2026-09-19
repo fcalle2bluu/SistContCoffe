@@ -6,11 +6,48 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.db import pool
 from app.deps import require_admin, require_session
 from app.templating import templates
+from app.tz import hoy_bolivia
 
 router = APIRouter(prefix="/dashboard/ventas")
 
 PAGOS_EFECTIVO = ("EFECTIVO", "EFEC/FAC")
 TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC")
+
+CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
+CUENTA_VENTAS = "5010101"  # Ventas
+
+
+async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
+    """Al cerrar un turno, asienta en el Libro Diario el total de ventas en
+    efectivo de ese turno (Debe Caja, Haber Ventas). Las ventas por QR/tarjeta
+    quedan fuera a propósito: llevan comisión de Linkser y crédito fiscal, un
+    tratamiento que el contador sigue armando a mano."""
+    total = await pool().fetchval(
+        "SELECT COALESCE(SUM(total), 0) FROM ordenes "
+        "WHERE turno_id = $1 AND estado = 'cobrada' AND tipo_pago = ANY($2::text[])",
+        turno_id,
+        list(PAGOS_EFECTIVO),
+    )
+    if not total or total <= 0:
+        return
+
+    turno = await pool().fetchrow("SELECT responsable FROM turnos WHERE id = $1", turno_id)
+    glosa = f"Ventas en efectivo del turno de {turno['responsable']} (cierre de caja, turno #{turno_id})."
+    fecha = hoy_bolivia()
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, $4, 0, $5)",
+                fecha, siguiente, CUENTA_CAJA_EFECTIVO, float(total), glosa,
+            )
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, 0, $4, $5)",
+                fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
+            )
 
 
 async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: list[str]) -> list[dict]:
@@ -268,12 +305,15 @@ async def cerrar_turno(
         ctx = await _ventas_context(session, error="Ingresa el monto final contado en caja.")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
-    await pool().execute(
+    resultado = await pool().execute(
         "UPDATE turnos SET estado = 'cerrado', monto_final_declarado = $1, cerrado_en = now() "
         "WHERE id = $2 AND estado = 'abierto'",
         monto_final,
         turno_id,
     )
+    if resultado == "UPDATE 1":
+        await _registrar_ventas_efectivo_en_diario(turno_id)
+
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
