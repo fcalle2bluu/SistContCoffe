@@ -78,22 +78,27 @@
     {% else %}
     <div class="table-wrap">
       <table class="ledger">
-        <thead><tr><th>N°</th><th>Fecha</th><th>Cuenta / Glosa</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
+        <thead><tr><th>N°</th><th>Fecha</th><th>Detalle</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
         <tbody>
           {% for a in asientos %}
-          <tr class="group-row">
-            <td>{{ a.nro }}</td>
-            <td>{{ a.fecha }}</td>
-            <td colspan="3">{{ a.glosa }}</td>
-          </tr>
           {% for l in a.lineas %}
           <tr class="line-row">
-            <td colspan="2"></td>
-            <td class="indent">{{ l.cuenta_nombre or l.codigo_cuenta }}</td>
+            <td>{{ a.nro if loop.first else "" }}</td>
+            <td>{{ (a.fecha|fecha) if loop.first else "" }}</td>
+            <td class="{{ '' if loop.first else 'indent' }}">{{ l.cuenta_nombre or l.codigo_cuenta }}</td>
             <td class="num">{{ (l.debe|bs) if l.debe and l.debe > 0 else "" }}</td>
             <td class="num">{{ (l.haber|bs) if l.haber and l.haber > 0 else "" }}</td>
           </tr>
           {% endfor %}
+          <tr class="line-row">
+            <td colspan="2"></td>
+            <td colspan="3" class="muted-sm">{{ a.glosa }}</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td colspan="3">Total{% if a.total_debe == a.total_haber %} — Cuadrado{% endif %}</td>
+            <td class="num">{{ a.total_debe|bs }}</td>
+            <td class="num">{{ a.total_haber|bs }}</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>

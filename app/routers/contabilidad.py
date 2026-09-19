@@ -26,6 +26,19 @@ def _parse_lineas(cuenta: list[str], lado: list[str], monto: list[str]) -> list[
     return lineas
 
 
+def _agrupar_asientos(filas) -> list[dict]:
+    asientos: dict[int, dict] = {}
+    for f in filas:
+        a = asientos.setdefault(
+            f["nro_asiento"], {"nro": f["nro_asiento"], "fecha": f["fecha"], "glosa": f["glosa"], "lineas": []}
+        )
+        a["lineas"].append(f)
+    for a in asientos.values():
+        a["total_debe"] = sum(l["debe"] or 0 for l in a["lineas"])
+        a["total_haber"] = sum(l["haber"] or 0 for l in a["lineas"])
+    return list(asientos.values())
+
+
 def _parse_monto_pegado(texto: str) -> float:
     texto = texto.strip().replace(" ", "")
     if not texto:
@@ -132,12 +145,7 @@ async def diario_page(request: Request, session: dict = Depends(require_admin), 
         ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.id
         """
     )
-    asientos: dict[int, dict] = {}
-    for f in filas:
-        a = asientos.setdefault(
-            f["nro_asiento"], {"nro": f["nro_asiento"], "fecha": f["fecha"], "glosa": f["glosa"], "lineas": []}
-        )
-        a["lineas"].append(f)
+    asientos = _agrupar_asientos(filas)
 
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
     return templates.TemplateResponse(
@@ -146,7 +154,7 @@ async def diario_page(request: Request, session: dict = Depends(require_admin), 
         {
             "session": session,
             "active": "contabilidad",
-            "asientos": list(asientos.values()),
+            "asientos": asientos,
             "cuentas": cuentas,
             "lineas": [],
             "total_debe": 0,
@@ -282,12 +290,7 @@ async def crear_asiento(
             ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.id
             """
         )
-        asientos: dict[int, dict] = {}
-        for f in filas:
-            a = asientos.setdefault(
-                f["nro_asiento"], {"nro": f["nro_asiento"], "fecha": f["fecha"], "glosa": f["glosa"], "lineas": []}
-            )
-            a["lineas"].append(f)
+        asientos = _agrupar_asientos(filas)
         cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
         cuentas_map = {c["codigo"]: c["nombre"] for c in cuentas}
         for l in lineas:
@@ -298,7 +301,7 @@ async def crear_asiento(
             {
                 "session": session,
                 "active": "contabilidad",
-                "asientos": list(asientos.values()),
+                "asientos": asientos,
                 "cuentas": cuentas,
                 "lineas": lineas,
                 "total_debe": total_debe,
