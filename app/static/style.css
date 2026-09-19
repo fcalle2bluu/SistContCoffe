@@ -386,13 +386,3 @@ a { color: inherit; }
 }
 .subnav-link:hover { color: var(--ink); background: var(--bg); }
 .subnav-link.active { color: var(--accent-strong); background: var(--accent-soft); font-weight: 600; }
-
-.update-banner {
-  display: flex; align-items: center; justify-content: center; gap: 16px;
-  background: var(--accent-soft); color: var(--accent-strong);
-  font-size: 13px; font-weight: 500; padding: 8px 16px; text-align: center;
-}
-.update-banner button {
-  background: none; border: none; color: var(--accent-strong); font-size: 16px;
-  line-height: 1; cursor: pointer; padding: 0 4px;
-}
