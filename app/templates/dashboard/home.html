@@ -16,22 +16,44 @@
     <div class="stat-box"><dt>Clientes</dt><dd>{{ kpi_clientes }}</dd></div>
   </dl>
 
+  <div class="dashboard-toolbar">
+    <div>
+      <label class="field-label">Período de análisis</label>
+      <select id="filtro-periodo" class="input input-w44">
+        <option value="hoy">Hoy (por hora)</option>
+        <option value="7d" selected>Últimos 7 días</option>
+        <option value="30d">Últimos 30 días</option>
+        <option value="anio">Este año (por mes)</option>
+        <option value="todos">Histórico (por mes)</option>
+      </select>
+    </div>
+    <p class="muted-sm" id="dashboard-ayuda">Haz clic en cualquier barra o segmento de los gráficos para ver qué productos se vendieron ahí.</p>
+    <p class="muted-sm" id="dashboard-cargando" style="display: none;">Actualizando gráficos…</p>
+  </div>
+
   <div class="charts-grid">
     <div class="card">
-      <h3 class="card-title">Ventas últimos 7 días</h3>
-      <div class="chart-wrap"><canvas id="chartSemana"></canvas></div>
+      <h3 class="card-title">Ventas en el período</h3>
+      <div class="chart-wrap"><canvas id="chartSerie"></canvas></div>
     </div>
     <div class="card">
-      <h3 class="card-title">Productos más vendidos (30 días)</h3>
+      <h3 class="card-title">Productos más vendidos</h3>
       <div class="chart-wrap"><canvas id="chartTopProductos"></canvas></div>
     </div>
     <div class="card">
-      <h3 class="card-title">Ventas por categoría (30 días)</h3>
+      <h3 class="card-title">Ventas por categoría</h3>
       <div class="chart-wrap"><canvas id="chartCategorias"></canvas></div>
     </div>
     <div class="card">
-      <h3 class="card-title">Métodos de pago (30 días)</h3>
+      <h3 class="card-title">Métodos de pago</h3>
       <div class="chart-wrap"><canvas id="chartPagos"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" id="detalle-card">
+    <h3 class="card-title" id="detalle-titulo">Detalle de productos</h3>
+    <div id="detalle-lista">
+      <p class="muted-sm">Haz clic en una barra, punto o segmento de cualquier gráfico para ver el detalle aquí.</p>
     </div>
   </div>
 </div>
@@ -39,42 +61,199 @@
 <script>
 (function () {
   var paleta = ["#d97706", "#2563eb", "#059669", "#dc2626", "#7c3aed", "#0891b2", "#db2777", "#65a30d"];
+  var selectPeriodo = document.getElementById("filtro-periodo");
+  var charts = {};
+  var ultimo = { serie: null, categorias: null, metodos_pago: null };
 
-  new Chart(document.getElementById("chartSemana"), {
-    type: "bar",
-    data: {
-      labels: {{ semana_labels|safe }},
-      datasets: [{ label: "Ventas (Bs)", data: {{ semana_datos|safe }}, backgroundColor: "#d97706", borderRadius: 6 }]
-    },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
+  function periodoActual() { return selectPeriodo.value; }
 
-  new Chart(document.getElementById("chartTopProductos"), {
-    type: "bar",
-    data: {
-      labels: {{ top_productos_labels|safe }},
-      datasets: [{ label: "Cantidad vendida", data: {{ top_productos_datos|safe }}, backgroundColor: "#2563eb", borderRadius: 6 }]
-    },
-    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-  });
+  function formatoBs(n) {
+    return "Bs " + Number(n).toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
 
-  new Chart(document.getElementById("chartCategorias"), {
-    type: "doughnut",
-    data: {
-      labels: {{ categorias_labels|safe }},
-      datasets: [{ data: {{ categorias_datos|safe }}, backgroundColor: paleta }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
+  function mostrarDetalle(titulo, items) {
+    document.getElementById("detalle-titulo").textContent = titulo;
+    var cont = document.getElementById("detalle-lista");
+    if (!items || items.length === 0) {
+      cont.innerHTML = '<p class="muted-sm">No hay ventas registradas en este punto.</p>';
+      return;
+    }
+    var filas = items.map(function (it) {
+      return (
+        '<div class="detalle-fila">' +
+        '<span class="detalle-nombre">' + it.nombre + '</span>' +
+        '<span class="detalle-cifras">' + it.cantidad + ' unid. · ' + formatoBs(it.monto) + '</span>' +
+        "</div>"
+      );
+    });
+    cont.innerHTML = '<div class="detalle-lista-wrap">' + filas.join("") + "</div>";
+  }
 
-  new Chart(document.getElementById("chartPagos"), {
-    type: "doughnut",
-    data: {
-      labels: {{ pago_labels|safe }},
-      datasets: [{ data: {{ pago_datos|safe }}, backgroundColor: paleta }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
+  async function verDetalleTiempo(clave) {
+    var r = await fetch("/dashboard/api/detalle-tiempo?periodo=" + periodoActual() + "&clave=" + encodeURIComponent(clave));
+    var data = await r.json();
+    mostrarDetalle(data.titulo, data.items);
+  }
+  async function verDetalleCategoria(categoria) {
+    var r = await fetch("/dashboard/api/detalle-categoria?periodo=" + periodoActual() + "&categoria=" + encodeURIComponent(categoria));
+    var data = await r.json();
+    mostrarDetalle(data.titulo, data.items);
+  }
+  async function verDetallePago(metodo) {
+    var r = await fetch("/dashboard/api/detalle-pago?periodo=" + periodoActual() + "&metodo=" + encodeURIComponent(metodo));
+    var data = await r.json();
+    mostrarDetalle(data.titulo, data.items);
+  }
+
+  function crearOActualizar(id, config) {
+    if (charts[id]) {
+      charts[id].data = config.data;
+      charts[id].update();
+      return charts[id];
+    }
+    charts[id] = new Chart(document.getElementById(id), config);
+    return charts[id];
+  }
+
+  function pintarSerie(serie) {
+    ultimo.serie = serie;
+    crearOActualizar("chartSerie", {
+      type: "bar",
+      data: {
+        labels: serie.labels,
+        datasets: [{ label: "Ventas (Bs)", data: serie.datos, backgroundColor: "#d97706", borderRadius: 6 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        onClick: function (evt, elementos) {
+          if (!elementos.length) return;
+          verDetalleTiempo(ultimo.serie.claves[elementos[0].index]);
+        },
+        onHover: function (evt, elementos) {
+          evt.native.target.style.cursor = elementos.length ? "pointer" : "default";
+        },
+      },
+    });
+  }
+
+  function pintarTopProductos(top) {
+    crearOActualizar("chartTopProductos", {
+      type: "bar",
+      data: {
+        labels: top.map(function (p) { return p.nombre; }),
+        datasets: [{ label: "Cantidad vendida", data: top.map(function (p) { return p.cantidad; }), backgroundColor: "#2563eb", borderRadius: 6 }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var p = top[ctx.dataIndex];
+                return p.cantidad + " unid. · " + formatoBs(p.monto);
+              },
+            },
+          },
+        },
+        onClick: function (evt, elementos) {
+          if (!elementos.length) return;
+          var p = top[elementos[0].index];
+          mostrarDetalle("Detalle — " + p.nombre, [p]);
+        },
+        onHover: function (evt, elementos) {
+          evt.native.target.style.cursor = elementos.length ? "pointer" : "default";
+        },
+      },
+    });
+  }
+
+  function pintarCategorias(categorias) {
+    ultimo.categorias = categorias;
+    crearOActualizar("chartCategorias", {
+      type: "doughnut",
+      data: {
+        labels: categorias.map(function (c) { return c.nombre; }),
+        datasets: [{ data: categorias.map(function (c) { return c.monto; }), backgroundColor: paleta }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var c = categorias[ctx.dataIndex];
+                return c.nombre + ": " + c.cantidad + " unid. · " + formatoBs(c.monto);
+              },
+            },
+          },
+        },
+        onClick: function (evt, elementos) {
+          if (!elementos.length) return;
+          verDetalleCategoria(ultimo.categorias[elementos[0].index].nombre);
+        },
+        onHover: function (evt, elementos) {
+          evt.native.target.style.cursor = elementos.length ? "pointer" : "default";
+        },
+      },
+    });
+  }
+
+  function pintarPagos(metodos) {
+    ultimo.metodos_pago = metodos;
+    crearOActualizar("chartPagos", {
+      type: "doughnut",
+      data: {
+        labels: metodos.map(function (m) { return m.nombre; }),
+        datasets: [{ data: metodos.map(function (m) { return m.monto; }), backgroundColor: paleta }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var m = metodos[ctx.dataIndex];
+                return m.nombre + ": " + m.cantidad + " ventas · " + formatoBs(m.monto);
+              },
+            },
+          },
+        },
+        onClick: function (evt, elementos) {
+          if (!elementos.length) return;
+          verDetallePago(ultimo.metodos_pago[elementos[0].index].nombre);
+        },
+        onHover: function (evt, elementos) {
+          evt.native.target.style.cursor = elementos.length ? "pointer" : "default";
+        },
+      },
+    });
+  }
+
+  var solicitudActual = 0;
+  async function cargarResumen() {
+    var miSolicitud = ++solicitudActual;
+    document.getElementById("dashboard-ayuda").style.display = "none";
+    document.getElementById("dashboard-cargando").style.display = "";
+    var r = await fetch("/dashboard/api/resumen?periodo=" + periodoActual());
+    var data = await r.json();
+    if (miSolicitud !== solicitudActual) return; // llego una respuesta vieja despues de un cambio mas reciente
+    pintarSerie(data.serie);
+    pintarTopProductos(data.top_productos);
+    pintarCategorias(data.categorias);
+    pintarPagos(data.metodos_pago);
+    document.getElementById("dashboard-cargando").style.display = "none";
+    document.getElementById("dashboard-ayuda").style.display = "";
+  }
+
+  selectPeriodo.addEventListener("change", cargarResumen);
+  cargarResumen();
 })();
 </script>
 {% endblock %}
