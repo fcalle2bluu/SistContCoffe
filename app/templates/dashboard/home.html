@@ -1,9 +1,81 @@
 {% extends "dashboard/_shell.html" %}
 {% block title %}Dashboard — Café Yanaloma{% endblock %}
 {% block content %}
-<div class="welcome-block">
-  <p class="eyebrow">Café Yanaloma</p>
-  <h1 class="brand-title">Bienvenido, {{ session.nombre }}</h1>
-  <p class="role-tag">Rol: {{ session.role }}</p>
+<div class="stack-8">
+  <div class="welcome-block">
+    <p class="eyebrow">Café Yanaloma</p>
+    <h1 class="brand-title">Bienvenido, {{ session.nombre }}</h1>
+    <p class="role-tag">Rol: {{ session.role }}</p>
+  </div>
+
+  <dl class="stats-grid kpi-grid">
+    <div class="stat-box stat-box-highlight"><dt>Ventas hoy</dt><dd>Bs {{ kpi_ventas_hoy|bs }}</dd></div>
+    <div class="stat-box"><dt>Ventas del mes</dt><dd>Bs {{ kpi_ventas_mes|bs }}</dd></div>
+    <div class="stat-box"><dt>Gastos del mes</dt><dd>Bs {{ kpi_gastos_mes|bs }}</dd></div>
+    <div class="stat-box"><dt>Productos</dt><dd>{{ kpi_productos }}</dd></div>
+    <div class="stat-box"><dt>Clientes</dt><dd>{{ kpi_clientes }}</dd></div>
+  </dl>
+
+  <div class="charts-grid">
+    <div class="card">
+      <h3 class="card-title">Ventas últimos 7 días</h3>
+      <div class="chart-wrap"><canvas id="chartSemana"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Productos más vendidos (30 días)</h3>
+      <div class="chart-wrap"><canvas id="chartTopProductos"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Ventas por categoría (30 días)</h3>
+      <div class="chart-wrap"><canvas id="chartCategorias"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Métodos de pago (30 días)</h3>
+      <div class="chart-wrap"><canvas id="chartPagos"></canvas></div>
+    </div>
+  </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function () {
+  var paleta = ["#d97706", "#2563eb", "#059669", "#dc2626", "#7c3aed", "#0891b2", "#db2777", "#65a30d"];
+
+  new Chart(document.getElementById("chartSemana"), {
+    type: "bar",
+    data: {
+      labels: {{ semana_labels|safe }},
+      datasets: [{ label: "Ventas (Bs)", data: {{ semana_datos|safe }}, backgroundColor: "#d97706", borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+
+  new Chart(document.getElementById("chartTopProductos"), {
+    type: "bar",
+    data: {
+      labels: {{ top_productos_labels|safe }},
+      datasets: [{ label: "Cantidad vendida", data: {{ top_productos_datos|safe }}, backgroundColor: "#2563eb", borderRadius: 6 }]
+    },
+    options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+
+  new Chart(document.getElementById("chartCategorias"), {
+    type: "doughnut",
+    data: {
+      labels: {{ categorias_labels|safe }},
+      datasets: [{ data: {{ categorias_datos|safe }}, backgroundColor: paleta }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+
+  new Chart(document.getElementById("chartPagos"), {
+    type: "doughnut",
+    data: {
+      labels: {{ pago_labels|safe }},
+      datasets: [{ data: {{ pago_datos|safe }}, backgroundColor: paleta }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+})();
+</script>
 {% endblock %}

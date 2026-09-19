@@ -343,6 +343,13 @@ a { color: inherit; }
 .stat-box dd { margin: 4px 0 0; font-family: "SFMono-Regular", Consolas, monospace; font-weight: 700; }
 .stat-box-highlight { border: 1px solid var(--accent); background: var(--accent-soft); }
 
+/* Dashboard: KPIs y graficos */
+.kpi-grid { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 900px) { .kpi-grid { grid-template-columns: repeat(5, 1fr); } }
+.charts-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 900px) { .charts-grid { grid-template-columns: repeat(2, 1fr); } }
+.chart-wrap { position: relative; height: 280px; margin-top: 12px; }
+
 .disclosure-row { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px; }
 .disclosure { border-top: 1px solid var(--border); padding-top: 12px; flex: 1; min-width: 240px; }
 .disclosure summary { list-style: none; }
