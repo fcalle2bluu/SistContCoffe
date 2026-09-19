@@ -35,6 +35,7 @@ jobs:
       - name: Empaquetar CafeYanaloma.exe
         run: >
           pyinstaller --onefile --name CafeYanaloma
+          --paths .
           --add-data "app/templates;app/templates"
           --add-data "app/static;app/static"
           --collect-all uvicorn
