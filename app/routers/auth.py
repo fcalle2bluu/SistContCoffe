@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app import bitacora
 from app.db import pool
 from app.deps import get_session, require_dashboard
 from app.session import clear_session_cookie, set_session_cookie
@@ -40,13 +41,16 @@ async def login(request: Request, username: str = Form(...), password: str = For
         )
 
     user = {"id": row["id"], "username": row["username"], "nombre": row["nombre"], "role": row["role"]}
+    await bitacora.registrar(user, "Inició sesión")
     response = RedirectResponse(role_home(user["role"]), status_code=303)
     set_session_cookie(response, user)
     return response
 
 
 @router.post("/logout")
-async def logout():
+async def logout(session: dict | None = Depends(get_session)):
+    if session:
+        await bitacora.registrar(session, "Cerró sesión")
     response = RedirectResponse("/", status_code=303)
     clear_session_cookie(response)
     return response

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app import bitacora
 from app.db import pool
 from app.deps import require_admin, require_dashboard
 from app.templating import templates
@@ -74,6 +75,7 @@ async def crear_producto(
         categoria,
         precio,
     )
+    await bitacora.registrar(session, "Creó producto", f"{nombre} ({categoria}) — Bs {precio:.2f}")
     return RedirectResponse("/dashboard/productos", status_code=303)
 
 
@@ -115,10 +117,12 @@ async def actualizar_producto(
         precio,
         producto_id,
     )
+    await bitacora.registrar(session, "Actualizó producto", f"#{producto_id}: {nombre} ({categoria}) — Bs {precio:.2f}")
     return RedirectResponse("/dashboard/productos", status_code=303)
 
 
 @router.post("/{producto_id}/eliminar")
 async def eliminar_producto(producto_id: int, session: dict = Depends(require_admin)):
     await pool().execute("DELETE FROM productos WHERE id = $1", producto_id)
+    await bitacora.registrar(session, "Eliminó producto", f"Producto #{producto_id}")
     return RedirectResponse("/dashboard/productos", status_code=303)

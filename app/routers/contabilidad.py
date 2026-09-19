@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app import bitacora
 from app.db import pool
 from app.deps import require_admin
 from app.templating import templates
@@ -131,6 +132,7 @@ async def crear_cuenta(
             },
             status_code=400,
         )
+    await bitacora.registrar(session, "Creó cuenta contable", f"{codigo} — {nombre} ({tipo})")
     return RedirectResponse("/dashboard/contabilidad/plan-cuentas", status_code=303)
 
 
@@ -330,6 +332,7 @@ async def crear_asiento(
                     l["monto"] if l["lado"] == "HABER" else 0,
                     glosa,
                 )
+    await bitacora.registrar(session, "Registró asiento contable", f"Asiento #{siguiente}: {glosa}")
     return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
 
 
@@ -459,6 +462,7 @@ async def agregar_fila_mayor(
                 fecha_date, siguiente, cuenta_haber, monto_num, glosa,
             )
 
+    await bitacora.registrar(session, "Registró asiento desde el Mayor", f"Asiento #{siguiente}: {glosa}")
     destino = "/dashboard/contabilidad/mayor"
     if cuenta_filtro:
         destino += f"?cuenta={cuenta_filtro}"

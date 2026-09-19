@@ -3,8 +3,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app import bitacora
 from app.db import pool
-from app.deps import require_admin, require_session
+from app.deps import require_session
 from app.templating import templates
 from app.tz import hoy_bolivia
 
@@ -159,6 +160,7 @@ async def agregar_mesa(request: Request, session: dict = Depends(require_session
         await pool().execute(
             "INSERT INTO mesas_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING", nombre_nueva
         )
+        await bitacora.registrar(session, "Agregó mesa/referencia", nombre_nueva)
     mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
     return templates.TemplateResponse(
         request, "partials/_mesa_select.html", {"mesas": mesas, "mesa_seleccionada": nombre_nueva}
@@ -229,6 +231,10 @@ async def crear_orden(
                     it["precio_unitario"],
                 )
 
+    accion = "Cobró venta" if cobrando else "Creó pedido"
+    detalle = f"Mesa {mesa}, total Bs {total:.2f}" + (f", {tipo_pago.strip()}" if cobrando else "")
+    await bitacora.registrar(session, accion, detalle)
+
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
@@ -247,12 +253,14 @@ async def cobrar_orden_pendiente(
             float(monto_pagado) if monto_pagado else None,
             orden_id,
         )
+        await bitacora.registrar(session, "Cobró venta pendiente", f"Orden #{orden_id}, {tipo_pago.strip()}")
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
 @router.post("/ordenes/{orden_id}/cancelar")
 async def cancelar_orden(orden_id: int, session: dict = Depends(require_session)):
     await pool().execute("UPDATE ordenes SET estado = 'cancelada' WHERE id = $1", orden_id)
+    await bitacora.registrar(session, "Canceló pedido", f"Orden #{orden_id}")
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
@@ -272,7 +280,7 @@ async def ticket_orden(request: Request, orden_id: int, session: dict = Depends(
 
 
 @router.post("/turno/abrir", response_class=HTMLResponse)
-async def abrir_turno(request: Request, session: dict = Depends(require_admin), monto_inicial: str = Form("")):
+async def abrir_turno(request: Request, session: dict = Depends(require_session), monto_inicial: str = Form("")):
     try:
         monto = float(monto_inicial)
     except ValueError:
@@ -292,12 +300,13 @@ async def abrir_turno(request: Request, session: dict = Depends(require_admin), 
         session["nombre"],
         monto,
     )
+    await bitacora.registrar(session, "Abrió turno", f"Monto inicial Bs {monto:.2f}")
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
 @router.post("/turno/{turno_id}/cerrar", response_class=HTMLResponse)
 async def cerrar_turno(
-    request: Request, turno_id: int, session: dict = Depends(require_admin), monto_final_declarado: str = Form("")
+    request: Request, turno_id: int, session: dict = Depends(require_session), monto_final_declarado: str = Form("")
 ):
     try:
         monto_final = float(monto_final_declarado)
@@ -313,6 +322,7 @@ async def cerrar_turno(
     )
     if resultado == "UPDATE 1":
         await _registrar_ventas_efectivo_en_diario(turno_id)
+        await bitacora.registrar(session, "Cerró turno", f"Turno #{turno_id}, monto final Bs {monto_final:.2f}")
 
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
@@ -346,4 +356,5 @@ async def registrar_movimiento_caja(
         session["nombre"],
         tipo_pago,
     )
+    await bitacora.registrar(session, "Registró egreso de caja", f"Bs {monto_num:.2f} — {motivo}")
     return RedirectResponse("/dashboard/ventas", status_code=303)

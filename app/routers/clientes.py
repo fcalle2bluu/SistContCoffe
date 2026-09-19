@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app import bitacora
 from app.db import pool
 from app.deps import require_dashboard, require_session
 from app.templating import templates
@@ -47,10 +48,12 @@ async def crear_cliente(
         ci_nit.strip() or None,
         telefono.strip() or None,
     )
+    await bitacora.registrar(session, "Creó cliente", nombre)
     return RedirectResponse("/dashboard/clientes", status_code=303)
 
 
 @router.post("/{cliente_id}/eliminar")
 async def eliminar_cliente(cliente_id: int, session: dict = Depends(require_session)):
     await pool().execute("DELETE FROM clientes WHERE id = $1", cliente_id)
+    await bitacora.registrar(session, "Eliminó cliente", f"Cliente #{cliente_id}")
     return RedirectResponse("/dashboard/clientes", status_code=303)

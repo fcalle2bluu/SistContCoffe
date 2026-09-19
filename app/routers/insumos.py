@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app import bitacora
 from app.db import pool
 from app.deps import require_session
 from app.templating import templates
@@ -131,10 +132,12 @@ async def crear_compra_insumo(
         solicitante.strip() or None,
         session["nombre"],
     )
+    await bitacora.registrar(session, "Registró compra de insumo", f"{detalle} — Bs {cantidad_num * precio_num:.2f}")
     return RedirectResponse("/dashboard/insumos", status_code=303)
 
 
 @router.post("/{insumo_id}/eliminar")
 async def eliminar_compra_insumo(insumo_id: int, session: dict = Depends(require_session)):
     await pool().execute("DELETE FROM compras_insumos WHERE id = $1", insumo_id)
+    await bitacora.registrar(session, "Eliminó compra de insumo", f"Insumo #{insumo_id}")
     return RedirectResponse("/dashboard/insumos", status_code=303)

@@ -1,0 +1,40 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Bitácora — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Bitácora</h2>
+    <p class="section-subtitle">Registro de cada movimiento hecho en el sistema — quién, qué y cuándo.</p>
+  </div>
+
+  {% if movimientos|length == 0 %}
+  <p class="muted">Todavía no hay movimientos registrados.</p>
+  {% else %}
+  <p class="muted-sm">Mostrando los últimos {{ movimientos|length }} de {{ total }} movimientos.</p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Fecha / hora</th>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Acción</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td class="mono">{{ m.creado_en|fechahora }}</td>
+          <td>{{ m.usuario }}</td>
+          <td>{{ m.rol }}</td>
+          <td>{{ m.accion }}</td>
+          <td>{{ m.detalle or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
