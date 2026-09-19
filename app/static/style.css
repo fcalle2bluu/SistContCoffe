@@ -268,9 +268,10 @@ a { color: inherit; }
 .ledger th {
   background: var(--surface-soft); color: var(--muted); text-align: left;
   padding: 8px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
 }
-.ledger td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--ink); }
+.ledger td { padding: 7px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); color: var(--ink); }
+.ledger th:last-child, .ledger td:last-child { border-right: none; }
 .ledger tbody tr.line-row:hover { background: var(--bg); }
 .ledger tbody tr.line-row:nth-of-type(odd) { background: rgba(16, 24, 40, 0.015); }
 .ledger .indent { padding-left: 26px; }
