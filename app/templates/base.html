@@ -10,6 +10,12 @@
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body hx-boost="true">
+  {% if request.app.state.actualizacion_disponible %}
+  <div class="update-banner">
+    <span>Hay una actualización nueva. Cuando puedas, cierra este programa y ábrelo de nuevo para aplicarla.</span>
+    <button type="button" onclick="this.closest('.update-banner').remove()" aria-label="Cerrar aviso">×</button>
+  </div>
+  {% endif %}
   {% block body %}{% endblock %}
 </body>
 </html>

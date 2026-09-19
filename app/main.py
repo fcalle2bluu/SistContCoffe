@@ -25,6 +25,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+app.state.actualizacion_disponible = False
 
 
 @app.exception_handler(RedirectTo)
