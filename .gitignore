@@ -12,3 +12,4 @@ __pycache__/
 # datos de negocio (referencia local, no va al repo)
 *.xlsx
 *.xls
+*.csv
