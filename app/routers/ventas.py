@@ -304,6 +304,33 @@ async def abrir_turno(request: Request, session: dict = Depends(require_session)
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
+@router.post("/turno/{turno_id}/apertura", response_class=HTMLResponse)
+async def editar_apertura_turno(
+    request: Request, turno_id: int, session: dict = Depends(require_session), monto_inicial: str = Form("")
+):
+    try:
+        monto = float(monto_inicial)
+    except ValueError:
+        monto = -1
+
+    if monto < 0:
+        ctx = await _ventas_context(session, error="Ingresa un monto de apertura válido.")
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    anterior = await pool().fetchval(
+        "SELECT monto_inicial FROM turnos WHERE id = $1 AND estado = 'abierto'", turno_id
+    )
+    if anterior is None:
+        ctx = await _ventas_context(session, error="Ese turno ya no está abierto.")
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    await pool().execute("UPDATE turnos SET monto_inicial = $1 WHERE id = $2", monto, turno_id)
+    await bitacora.registrar(
+        session, "Corrigió apertura de turno", f"Turno #{turno_id}: Bs {float(anterior):.2f} → Bs {monto:.2f}"
+    )
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
 @router.post("/turno/{turno_id}/cerrar", response_class=HTMLResponse)
 async def cerrar_turno(
     request: Request, turno_id: int, session: dict = Depends(require_session), monto_final_declarado: str = Form("")
