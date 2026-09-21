@@ -333,6 +333,7 @@ a { color: inherit; }
 .pos-tab:hover { border-color: var(--muted-soft); color: var(--ink); }
 .pos-tab.activa { background: var(--accent); border-color: var(--accent); color: #ffffff; }
 
+.oculto { display: none; }
 .pos-panel.oculto { display: none; }
 .pos-grid-productos {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
@@ -438,6 +439,8 @@ a { color: inherit; }
 .cart-total-row { display: flex; justify-content: flex-end; gap: 12px; align-items: baseline; padding-top: 8px; }
 .cart-total-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0; }
 .cart-total-value { font-family: "SFMono-Regular", Consolas, monospace; font-size: 24px; font-weight: 800; color: var(--ink); margin: 0; }
+.cart-total-row-sm { padding-top: 0; }
+.cart-total-value-sm { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; }
 
 .subnav { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
 .subnav-link {

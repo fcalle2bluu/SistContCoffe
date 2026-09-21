@@ -17,17 +17,28 @@ TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC")
 CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
 CUENTA_VENTAS = "5010101"  # Ventas
 
+TASA_IVA = 0.13
+TASA_IT = 0.03
+TASA_COMISION_LINKSER = 0.018
+
+CUENTA_IT = "1160103"
+CUENTA_IT_POR_PAGAR = "1160104"
+CUENTA_IVA = "900006"
+CUENTA_LINKSER = "502030102"
+CUENTA_COMISION_LINKSER = "502030103"
+
 
 async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
     """Al cerrar un turno, asienta en el Libro Diario el total de ventas en
-    efectivo de ese turno (Debe Caja, Haber Ventas). Las ventas por QR/tarjeta
-    quedan fuera a propósito: llevan comisión de Linkser y crédito fiscal, un
-    tratamiento que el contador sigue armando a mano."""
+    efectivo SIN factura de ese turno (Debe Caja, Haber Ventas). Las ventas
+    EFEC/FAC y QR/FAC no pasan por aquí: llevan su propio desglose de IT/IVA
+    en _registrar_ventas_facturadas_en_diario. Las ventas por QR/POS sin
+    factura quedan fuera a propósito: ese tratamiento lo sigue armando el
+    contador a mano."""
     total = await pool().fetchval(
         "SELECT COALESCE(SUM(total), 0) FROM ordenes "
-        "WHERE turno_id = $1 AND estado = 'cobrada' AND tipo_pago = ANY($2::text[])",
+        "WHERE turno_id = $1 AND estado = 'cobrada' AND tipo_pago = 'EFECTIVO'",
         turno_id,
-        list(PAGOS_EFECTIVO),
     )
     if not total or total <= 0:
         return
@@ -49,6 +60,77 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
                 "VALUES ($1, $2, $3, 0, $4, $5)",
                 fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
             )
+
+
+async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
+    """Al cerrar un turno, asienta las ventas con factura (EFEC/FAC y QR/FAC)
+    desglosando IT (3%) e IVA (13%) sobre el total, igual que se calculaba a
+    mano en el Excel. Las ventas QR/FAC pasan primero por Linkser, que cobra
+    una comisión (1.8%) antes de depositar. Las ventas QR/POS sin factura
+    siguen sin tocarse: ese tratamiento lo sigue armando el contador."""
+    filas = await pool().fetch(
+        "SELECT tipo_pago, COALESCE(SUM(total), 0) AS total FROM ordenes "
+        "WHERE turno_id = $1 AND estado = 'cobrada' AND tipo_pago = ANY($2::text[]) "
+        "GROUP BY tipo_pago",
+        turno_id,
+        ["EFEC/FAC", "QR/FAC"],
+    )
+    totales = {f["tipo_pago"]: float(f["total"]) for f in filas if f["total"] and f["total"] > 0}
+    if not totales:
+        return
+
+    turno = await pool().fetchrow("SELECT responsable FROM turnos WHERE id = $1", turno_id)
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            fecha = hoy_bolivia()
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+
+            async def linea(nro: int, codigo: str, debe: float, haber: float, glosa: str) -> None:
+                await conn.execute(
+                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                    "VALUES ($1, $2, $3, $4, $5, $6)",
+                    fecha, nro, codigo, debe, haber, glosa,
+                )
+
+            if "EFEC/FAC" in totales:
+                total = totales["EFEC/FAC"]
+                it = round(total * TASA_IT, 2)
+                iva = round(total * TASA_IVA, 2)
+                venta_neta = round(total - iva, 2)
+                glosa = f"Ventas en efectivo con factura del turno de {turno['responsable']} (turno #{turno_id})."
+                await linea(siguiente, CUENTA_CAJA_EFECTIVO, total, 0, glosa)
+                await linea(siguiente, CUENTA_IT, it, 0, glosa)
+                await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
+                await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
+                await linea(siguiente, CUENTA_VENTAS, 0, venta_neta, glosa)
+                siguiente += 1
+
+            if "QR/FAC" in totales:
+                total = totales["QR/FAC"]
+                comision = round(total * TASA_COMISION_LINKSER, 2)
+                neto_linkser = round(total - comision, 2)
+                it = round(total * TASA_IT, 2)
+                iva = round(total * TASA_IVA, 2)
+                venta_neta = round(total - iva, 2)
+                glosa = f"Ventas QR con factura (vía Linkser) del turno de {turno['responsable']} (turno #{turno_id})."
+                await linea(siguiente, CUENTA_LINKSER, neto_linkser, 0, glosa)
+                await linea(siguiente, CUENTA_COMISION_LINKSER, comision, 0, glosa)
+                await linea(siguiente, CUENTA_IT, it, 0, glosa)
+                await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
+                await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
+                await linea(siguiente, CUENTA_VENTAS, 0, venta_neta, glosa)
+
+
+def _calcular_descuento(items) -> float:
+    """Suma el valor absoluto de los ítems con precio negativo (p. ej. el
+    producto "DESCUENTO BS" en Ajustes), que es como se registran los
+    descuentos manuales en una venta."""
+    return sum(
+        -float(it["cantidad"]) * float(it["precio_unitario"])
+        for it in items
+        if float(it["precio_unitario"]) < 0
+    )
 
 
 async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: list[str]) -> list[dict]:
@@ -102,7 +184,7 @@ async def _ventas_context(
         )
         if ordenes_cobradas:
             item_rows = await pool().fetch(
-                "SELECT orden_id, producto_nombre, cantidad FROM orden_items "
+                "SELECT orden_id, producto_nombre, cantidad, precio_unitario FROM orden_items "
                 "WHERE orden_id = ANY($1::int[]) ORDER BY id",
                 [o["id"] for o in ordenes_cobradas],
             )
@@ -124,6 +206,8 @@ async def _ventas_context(
     for p in productos:
         por_categoria.setdefault(p["categoria"], []).append(p)
 
+    descuentos_por_orden = {oid: _calcular_descuento(items) for oid, items in items_por_orden.items()}
+
     return {
         "session": session,
         "active": "ventas",
@@ -135,6 +219,7 @@ async def _ventas_context(
         "ordenes_abiertas": ordenes_abiertas,
         "ordenes_cobradas": ordenes_cobradas,
         "items_por_orden": items_por_orden,
+        "descuentos_por_orden": descuentos_por_orden,
         "egresos_lista": egresos_lista,
         "ingresos_efectivo": ingresos_efectivo,
         "egresos_efectivo": egresos_efectivo,
@@ -287,7 +372,11 @@ async def ticket_orden(request: Request, orden_id: int, session: dict = Depends(
         "SELECT producto_nombre, cantidad, precio_unitario FROM orden_items WHERE orden_id = $1 ORDER BY id",
         orden_id,
     )
-    return templates.TemplateResponse(request, "ticket.html", {"orden": orden, "items": items})
+    descuento = _calcular_descuento(items)
+    subtotal = float(orden["total"]) + descuento
+    return templates.TemplateResponse(
+        request, "ticket.html", {"orden": orden, "items": items, "descuento": descuento, "subtotal": subtotal}
+    )
 
 
 @router.post("/turno/abrir", response_class=HTMLResponse)
@@ -360,6 +449,7 @@ async def cerrar_turno(
     )
     if resultado == "UPDATE 1":
         await _registrar_ventas_efectivo_en_diario(turno_id)
+        await _registrar_ventas_facturadas_en_diario(turno_id)
         await bitacora.registrar(session, "Cerró turno", f"Turno #{turno_id}, monto final Bs {monto_final:.2f}")
 
     return RedirectResponse("/dashboard/ventas", status_code=303)

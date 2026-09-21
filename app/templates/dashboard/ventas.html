@@ -133,6 +133,14 @@
             <p class="muted-sm" id="pos-items-vacio">Toca un producto de la izquierda para agregarlo al pedido.</p>
           </div>
 
+          <div class="cart-total-row cart-total-row-sm oculto" id="fila-subtotal">
+            <p class="cart-total-label">Subtotal</p>
+            <p class="cart-total-value-sm" id="subtotal-estimado">Bs 0.00</p>
+          </div>
+          <div class="cart-total-row cart-total-row-sm oculto" id="fila-descuento">
+            <p class="cart-total-label">Descuento</p>
+            <p class="cart-total-value-sm" id="descuento-estimado">-Bs 0.00</p>
+          </div>
           <div class="cart-total-row">
             <p class="cart-total-label">Total estimado</p>
             <p class="cart-total-value" id="total-estimado">Bs 0.00</p>
@@ -228,7 +236,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table data-table-wide">
-        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
+        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Descuento</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for o in ordenes_cobradas %}
           <tr>
@@ -236,6 +244,7 @@
             <td class="small">
               {% for it in items_por_orden.get(o.id, []) %}{{ "%g"|format(it.cantidad) }}× {{ it.producto_nombre }}{{ ", " if not loop.last }}{% else %}—{% endfor %}
             </td>
+            <td class="text-right mono small">{{ "-Bs %.2f"|format(descuentos_por_orden.get(o.id, 0)) if descuentos_por_orden.get(o.id, 0) > 0 else "—" }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
             <td class="uppercase small">{{ o.tipo_pago }}</td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
@@ -308,6 +317,10 @@
   var carrito = [];
   var itemsBox = document.getElementById("pos-items");
   var totalOut = document.getElementById("total-estimado");
+  var subtotalOut = document.getElementById("subtotal-estimado");
+  var descuentoOut = document.getElementById("descuento-estimado");
+  var filaSubtotal = document.getElementById("fila-subtotal");
+  var filaDescuento = document.getElementById("fila-descuento");
   var cambioOut = document.getElementById("cambio-calculado");
   var montoPagadoInput = document.getElementById("monto-pagado-input");
   var totalActual = 0;
@@ -320,8 +333,24 @@
   }
 
   function renderCarrito() {
-    totalActual = carrito.reduce(function (acc, it) { return acc + it.precio * it.cantidad; }, 0);
+    var subtotal = 0;
+    var descuento = 0;
+    carrito.forEach(function (it) {
+      var monto = it.precio * it.cantidad;
+      if (monto < 0) descuento += -monto;
+      else subtotal += monto;
+    });
+    totalActual = subtotal - descuento;
     totalOut.textContent = "Bs " + totalActual.toFixed(2);
+
+    var hayDescuento = descuento > 0;
+    filaSubtotal.classList.toggle("oculto", !hayDescuento);
+    filaDescuento.classList.toggle("oculto", !hayDescuento);
+    if (hayDescuento) {
+      subtotalOut.textContent = "Bs " + subtotal.toFixed(2);
+      descuentoOut.textContent = "-Bs " + descuento.toFixed(2);
+    }
+
     recalcularCambio();
 
     if (!carrito.length) {

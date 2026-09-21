@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
+from app.routers.ventas import _calcular_descuento
 from app.templating import templates
 
 router = APIRouter(prefix="/dashboard/turnos")
@@ -48,11 +49,13 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
     items_por_orden: dict[int, list] = {}
     if ordenes:
         item_rows = await pool().fetch(
-            "SELECT orden_id, producto_nombre, cantidad FROM orden_items WHERE orden_id = ANY($1::int[]) ORDER BY id",
+            "SELECT orden_id, producto_nombre, cantidad, precio_unitario FROM orden_items "
+            "WHERE orden_id = ANY($1::int[]) ORDER BY id",
             [o["id"] for o in ordenes],
         )
         for r in item_rows:
             items_por_orden.setdefault(r["orden_id"], []).append(r)
+    descuentos_por_orden = {oid: _calcular_descuento(items) for oid, items in items_por_orden.items()}
 
     movimientos = await pool().fetch(
         "SELECT id, tipo, monto, motivo, tipo_pago, responsable, creado_en FROM movimientos_caja "
@@ -69,6 +72,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "turno": turno,
             "ordenes": ordenes,
             "items_por_orden": items_por_orden,
+            "descuentos_por_orden": descuentos_por_orden,
             "movimientos": movimientos,
         },
     )

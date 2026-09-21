@@ -56,6 +56,12 @@
     {% endfor %}
   </table>
   <hr />
+  {% if descuento > 0 %}
+  <p class="datos">
+    Subtotal: {{ subtotal|bs }} Bs<br />
+    Descuento: -{{ descuento|bs }} Bs
+  </p>
+  {% endif %}
   <p class="total-final">TOTAL: {{ orden.total|bs }} Bs</p>
   <button class="btn-print no-print" onclick="window.print()">Imprimir</button>
   <script>
