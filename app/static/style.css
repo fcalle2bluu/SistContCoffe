@@ -471,7 +471,9 @@ a { color: inherit; }
 .tema-crema .input,
 .tema-crema .btn,
 .tema-crema .data-table,
-.tema-crema .ledger {
+.tema-crema .ledger,
+.tema-crema .capture-grid,
+.tema-crema .category-block {
   border-width: 2px;
 }
 .tema-crema .pos-qty-btn { border-width: 2px; }
