@@ -1,0 +1,82 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Usuarios — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Usuarios</h2>
+    <p class="section-subtitle">Cuentas de acceso al sistema — solo administración.</p>
+  </div>
+
+  <div>
+    <h3 class="subsection-title">Nuevo usuario</h3>
+    <form method="post" action="/dashboard/usuarios" class="card order-row">
+      <div>
+        <label class="field-label">Usuario</label>
+        <input name="username" placeholder="Ej: marco" required class="input input-w28" />
+      </div>
+      <div>
+        <label class="field-label">Nombre completo</label>
+        <input name="nombre" placeholder="Ej: Marco Luis" required class="input input-w36" />
+      </div>
+      <div>
+        <label class="field-label">Contraseña</label>
+        <input name="password" type="text" required class="input input-w28" />
+      </div>
+      <div>
+        <label class="field-label">Rol</label>
+        <select name="role" required class="input input-w28">
+          <option value="">—</option>
+          {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Crear usuario</button>
+    </form>
+    {% if error and not editando_id %}<p class="error-box">{{ error }}</p>{% endif %}
+  </div>
+
+  <div>
+    <h3 class="subsection-title">Cuentas registradas ({{ usuarios|length }})</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th class="text-right"></th></tr></thead>
+        <tbody>
+          {% for u in usuarios %}
+          {% if editando_id == u.id %}
+          <tr class="editing-row">
+            <td colspan="4">
+              <form method="post" action="/dashboard/usuarios/{{ u.id }}/editar" class="inline-form">
+                <span class="strong mono">{{ u.username }}</span>
+                <input name="nombre" value="{{ u.nombre }}" required class="input input-w36" />
+                <select name="role" required class="input input-w28">
+                  {% for r in roles %}<option value="{{ r }}" {{ "selected" if r == u.role }}>{{ r }}</option>{% endfor %}
+                </select>
+                <input name="password" type="text" placeholder="Nueva contraseña (opcional)" class="input input-w32" />
+                <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                <a href="/dashboard/usuarios" class="btn btn-outline btn-sm">Cancelar</a>
+              </form>
+              {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td class="mono">{{ u.username }}</td>
+            <td class="strong">{{ u.nombre }}</td>
+            <td class="small uppercase">{{ u.role }}</td>
+            <td class="text-right">
+              <div class="row-actions">
+                <a href="/dashboard/usuarios?editar={{ u.id }}" class="link-muted">Editar</a>
+                <form method="post" action="/dashboard/usuarios/{{ u.id }}/eliminar"
+                  onsubmit="return confirm('¿Eliminar la cuenta de {{ u.nombre }} ({{ u.username }})? Esta acción no se puede deshacer.');">
+                  <button type="submit" class="link-danger">Eliminar</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
