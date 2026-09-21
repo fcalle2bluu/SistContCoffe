@@ -89,89 +89,85 @@
 
   <div>
     <h3 class="subsection-title">Nuevo pedido</h3>
-    <form method="post" action="/dashboard/ventas/ordenes" class="card stack-4">
+    <form method="post" action="/dashboard/ventas/ordenes" class="card pos-form" id="form-nuevo-pedido">
       <input type="hidden" name="turno_id" value="{{ turno.id }}" />
 
-      <div class="order-row">
-        <div>
-          <label class="field-label">Mesa / referencia</label>
-          {% include "partials/_mesa_select.html" %}
-        </div>
-        <div>
-          <label class="field-label">Nueva mesa</label>
-          <input type="text" name="nombre_nueva" placeholder="Ej: 9, Delivery" class="input input-w28" />
-        </div>
-        <button type="button" class="btn btn-outline btn-sm"
-          hx-post="/dashboard/ventas/mesas" hx-include="closest form"
-          hx-target="#mesa-select" hx-swap="outerHTML">+ Agregar mesa</button>
-      </div>
-
-      <div class="table-wrap">
-        <table class="capture-grid" id="items-pedido">
-          <thead>
-            <tr id="items-thead-row">
-              <th>Ítem 1</th><th class="col-monto">Cant.</th><th class="col-add"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr id="items-tbody-row">
-              <td class="item-search-cell">
-                <input type="text" class="input item-search" placeholder="Buscar producto…" autocomplete="off" />
-                <input type="hidden" name="cart_producto_id" class="item-select-hidden" />
-              </td>
-              <td class="col-monto"><input name="cart_cantidad" type="number" min="1" value="1" class="item-cant" /></td>
-              <td class="col-add"><button type="button" id="btn-add-item" class="btn btn-outline btn-sm">+</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <template id="item-slot-template">
-        <select name="cart_producto_id" class="item-select">
-          <option value="">—</option>
-          {% for categoria, items in por_categoria.items() %}
-          <optgroup label="{{ categoria }}">
-            {% for p in items %}
-            <option value="{{ p.id }}" data-precio="{{ p.precio_venta }}">{{ p.nombre }}</option>
+      <div class="pos-layout">
+        <div class="pos-catalogo">
+          <div class="pos-tabs" id="pos-tabs">
+            {% for categoria in por_categoria.keys() %}
+            <button type="button" class="pos-tab{{ ' activa' if loop.first else '' }}" data-panel="panel-{{ loop.index }}">{{ categoria }}</button>
             {% endfor %}
-          </optgroup>
-          {% endfor %}
-        </select>
-      </template>
+          </div>
+          <div class="pos-paneles">
+            {% for categoria, items in por_categoria.items() %}
+            <div class="pos-panel{{ '' if loop.first else ' oculto' }}" id="panel-{{ loop.index }}">
+              <div class="pos-grid-productos">
+                {% for p in items %}
+                <button type="button" class="pos-producto" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-precio="{{ p.precio_venta }}">
+                  <span class="pos-producto-nombre">{{ p.nombre }}</span>
+                  <span class="pos-producto-precio">Bs {{ "%.2f"|format(p.precio_venta) }}</span>
+                </button>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
 
-      <div class="cart-total-row">
-        <p class="cart-total-label">Total estimado</p>
-        <p class="cart-total-value" id="total-estimado">Bs 0.00</p>
+        <div class="pos-carrito">
+          <div class="order-row">
+            <div class="flex-1">
+              <label class="field-label">Mesa / referencia</label>
+              {% include "partials/_mesa_select.html" %}
+            </div>
+          </div>
+          <div class="order-row">
+            <input type="text" name="nombre_nueva" placeholder="Nueva mesa: Ej 9, Delivery" class="input flex-1" />
+            <button type="button" class="btn btn-outline btn-sm"
+              hx-post="/dashboard/ventas/mesas" hx-include="closest form"
+              hx-target="#mesa-select" hx-swap="outerHTML">+ Agregar</button>
+          </div>
+
+          <div class="pos-items" id="pos-items">
+            <p class="muted-sm" id="pos-items-vacio">Toca un producto de la izquierda para agregarlo al pedido.</p>
+          </div>
+
+          <div class="cart-total-row">
+            <p class="cart-total-label">Total estimado</p>
+            <p class="cart-total-value" id="total-estimado">Bs 0.00</p>
+          </div>
+
+          <div class="pos-pago-fields">
+            <div>
+              <label class="field-label">Método de pago</label>
+              <select name="tipo_pago" class="input">
+                <option value="">—</option>
+                {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Monto pagado (Bs)</label>
+              <input name="monto_pagado" type="number" step="0.01" class="input" id="monto-pagado-input" />
+            </div>
+            <div>
+              <label class="field-label">Cambio</label>
+              <p class="cart-total-value" id="cambio-calculado">Bs 0.00</p>
+            </div>
+            <div>
+              <label class="field-label">Observación</label>
+              <input name="observacion" class="input" />
+            </div>
+          </div>
+
+          <div class="order-actions">
+            <button type="submit" name="accion" value="cobrar" class="btn btn-primary">Cobrar</button>
+            <button type="submit" name="accion" value="pendiente" class="btn btn-outline">Guardar cuenta pendiente</button>
+          </div>
+
+          {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+        </div>
       </div>
-
-      <div class="order-footer-fields">
-        <div>
-          <label class="field-label">Método de pago</label>
-          <select name="tipo_pago" class="input input-w36">
-            <option value="">—</option>
-            {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="field-label">Monto pagado (Bs)</label>
-          <input name="monto_pagado" type="number" step="0.01" class="input input-w28" id="monto-pagado-input" />
-        </div>
-        <div>
-          <label class="field-label">Cambio</label>
-          <p class="cart-total-value" id="cambio-calculado">Bs 0.00</p>
-        </div>
-        <div class="flex-1">
-          <label class="field-label">Observación</label>
-          <input name="observacion" class="input" />
-        </div>
-      </div>
-
-      <div class="order-actions">
-        <button type="submit" name="accion" value="cobrar" class="btn btn-primary">Cobrar</button>
-        <button type="submit" name="accion" value="pendiente" class="btn btn-outline">Guardar cuenta pendiente</button>
-      </div>
-
-      {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
     </form>
   </div>
 
@@ -290,217 +286,107 @@
 
 <script>
 (function () {
-  var tabla = document.getElementById("items-pedido");
-  if (!tabla) return;
+  var form = document.getElementById("form-nuevo-pedido");
+  if (!form) return;
+
+  // Pestañas de categorías: puramente estático, un panel visible a la vez.
+  var tabs = document.getElementById("pos-tabs");
+  if (tabs) {
+    tabs.addEventListener("click", function (e) {
+      var btn = e.target.closest(".pos-tab");
+      if (!btn) return;
+      tabs.querySelectorAll(".pos-tab").forEach(function (t) { t.classList.remove("activa"); });
+      btn.classList.add("activa");
+      var panelId = btn.getAttribute("data-panel");
+      document.querySelectorAll(".pos-panel").forEach(function (p) {
+        p.classList.toggle("oculto", p.id !== panelId);
+      });
+    });
+  }
+
+  // Carrito en memoria: se agregan productos con un clic (sin buscador, sin desplegables).
+  var carrito = [];
+  var itemsBox = document.getElementById("pos-items");
   var totalOut = document.getElementById("total-estimado");
   var cambioOut = document.getElementById("cambio-calculado");
   var montoPagadoInput = document.getElementById("monto-pagado-input");
   var totalActual = 0;
 
-  function calcularTotalItems() {
-    var total = 0;
-    var ocultos = tabla.querySelectorAll(".item-select-hidden");
-    ocultos.forEach(function (oculto) {
-      var precio = parseFloat(oculto.getAttribute("data-precio") || "0");
-      var cantInput = oculto.closest("td").nextElementSibling.querySelector(".item-cant");
-      var cant = cantInput ? parseFloat(cantInput.value || "0") : 0;
-      if (precio > 0 && cant > 0) total += precio * cant;
-    });
-    return total;
-  }
-
-  function recalcularCambioPedido() {
+  function recalcularCambio() {
     if (!cambioOut || !montoPagadoInput) return;
     var pagado = parseFloat(montoPagadoInput.value || "0");
     var cambio = pagado - totalActual;
     cambioOut.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
   }
 
-  function recalcular() {
-    totalActual = calcularTotalItems();
+  function renderCarrito() {
+    totalActual = carrito.reduce(function (acc, it) { return acc + it.precio * it.cantidad; }, 0);
     totalOut.textContent = "Bs " + totalActual.toFixed(2);
-    recalcularCambioPedido();
-  }
+    recalcularCambio();
 
-  tabla.addEventListener("input", recalcular);
-  tabla.addEventListener("change", recalcular);
-  if (montoPagadoInput) montoPagadoInput.addEventListener("input", recalcularCambioPedido);
-
-  // Datos de productos para el buscador (se toman del <select> plantilla, una sola fuente de datos)
-  var slotTemplate = document.getElementById("item-slot-template");
-  var productos = [];
-  slotTemplate.content.querySelectorAll("option[value]").forEach(function (opt) {
-    if (!opt.value) return;
-    var optgroup = opt.closest("optgroup");
-    productos.push({
-      id: opt.value,
-      nombre: opt.textContent,
-      categoria: optgroup ? optgroup.label : "",
-      precio: parseFloat(opt.getAttribute("data-precio") || "0"),
-    });
-  });
-
-  function normalizar(s) {
-    return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  }
-
-  function buscarProductos(q) {
-    q = normalizar(q);
-    if (!q) return productos;
-    var empieza = [];
-    var contiene = [];
-    productos.forEach(function (p) {
-      var n = normalizar(p.nombre);
-      if (n.indexOf(q) === 0) empieza.push(p);
-      else if (n.indexOf(q) !== -1) contiene.push(p);
-    });
-    return empieza.concat(contiene).slice(0, 8);
-  }
-
-  // Un solo desplegable flotante (fuera de la tabla) para que no lo recorte
-  // el contenedor con scroll horizontal de la tabla de ítems.
-  var flotante = document.createElement("div");
-  flotante.className = "item-search-resultados oculto";
-  document.body.appendChild(flotante);
-  var celdaActiva = null;
-  var inputActivo = null;
-
-  function ocultarFlotante() {
-    flotante.classList.add("oculto");
-    flotante.innerHTML = "";
-    celdaActiva = null;
-    inputActivo = null;
-  }
-
-  function reposicionarFlotante() {
-    if (!inputActivo) return;
-    var r = inputActivo.getBoundingClientRect();
-    flotante.style.left = r.left + "px";
-    flotante.style.top = (r.bottom + 4) + "px";
-    flotante.style.width = r.width + "px";
-  }
-
-  function pintarResultados(input, celda, lista) {
-    if (!lista.length) {
-      ocultarFlotante();
+    if (!carrito.length) {
+      itemsBox.innerHTML = '<p class="muted-sm" id="pos-items-vacio">Toca un producto de la izquierda para agregarlo al pedido.</p>';
       return;
     }
-    celdaActiva = celda;
-    inputActivo = input;
-    reposicionarFlotante();
-    flotante.innerHTML = lista.map(function (p, i) {
+
+    itemsBox.innerHTML = carrito.map(function (it, i) {
       return (
-        '<div class="item-search-opcion' + (i === 0 ? " activa" : "") + '" data-id="' + p.id + '" data-precio="' + p.precio + '" data-nombre="' + p.nombre.replace(/"/g, "&quot;") + '">' +
-        '<span>' + p.nombre + '</span>' +
-        '<span class="muted-sm">' + (p.categoria ? p.categoria + " · " : "") + "Bs " + p.precio.toFixed(2) + "</span>" +
-        "</div>"
+        '<div class="pos-item-row" data-idx="' + i + '">' +
+          '<div class="pos-item-nombre">' + it.nombre + '<span class="muted-sm">Bs ' + it.precio.toFixed(2) + ' c/u</span></div>' +
+          '<div class="pos-item-qty">' +
+            '<button type="button" class="pos-qty-btn" data-accion="restar">−</button>' +
+            '<span class="pos-qty-valor">' + it.cantidad + '</span>' +
+            '<button type="button" class="pos-qty-btn" data-accion="sumar">+</button>' +
+          '</div>' +
+          '<div class="pos-item-subtotal">Bs ' + (it.precio * it.cantidad).toFixed(2) + '</div>' +
+          '<button type="button" class="pos-item-quitar" data-accion="quitar">×</button>' +
+          '<input type="hidden" name="cart_producto_id" value="' + it.id + '" />' +
+          '<input type="hidden" name="cart_cantidad" value="' + it.cantidad + '" />' +
+        '</div>'
       );
     }).join("");
-    flotante.classList.remove("oculto");
   }
 
-  function elegirProducto(celda, opcion) {
-    var buscador = celda.querySelector(".item-search");
-    var oculto = celda.querySelector(".item-select-hidden");
-    buscador.value = opcion.getAttribute("data-nombre");
-    oculto.value = opcion.getAttribute("data-id");
-    oculto.setAttribute("data-precio", opcion.getAttribute("data-precio"));
-    ocultarFlotante();
-    recalcular();
-  }
-
-  tabla.addEventListener("input", function (e) {
-    if (!e.target.classList.contains("item-search")) return;
-    var celda = e.target.closest("td");
-    var oculto = celda.querySelector(".item-select-hidden");
-    oculto.value = "";
-    oculto.removeAttribute("data-precio");
-    pintarResultados(e.target, celda, buscarProductos(e.target.value));
+  document.querySelectorAll(".pos-producto").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var id = btn.getAttribute("data-id");
+      var existente = carrito.find(function (it) { return it.id === id; });
+      if (existente) {
+        existente.cantidad += 1;
+      } else {
+        carrito.push({
+          id: id,
+          nombre: btn.getAttribute("data-nombre"),
+          precio: parseFloat(btn.getAttribute("data-precio") || "0"),
+          cantidad: 1,
+        });
+      }
+      renderCarrito();
+    });
   });
 
-  function mostrarAlEnfocar(e) {
-    if (!e.target.classList.contains("item-search")) return;
-    var celda = e.target.closest("td");
-    pintarResultados(e.target, celda, buscarProductos(e.target.value));
-  }
-  tabla.addEventListener("focusin", mostrarAlEnfocar);
-  tabla.addEventListener("click", mostrarAlEnfocar);
-
-  tabla.addEventListener("focusout", function (e) {
-    if (!e.target.classList.contains("item-search")) return;
-    setTimeout(ocultarFlotante, 150);
+  itemsBox.addEventListener("click", function (e) {
+    var accionBtn = e.target.closest("[data-accion]");
+    if (!accionBtn) return;
+    var fila = accionBtn.closest(".pos-item-row");
+    var idx = parseInt(fila.getAttribute("data-idx"), 10);
+    var accion = accionBtn.getAttribute("data-accion");
+    if (accion === "sumar") carrito[idx].cantidad += 1;
+    else if (accion === "restar") {
+      carrito[idx].cantidad -= 1;
+      if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+    } else if (accion === "quitar") carrito.splice(idx, 1);
+    renderCarrito();
   });
 
-  flotante.addEventListener("mousedown", function (e) {
-    var opcion = e.target.closest(".item-search-opcion");
-    if (!opcion || !celdaActiva) return;
-    e.preventDefault();
-    elegirProducto(celdaActiva, opcion);
-  });
+  if (montoPagadoInput) montoPagadoInput.addEventListener("input", recalcularCambio);
 
-  window.addEventListener("scroll", function (e) {
-    if (!inputActivo || flotante.contains(e.target)) return;
-    reposicionarFlotante();
-  }, true);
-  window.addEventListener("resize", reposicionarFlotante);
-
-  tabla.addEventListener("keydown", function (e) {
-    if (!e.target.classList.contains("item-search")) return;
-    var opciones = Array.prototype.slice.call(flotante.querySelectorAll(".item-search-opcion"));
-    if (!opciones.length) return;
-    var idx = opciones.findIndex(function (o) { return o.classList.contains("activa"); });
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+  form.addEventListener("submit", function (e) {
+    if (!carrito.length) {
       e.preventDefault();
-      if (idx >= 0) opciones[idx].classList.remove("activa");
-      idx = e.key === "ArrowDown" ? (idx + 1) % opciones.length : (idx - 1 + opciones.length) % opciones.length;
-      opciones[idx].classList.add("activa");
-      opciones[idx].scrollIntoView({ block: "nearest" });
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (idx >= 0 && celdaActiva) elegirProducto(celdaActiva, opciones[idx]);
-    } else if (e.key === "Escape") {
-      ocultarFlotante();
+      alert("Agrega al menos un producto al pedido.");
     }
   });
-
-  // Agregar ítems dinámicamente (empieza con 1, botón "+" agrega los que se necesiten)
-  var theadRow = document.getElementById("items-thead-row");
-  var tbodyRow = document.getElementById("items-tbody-row");
-  var addBtn = document.getElementById("btn-add-item");
-  var contadorItems = 1;
-
-  if (addBtn) {
-    addBtn.addEventListener("click", function () {
-      contadorItems++;
-
-      var thItem = document.createElement("th");
-      thItem.textContent = "Ítem " + contadorItems;
-      var thCant = document.createElement("th");
-      thCant.className = "col-monto";
-      thCant.textContent = "Cant.";
-      theadRow.insertBefore(thItem, theadRow.lastElementChild);
-      theadRow.insertBefore(thCant, theadRow.lastElementChild);
-
-      var tdSelect = document.createElement("td");
-      tdSelect.className = "item-search-cell";
-      tdSelect.innerHTML =
-        '<input type="text" class="input item-search" placeholder="Buscar producto…" autocomplete="off" />' +
-        '<input type="hidden" name="cart_producto_id" class="item-select-hidden" />';
-
-      var tdCant = document.createElement("td");
-      tdCant.className = "col-monto";
-      var cantInput = document.createElement("input");
-      cantInput.type = "number";
-      cantInput.min = "1";
-      cantInput.value = "1";
-      cantInput.name = "cart_cantidad";
-      cantInput.className = "item-cant";
-      tdCant.appendChild(cantInput);
-
-      tbodyRow.insertBefore(tdSelect, tbodyRow.lastElementChild);
-      tbodyRow.insertBefore(tdCant, tbodyRow.lastElementChild);
-    });
-  }
 
   // Cambio en la fila "Cobrar" de cuentas pendientes
   document.querySelectorAll(".monto-pagado-pendiente").forEach(function (input) {
