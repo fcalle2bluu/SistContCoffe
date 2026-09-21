@@ -10,12 +10,14 @@
   {% include "partials/_contabilidad_nav.html" %}
 
   <div>
-    <h3 class="subsection-title">Nuevo asiento</h3>
-    <form method="post" action="/dashboard/contabilidad/diario" class="card stack-4">
+    <h3 class="subsection-title">{{ "Editar asiento #" + editando_nro|string if editando_nro else "Nuevo asiento" }}</h3>
+    <form method="post"
+      action="{{ '/dashboard/contabilidad/diario/' + editando_nro|string + '/editar' if editando_nro else '/dashboard/contabilidad/diario' }}"
+      class="card stack-4">
       <div class="order-row">
         <div>
           <label class="field-label">Fecha</label>
-          <input name="fecha" type="date" value="{{ hoy }}" required class="input input-w44" />
+          <input name="fecha" type="date" value="{{ form_fecha }}" required class="input input-w44" />
         </div>
       </div>
 
@@ -59,12 +61,13 @@
       <div class="order-row">
         <div class="flex-1">
           <label class="field-label">Glosa (descripción)</label>
-          <input name="glosa" required class="input" />
+          <input name="glosa" value="{{ form_glosa }}" required class="input" />
         </div>
       </div>
 
       <div class="order-actions">
-        <button type="submit" class="btn btn-primary">Registrar asiento</button>
+        <button type="submit" class="btn btn-primary">{{ "Guardar cambios" if editando_nro else "Registrar asiento" }}</button>
+        {% if editando_nro %}<a href="/dashboard/contabilidad/diario" class="btn btn-outline">Cancelar edición</a>{% endif %}
       </div>
 
       {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
@@ -78,7 +81,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="ledger">
-        <thead><tr><th>N°</th><th>Fecha</th><th>Cuenta Debe</th><th>Cuenta Haber</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
+        <thead><tr><th>N°</th><th>Fecha</th><th>Cuenta Debe</th><th>Cuenta Haber</th><th class="num">Debe</th><th class="num">Haber</th><th></th></tr></thead>
         <tbody>
           {% for a in asientos %}
           {% for l in a.lineas %}
@@ -89,16 +92,27 @@
             <td>{{ (l.cuenta_nombre or l.codigo_cuenta) if l.haber and l.haber > 0 else "" }}</td>
             <td class="num">{{ (l.debe|bs) if l.debe and l.debe > 0 else "" }}</td>
             <td class="num">{{ (l.haber|bs) if l.haber and l.haber > 0 else "" }}</td>
+            <td></td>
           </tr>
           {% endfor %}
           <tr class="line-row">
             <td colspan="2"></td>
             <td colspan="4" class="muted-sm">{{ a.glosa }}</td>
+            <td></td>
           </tr>
           <tr class="subtotal-row">
             <td colspan="4">Total{% if a.total_debe == a.total_haber %} — Cuadrado{% endif %}</td>
             <td class="num">{{ a.total_debe|bs }}</td>
             <td class="num">{{ a.total_haber|bs }}</td>
+            <td class="text-right">
+              <div class="row-actions">
+                <a href="/dashboard/contabilidad/diario/{{ a.nro }}/editar" class="link-muted">Editar</a>
+                <form method="post" action="/dashboard/contabilidad/diario/{{ a.nro }}/eliminar"
+                  onsubmit="return confirm('¿Eliminar el asiento #{{ a.nro }} completo? Esta acción no se puede deshacer.');">
+                  <button type="submit" class="link-danger">Eliminar</button>
+                </form>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>

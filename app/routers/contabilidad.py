@@ -136,8 +136,14 @@ async def crear_cuenta(
     return RedirectResponse("/dashboard/contabilidad/plan-cuentas", status_code=303)
 
 
-@router.get("/diario", response_class=HTMLResponse)
-async def diario_page(request: Request, session: dict = Depends(require_admin), error: str | None = None):
+async def _diario_context(
+    session: dict,
+    error: str | None = None,
+    lineas: list[dict] | None = None,
+    fecha: str | None = None,
+    glosa: str = "",
+    editando_nro: int | None = None,
+) -> dict:
     filas = await pool().fetch(
         """
         SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
@@ -148,23 +154,61 @@ async def diario_page(request: Request, session: dict = Depends(require_admin), 
         """
     )
     asientos = _agrupar_asientos(filas)
-
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
-    return templates.TemplateResponse(
-        request,
-        "dashboard/contabilidad_diario.html",
-        {
-            "session": session,
-            "active": "contabilidad",
-            "asientos": asientos,
-            "cuentas": cuentas,
-            "lineas": [],
-            "total_debe": 0,
-            "total_haber": 0,
-            "error": error,
-            "hoy": hoy_bolivia().isoformat(),
-        },
+    lineas = lineas or []
+    total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
+    total_haber = sum(l["monto"] for l in lineas if l["lado"] == "HABER")
+    return {
+        "session": session,
+        "active": "contabilidad",
+        "asientos": asientos,
+        "cuentas": cuentas,
+        "lineas": lineas,
+        "total_debe": total_debe,
+        "total_haber": total_haber,
+        "error": error,
+        "hoy": hoy_bolivia().isoformat(),
+        "form_fecha": fecha or hoy_bolivia().isoformat(),
+        "form_glosa": glosa,
+        "editando_nro": editando_nro,
+    }
+
+
+@router.get("/diario", response_class=HTMLResponse)
+async def diario_page(request: Request, session: dict = Depends(require_admin), error: str | None = None):
+    ctx = await _diario_context(session, error=error)
+    return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx)
+
+
+@router.get("/diario/{nro_asiento}/editar", response_class=HTMLResponse)
+async def editar_asiento_form(request: Request, nro_asiento: int, session: dict = Depends(require_admin)):
+    filas = await pool().fetch(
+        """
+        SELECT ld.fecha, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa
+        FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+        WHERE ld.nro_asiento = $1
+        ORDER BY ld.id
+        """,
+        nro_asiento,
     )
+    if not filas:
+        return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
+
+    lineas = []
+    for f in filas:
+        if f["debe"] and f["debe"] > 0:
+            lineas.append({"codigo_cuenta": f["codigo_cuenta"], "nombre": f["cuenta_nombre"] or f["codigo_cuenta"], "lado": "DEBE", "monto": float(f["debe"])})
+        if f["haber"] and f["haber"] > 0:
+            lineas.append({"codigo_cuenta": f["codigo_cuenta"], "nombre": f["cuenta_nombre"] or f["codigo_cuenta"], "lado": "HABER", "monto": float(f["haber"])})
+
+    ctx = await _diario_context(
+        session,
+        lineas=lineas,
+        fecha=filas[0]["fecha"].isoformat(),
+        glosa=filas[0]["glosa"],
+        editando_nro=nro_asiento,
+    )
+    return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx)
 
 
 @router.post("/diario/linea", response_class=HTMLResponse)
@@ -284,35 +328,11 @@ async def crear_asiento(
         error = f"El asiento no cuadra: debe {total_debe:.2f} vs haber {total_haber:.2f}."
 
     if error:
-        filas = await pool().fetch(
-            """
-            SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
-                   ld.debe, ld.haber, ld.glosa
-            FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
-            ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.id
-            """
-        )
-        asientos = _agrupar_asientos(filas)
-        cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
-        cuentas_map = {c["codigo"]: c["nombre"] for c in cuentas}
+        cuentas_map = {c["codigo"]: c["nombre"] for c in await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")}
         for l in lineas:
             l["nombre"] = cuentas_map.get(l["codigo_cuenta"], l["codigo_cuenta"])
-        return templates.TemplateResponse(
-            request,
-            "dashboard/contabilidad_diario.html",
-            {
-                "session": session,
-                "active": "contabilidad",
-                "asientos": asientos,
-                "cuentas": cuentas,
-                "lineas": lineas,
-                "total_debe": total_debe,
-                "total_haber": total_haber,
-                "error": error,
-                "hoy": hoy_bolivia().isoformat(),
-            },
-            status_code=400,
-        )
+        ctx = await _diario_context(session, error=error, lineas=lineas, fecha=fecha, glosa=glosa)
+        return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx, status_code=400)
 
     fecha_date = date.fromisoformat(fecha)
 
@@ -333,6 +353,73 @@ async def crear_asiento(
                     glosa,
                 )
     await bitacora.registrar(session, "Registró asiento contable", f"Asiento #{siguiente}: {glosa}")
+    return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
+
+
+@router.post("/diario/{nro_asiento}/editar", response_class=HTMLResponse)
+async def editar_asiento(
+    request: Request,
+    nro_asiento: int,
+    session: dict = Depends(require_admin),
+    fecha: str = Form(""),
+    glosa: str = Form(""),
+    cuenta: list[str] = Form([]),
+    lado: list[str] = Form([]),
+    monto: list[str] = Form([]),
+):
+    lineas = _parse_lineas(cuenta, lado, monto)
+    glosa = glosa.strip()
+    total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
+    total_haber = sum(l["monto"] for l in lineas if l["lado"] == "HABER")
+
+    error = None
+    if not fecha:
+        error = "Indica la fecha del asiento."
+    elif not glosa:
+        error = "Indica la glosa (descripción) del asiento."
+    elif len(lineas) < 2:
+        error = "Un asiento necesita al menos una línea de debe y una de haber."
+    elif abs(total_debe - total_haber) > 0.01:
+        error = f"El asiento no cuadra: debe {total_debe:.2f} vs haber {total_haber:.2f}."
+
+    if error:
+        cuentas_map = {c["codigo"]: c["nombre"] for c in await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")}
+        for l in lineas:
+            l["nombre"] = cuentas_map.get(l["codigo_cuenta"], l["codigo_cuenta"])
+        ctx = await _diario_context(session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, editando_nro=nro_asiento)
+        return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx, status_code=400)
+
+    fecha_date = date.fromisoformat(fecha)
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            existe = await conn.fetchval("SELECT COUNT(*) FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
+            if not existe:
+                return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
+            await conn.execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
+            for l in lineas:
+                await conn.execute(
+                    """
+                    INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    """,
+                    fecha_date,
+                    nro_asiento,
+                    l["codigo_cuenta"],
+                    l["monto"] if l["lado"] == "DEBE" else 0,
+                    l["monto"] if l["lado"] == "HABER" else 0,
+                    glosa,
+                )
+    await bitacora.registrar(session, "Editó asiento contable", f"Asiento #{nro_asiento}: {glosa}")
+    return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
+
+
+@router.post("/diario/{nro_asiento}/eliminar")
+async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_admin)):
+    fila = await pool().fetchrow("SELECT glosa FROM libro_diario WHERE nro_asiento = $1 LIMIT 1", nro_asiento)
+    if fila:
+        await pool().execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
+        await bitacora.registrar(session, "Eliminó asiento contable", f"Asiento #{nro_asiento}: {fila['glosa']}")
     return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
 
 
