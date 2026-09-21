@@ -457,6 +457,8 @@ a { color: inherit; }
   --surface-soft: #f6ead0;
   --border: #1a1a1a;
   --border-strong: #000000;
+  --muted: #5c4a2f;
+  --muted-soft: #7a6647;
   background: var(--bg);
 }
 .tema-crema .card,
