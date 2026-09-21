@@ -355,11 +355,21 @@
   flotante.className = "item-search-resultados oculto";
   document.body.appendChild(flotante);
   var celdaActiva = null;
+  var inputActivo = null;
 
   function ocultarFlotante() {
     flotante.classList.add("oculto");
     flotante.innerHTML = "";
     celdaActiva = null;
+    inputActivo = null;
+  }
+
+  function reposicionarFlotante() {
+    if (!inputActivo) return;
+    var r = inputActivo.getBoundingClientRect();
+    flotante.style.left = r.left + "px";
+    flotante.style.top = (r.bottom + 4) + "px";
+    flotante.style.width = r.width + "px";
   }
 
   function pintarResultados(input, celda, lista) {
@@ -368,10 +378,8 @@
       return;
     }
     celdaActiva = celda;
-    var r = input.getBoundingClientRect();
-    flotante.style.left = r.left + "px";
-    flotante.style.top = (r.bottom + 4) + "px";
-    flotante.style.width = r.width + "px";
+    inputActivo = input;
+    reposicionarFlotante();
     flotante.innerHTML = lista.map(function (p, i) {
       return (
         '<div class="item-search-opcion' + (i === 0 ? " activa" : "") + '" data-id="' + p.id + '" data-precio="' + p.precio + '" data-nombre="' + p.nombre.replace(/"/g, "&quot;") + '">' +
@@ -423,10 +431,10 @@
   });
 
   window.addEventListener("scroll", function (e) {
-    if (flotante.contains(e.target)) return;
-    ocultarFlotante();
+    if (!inputActivo || flotante.contains(e.target)) return;
+    reposicionarFlotante();
   }, true);
-  window.addEventListener("resize", ocultarFlotante);
+  window.addEventListener("resize", reposicionarFlotante);
 
   tabla.addEventListener("keydown", function (e) {
     if (!e.target.classList.contains("item-search")) return;
