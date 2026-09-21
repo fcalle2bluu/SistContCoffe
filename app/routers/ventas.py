@@ -264,6 +264,17 @@ async def cancelar_orden(orden_id: int, session: dict = Depends(require_session)
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
+@router.post("/ordenes/{orden_id}/eliminar")
+async def eliminar_orden(orden_id: int, session: dict = Depends(require_session)):
+    orden = await pool().fetchrow("SELECT mesa, total, tipo_pago FROM ordenes WHERE id = $1", orden_id)
+    if orden:
+        await pool().execute("DELETE FROM ordenes WHERE id = $1", orden_id)
+        await bitacora.registrar(
+            session, "Eliminó venta", f"Orden #{orden_id}, mesa {orden['mesa']}, Bs {orden['total']:.2f}"
+        )
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
 @router.get("/ordenes/{orden_id}/ticket", response_class=HTMLResponse)
 async def ticket_orden(request: Request, orden_id: int, session: dict = Depends(require_session)):
     orden = await pool().fetchrow(

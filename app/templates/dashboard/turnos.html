@@ -1,0 +1,41 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Control de Turnos — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Control de Turnos</h2>
+    <p class="section-subtitle">Historial de todos los turnos de caja: qué se vendió y movió en cada uno.</p>
+  </div>
+
+  {% if turnos|length == 0 %}
+  <p class="muted">Todavía no hay turnos registrados.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="data-table data-table-wide">
+      <thead>
+        <tr>
+          <th>#</th><th>Responsable</th><th>Estado</th><th>Apertura</th><th>Cierre</th>
+          <th class="text-right">Ventas</th><th class="text-right">Total ventas</th>
+          <th class="text-right">Movimientos</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in turnos %}
+        <tr>
+          <td class="strong">#{{ t.id }}</td>
+          <td>{{ t.responsable }}</td>
+          <td class="small uppercase">{{ t.estado }}</td>
+          <td class="small">{{ t.abierto_en|fechahora }}</td>
+          <td class="small">{{ (t.cerrado_en|fechahora) if t.cerrado_en else "—" }}</td>
+          <td class="text-right mono">{{ t.cantidad_ventas }}</td>
+          <td class="text-right mono">Bs {{ "%.2f"|format(t.total_ventas) }}</td>
+          <td class="text-right mono">{{ t.cantidad_movimientos }}</td>
+          <td class="text-right"><a href="/dashboard/turnos/{{ t.id }}" class="link-muted">Ver detalle</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

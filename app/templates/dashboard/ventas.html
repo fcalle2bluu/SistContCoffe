@@ -244,7 +244,15 @@
             <td class="uppercase small">{{ o.tipo_pago }}</td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
             <td class="small muted-inline">{{ o.responsable }}</td>
-            <td class="text-right"><a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a></td>
+            <td class="text-right">
+              <div class="row-actions">
+                <a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a>
+                <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/eliminar"
+                  onsubmit="return confirm('¿Eliminar esta venta? Esta acción no se puede deshacer.');">
+                  <button type="submit" class="link-danger">Eliminar</button>
+                </form>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>

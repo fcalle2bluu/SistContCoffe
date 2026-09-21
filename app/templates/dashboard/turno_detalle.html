@@ -1,0 +1,88 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Turno #{{ turno.id }} — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <a href="/dashboard/turnos" class="link-muted">← Volver a Control de Turnos</a>
+    <h2 class="section-title">Turno #{{ turno.id }} — {{ turno.responsable }}</h2>
+    <p class="section-subtitle">
+      Abierto {{ turno.abierto_en|fechahora }}
+      {% if turno.cerrado_en %} · Cerrado {{ turno.cerrado_en|fechahora }}{% else %} · Turno abierto{% endif %}
+    </p>
+  </div>
+
+  <dl class="stats-grid">
+    <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
+    <div class="stat-box"><dt>Cierre declarado</dt><dd>{{ ("Bs " + "%.2f"|format(turno.monto_final_declarado)) if turno.monto_final_declarado is not none else "—" }}</dd></div>
+    <div class="stat-box"><dt>Estado</dt><dd class="uppercase">{{ turno.estado }}</dd></div>
+  </dl>
+
+  <div>
+    <h3 class="subsection-title">Ventas del turno ({{ ordenes|length }})</h3>
+    {% if ordenes|length == 0 %}
+    <p class="muted">Este turno no tiene ventas registradas.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table data-table-wide">
+        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Estado</th><th>Pago</th><th>Hora</th><th>Responsable</th></tr></thead>
+        <tbody>
+          {% for o in ordenes %}
+          <tr>
+            <td class="strong">{{ o.mesa }}</td>
+            <td class="small">
+              {% for it in items_por_orden.get(o.id, []) %}{{ "%g"|format(it.cantidad) }}× {{ it.producto_nombre }}{{ ", " if not loop.last }}{% else %}—{% endfor %}
+            </td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
+            <td class="small uppercase">{{ o.estado }}</td>
+            <td class="uppercase small">{{ o.tipo_pago or "—" }}</td>
+            <td class="small">{{ (o.cobrado_en|hora) if o.cobrado_en else (o.creado_en|hora) }}</td>
+            <td class="small muted-inline">{{ o.responsable }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <h3 class="subsection-title">Movimientos de caja ({{ movimientos|length }})</h3>
+    {% if movimientos|length == 0 %}
+    <p class="muted">Este turno no tiene movimientos de caja registrados.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Tipo</th><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th></tr></thead>
+        <tbody>
+          {% for m in movimientos %}
+          <tr>
+            <td class="small uppercase">{{ m.tipo }}</td>
+            <td class="strong">{{ m.motivo }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(m.monto) }}</td>
+            <td class="uppercase small">{{ m.tipo_pago }}</td>
+            <td class="small">{{ m.creado_en|hora }}</td>
+            <td class="small muted-inline">{{ m.responsable }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Eliminar turno completo</h3>
+    <p class="muted-sm">
+      Borra este turno junto con todas sus ventas y movimientos de caja. No se puede deshacer.
+      {% if turno.estado == 'cerrado' %}
+      Como este turno ya está <strong>cerrado</strong>, puede tener un asiento ya registrado en el Libro Diario
+      que no se borra solo — revísalo después en Contabilidad si hace falta corregirlo.
+      {% endif %}
+    </p>
+    <form method="post" action="/dashboard/turnos/{{ turno.id }}/eliminar"
+      onsubmit="return confirm('¿Eliminar el turno #{{ turno.id }} completo, con sus {{ ordenes|length }} ventas y {{ movimientos|length }} movimientos? Esta acción no se puede deshacer.');">
+      <button type="submit" class="btn btn-danger">Eliminar turno #{{ turno.id }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
