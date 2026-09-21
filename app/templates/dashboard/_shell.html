@@ -31,7 +31,7 @@
     </div>
   </aside>
 
-  <main class="dashboard-main">
+  <main class="dashboard-main {{ 'tema-crema' if active == 'ventas' else '' }}">
     {% block content %}{% endblock %}
   </main>
 </div>

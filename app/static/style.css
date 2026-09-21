@@ -449,3 +449,27 @@ a { color: inherit; }
 }
 .subnav-link:hover { color: var(--ink); background: var(--bg); }
 .subnav-link.active { color: var(--accent-strong); background: var(--accent-soft); font-weight: 600; }
+
+/* Tema crema con bordes negros marcados — prueba, por ahora solo en Ventas/Caja. */
+.tema-crema {
+  --bg: #f2e6c8;
+  --surface: #fffaf2;
+  --surface-soft: #f6ead0;
+  --border: #1a1a1a;
+  --border-strong: #000000;
+  background: var(--bg);
+}
+.tema-crema .card,
+.tema-crema .table-wrap,
+.tema-crema .pos-carrito,
+.tema-crema .pos-producto,
+.tema-crema .pos-item-row,
+.tema-crema .pos-tab,
+.tema-crema .stat-box,
+.tema-crema .input,
+.tema-crema .btn,
+.tema-crema .data-table,
+.tema-crema .ledger {
+  border-width: 2px;
+}
+.tema-crema .pos-qty-btn { border-width: 2px; }
