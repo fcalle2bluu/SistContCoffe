@@ -402,11 +402,13 @@
     pintarResultados(e.target, celda, buscarProductos(e.target.value));
   });
 
-  tabla.addEventListener("focusin", function (e) {
+  function mostrarAlEnfocar(e) {
     if (!e.target.classList.contains("item-search")) return;
     var celda = e.target.closest("td");
     pintarResultados(e.target, celda, buscarProductos(e.target.value));
-  });
+  }
+  tabla.addEventListener("focusin", mostrarAlEnfocar);
+  tabla.addEventListener("click", mostrarAlEnfocar);
 
   tabla.addEventListener("focusout", function (e) {
     if (!e.target.classList.contains("item-search")) return;
@@ -420,7 +422,10 @@
     elegirProducto(celdaActiva, opcion);
   });
 
-  window.addEventListener("scroll", ocultarFlotante, true);
+  window.addEventListener("scroll", function (e) {
+    if (flotante.contains(e.target)) return;
+    ocultarFlotante();
+  }, true);
   window.addEventListener("resize", ocultarFlotante);
 
   tabla.addEventListener("keydown", function (e) {
