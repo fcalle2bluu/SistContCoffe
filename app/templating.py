@@ -34,6 +34,26 @@ def formato_fecha(iso: str) -> str:
     return f"{d}/{m}/{y}"
 
 
+MESES_ES = [
+    "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
+    "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE",
+]
+
+
+def formato_ticket_fecha(iso: str) -> str:
+    dt = _a_hora_bolivia(iso)
+    fecha = dt.strftime("%d/%m/%y")
+    hora = dt.strftime("%H:%M")
+    if hora.startswith("0"):
+        hora = hora[1:]
+    return f"{fecha} {hora}"
+
+
+def formato_mes_anio(iso: str) -> str:
+    dt = _a_hora_bolivia(iso)
+    return f"{MESES_ES[dt.month - 1]} {dt.year}"
+
+
 def formato_bs(value) -> str:
     try:
         num = float(value)
@@ -49,3 +69,5 @@ templates.env.filters["hora"] = formato_hora
 templates.env.filters["fechahora"] = formato_fecha_hora
 templates.env.filters["fecha"] = formato_fecha
 templates.env.filters["bs"] = formato_bs
+templates.env.filters["ticket_fecha"] = formato_ticket_fecha
+templates.env.filters["mes_anio"] = formato_mes_anio

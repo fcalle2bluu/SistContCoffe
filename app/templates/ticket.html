@@ -9,20 +9,22 @@
     * { box-sizing: border-box; }
     body {
       font-family: "SFMono-Regular", Consolas, monospace;
-      width: 300px;
+      width: 320px;
       margin: 24px auto;
       padding: 16px;
       color: #111;
       font-size: 13px;
     }
-    h1 { font-size: 16px; text-align: center; margin: 0 0 2px; }
+    h1 { font-size: 20px; text-align: center; margin: 0 0 4px; letter-spacing: 1px; }
     .center { text-align: center; }
-    .muted { color: #555; font-size: 11px; }
+    .subtitulo { text-align: center; margin: 0 0 4px; }
     hr { border: none; border-top: 1px dashed #999; margin: 10px 0; }
+    p.datos { margin: 0; line-height: 1.6; }
     table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 12px; padding: 2px 0; }
     td { padding: 2px 0; font-size: 12px; vertical-align: top; }
     .num { text-align: right; white-space: nowrap; }
-    .total-row td { border-top: 1px dashed #999; font-weight: 700; font-size: 14px; padding-top: 6px; }
+    .total-final { text-align: right; font-weight: 700; font-size: 15px; margin: 0; }
     .btn-print {
       display: block; width: 100%; margin-top: 16px; padding: 10px;
       font-size: 13px; cursor: pointer; border: 1px solid #111; background: #fff;
@@ -34,30 +36,27 @@
   </style>
 </head>
 <body>
-  <h1>Café Yanaloma</h1>
-  <p class="center muted">The Roasting Lab</p>
+  <h1>CAFÉ YANALOMA</h1>
+  <p class="subtitulo">Recibo de Venta</p>
   <hr />
-  <p>
+  <p class="datos">
+    Fecha: {{ (orden.cobrado_en if orden.cobrado_en else orden.creado_en)|ticket_fecha }}<br />
     Mesa: {{ orden.mesa }}<br />
-    Fecha: {{ (orden.cobrado_en|fechahora) if orden.cobrado_en else (orden.creado_en|fechahora) }}<br />
-    Atendido por: {{ orden.responsable }}
+    Mes: {{ (orden.cobrado_en if orden.cobrado_en else orden.creado_en)|mes_anio }}
   </p>
   <hr />
   <table>
+    <tr><th>Cant</th><th>Descripción</th><th class="num">Total</th></tr>
     {% for it in items %}
     <tr>
-      <td>{{ "%g"|format(it.cantidad) }}x {{ it.producto_nombre }}</td>
-      <td class="num">{{ (it.cantidad * it.precio_unitario)|bs }}</td>
+      <td>{{ "%g"|format(it.cantidad) }}</td>
+      <td>{{ it.producto_nombre }}</td>
+      <td class="num">{{ (it.cantidad * it.precio_unitario)|bs }} Bs</td>
     </tr>
     {% endfor %}
-    <tr class="total-row">
-      <td>TOTAL</td>
-      <td class="num">Bs {{ orden.total|bs }}</td>
-    </tr>
   </table>
   <hr />
-  <p class="center muted">Pago: {{ orden.tipo_pago or "—" }}</p>
-  <p class="center muted">¡Gracias por su visita!</p>
+  <p class="total-final">TOTAL: {{ orden.total|bs }} Bs</p>
   <button class="btn-print no-print" onclick="window.print()">Imprimir</button>
   <script>
     window.onload = function () { window.print(); };
