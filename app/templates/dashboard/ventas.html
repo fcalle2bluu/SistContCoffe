@@ -118,7 +118,6 @@
               <td class="item-search-cell">
                 <input type="text" class="input item-search" placeholder="Buscar producto…" autocomplete="off" />
                 <input type="hidden" name="cart_producto_id" class="item-select-hidden" />
-                <div class="item-search-resultados oculto"></div>
               </td>
               <td class="col-monto"><input name="cart_cantidad" type="number" min="1" value="1" class="item-cant" /></td>
               <td class="col-add"><button type="button" id="btn-add-item" class="btn btn-outline btn-sm">+</button></td>
@@ -339,7 +338,7 @@
 
   function buscarProductos(q) {
     q = normalizar(q);
-    if (!q) return [];
+    if (!q) return productos;
     var empieza = [];
     var contiene = [];
     productos.forEach(function (p) {
@@ -350,14 +349,30 @@
     return empieza.concat(contiene).slice(0, 8);
   }
 
-  function pintarResultados(celda, lista) {
-    var caja = celda.querySelector(".item-search-resultados");
+  // Un solo desplegable flotante (fuera de la tabla) para que no lo recorte
+  // el contenedor con scroll horizontal de la tabla de ítems.
+  var flotante = document.createElement("div");
+  flotante.className = "item-search-resultados oculto";
+  document.body.appendChild(flotante);
+  var celdaActiva = null;
+
+  function ocultarFlotante() {
+    flotante.classList.add("oculto");
+    flotante.innerHTML = "";
+    celdaActiva = null;
+  }
+
+  function pintarResultados(input, celda, lista) {
     if (!lista.length) {
-      caja.classList.add("oculto");
-      caja.innerHTML = "";
+      ocultarFlotante();
       return;
     }
-    caja.innerHTML = lista.map(function (p, i) {
+    celdaActiva = celda;
+    var r = input.getBoundingClientRect();
+    flotante.style.left = r.left + "px";
+    flotante.style.top = (r.bottom + 4) + "px";
+    flotante.style.width = r.width + "px";
+    flotante.innerHTML = lista.map(function (p, i) {
       return (
         '<div class="item-search-opcion' + (i === 0 ? " activa" : "") + '" data-id="' + p.id + '" data-precio="' + p.precio + '" data-nombre="' + p.nombre.replace(/"/g, "&quot;") + '">' +
         '<span>' + p.nombre + '</span>' +
@@ -365,7 +380,7 @@
         "</div>"
       );
     }).join("");
-    caja.classList.remove("oculto");
+    flotante.classList.remove("oculto");
   }
 
   function elegirProducto(celda, opcion) {
@@ -374,7 +389,7 @@
     buscador.value = opcion.getAttribute("data-nombre");
     oculto.value = opcion.getAttribute("data-id");
     oculto.setAttribute("data-precio", opcion.getAttribute("data-precio"));
-    celda.querySelector(".item-search-resultados").classList.add("oculto");
+    ocultarFlotante();
     recalcular();
   }
 
@@ -384,33 +399,33 @@
     var oculto = celda.querySelector(".item-select-hidden");
     oculto.value = "";
     oculto.removeAttribute("data-precio");
-    pintarResultados(celda, buscarProductos(e.target.value));
+    pintarResultados(e.target, celda, buscarProductos(e.target.value));
   });
 
   tabla.addEventListener("focusin", function (e) {
     if (!e.target.classList.contains("item-search")) return;
     var celda = e.target.closest("td");
-    if (e.target.value) pintarResultados(celda, buscarProductos(e.target.value));
+    pintarResultados(e.target, celda, buscarProductos(e.target.value));
   });
 
   tabla.addEventListener("focusout", function (e) {
     if (!e.target.classList.contains("item-search")) return;
-    var celda = e.target.closest("td");
-    setTimeout(function () { celda.querySelector(".item-search-resultados").classList.add("oculto"); }, 150);
+    setTimeout(ocultarFlotante, 150);
   });
 
-  tabla.addEventListener("mousedown", function (e) {
+  flotante.addEventListener("mousedown", function (e) {
     var opcion = e.target.closest(".item-search-opcion");
-    if (!opcion) return;
+    if (!opcion || !celdaActiva) return;
     e.preventDefault();
-    elegirProducto(opcion.closest("td"), opcion);
+    elegirProducto(celdaActiva, opcion);
   });
+
+  window.addEventListener("scroll", ocultarFlotante, true);
+  window.addEventListener("resize", ocultarFlotante);
 
   tabla.addEventListener("keydown", function (e) {
     if (!e.target.classList.contains("item-search")) return;
-    var celda = e.target.closest("td");
-    var caja = celda.querySelector(".item-search-resultados");
-    var opciones = Array.prototype.slice.call(caja.querySelectorAll(".item-search-opcion"));
+    var opciones = Array.prototype.slice.call(flotante.querySelectorAll(".item-search-opcion"));
     if (!opciones.length) return;
     var idx = opciones.findIndex(function (o) { return o.classList.contains("activa"); });
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -421,9 +436,9 @@
       opciones[idx].scrollIntoView({ block: "nearest" });
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (idx >= 0) elegirProducto(celda, opciones[idx]);
+      if (idx >= 0 && celdaActiva) elegirProducto(celdaActiva, opciones[idx]);
     } else if (e.key === "Escape") {
-      caja.classList.add("oculto");
+      ocultarFlotante();
     }
   });
 
@@ -449,8 +464,7 @@
       tdSelect.className = "item-search-cell";
       tdSelect.innerHTML =
         '<input type="text" class="input item-search" placeholder="Buscar producto…" autocomplete="off" />' +
-        '<input type="hidden" name="cart_producto_id" class="item-select-hidden" />' +
-        '<div class="item-search-resultados oculto"></div>';
+        '<input type="hidden" name="cart_producto_id" class="item-select-hidden" />';
 
       var tdCant = document.createElement("td");
       tdCant.className = "col-monto";

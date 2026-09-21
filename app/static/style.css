@@ -314,11 +314,10 @@ a { color: inherit; }
 .capture-grid input:focus, .capture-grid select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .capture-grid input[type="number"] { text-align: right; font-family: "SFMono-Regular", Consolas, monospace; }
 
-.item-search-cell { position: relative; }
 .item-search-resultados {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+  position: fixed; z-index: 200;
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); max-height: 260px; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); max-height: 380px; overflow-y: auto;
 }
 .item-search-resultados.oculto { display: none; }
 .item-search-opcion {
