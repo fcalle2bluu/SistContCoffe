@@ -371,6 +371,11 @@ a { color: inherit; }
 .pos-item-quitar:hover { color: #b91c1c; }
 .pos-pago-fields { display: flex; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
 .pos-pago-fields > div { flex: 1; min-width: 130px; }
+.pos-item-row.pos-item-nota { grid-template-columns: 1fr auto auto; }
+.pos-descuento-popup {
+  border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-soft);
+  padding: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px;
+}
 
 .mono { font-family: "SFMono-Regular", Consolas, monospace; }
 .small { font-size: 12px; color: var(--muted); }

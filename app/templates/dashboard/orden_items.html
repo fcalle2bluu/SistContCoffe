@@ -43,6 +43,16 @@
             <button type="button" class="pos-tab{{ ' activa' if loop.first else '' }}" data-panel="panel-{{ loop.index }}">{{ categoria }}</button>
             {% endfor %}
           </div>
+          <div class="pos-descuento-popup oculto" id="pos-descuento-popup">
+            <p class="field-label">Monto del descuento (Bs)</p>
+            <input type="number" step="0.01" min="0.01" class="input" id="pos-descuento-monto" />
+            <p class="field-label">Justificativo</p>
+            <input type="text" class="input" id="pos-descuento-justificativo" placeholder="Motivo del descuento" />
+            <div class="order-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="pos-descuento-agregar">Agregar</button>
+              <button type="button" class="btn btn-outline btn-sm" id="pos-descuento-cancelar">Cancelar</button>
+            </div>
+          </div>
           <div class="pos-paneles">
             {% for categoria, items_cat in por_categoria.items() %}
             <div class="pos-panel{{ '' if loop.first else ' oculto' }}" id="panel-{{ loop.index }}">
@@ -103,6 +113,12 @@
   var itemsBox = document.getElementById("pos-items");
   var totalOut = document.getElementById("total-estimado");
 
+  function escapeHtml(texto) {
+    var div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
+  }
+
   function renderCarrito() {
     var total = 0;
     carrito.forEach(function (it) { total += it.precio * it.cantidad; });
@@ -114,6 +130,19 @@
     }
 
     itemsBox.innerHTML = carrito.map(function (it, i) {
+      if (it.nota) {
+        var notaEscapada = escapeHtml(it.nota);
+        return (
+          '<div class="pos-item-row pos-item-nota" data-idx="' + i + '">' +
+            '<div class="pos-item-nombre">' + it.nombre + '<span class="muted-sm">' + notaEscapada + '</span></div>' +
+            '<div class="pos-item-subtotal">Bs ' + (it.precio * it.cantidad).toFixed(2) + '</div>' +
+            '<button type="button" class="pos-item-quitar" data-accion="quitar">×</button>' +
+            '<input type="hidden" name="cart_producto_id" value="' + it.id + '" />' +
+            '<input type="hidden" name="cart_cantidad" value="' + it.cantidad + '" />' +
+            '<input type="hidden" name="cart_nota" value="' + notaEscapada + '" />' +
+          '</div>'
+        );
+      }
       return (
         '<div class="pos-item-row" data-idx="' + i + '">' +
           '<div class="pos-item-nombre">' + it.nombre + '<span class="muted-sm">Bs ' + it.precio.toFixed(2) + ' c/u</span></div>' +
@@ -126,28 +155,81 @@
           '<button type="button" class="pos-item-quitar" data-accion="quitar">×</button>' +
           '<input type="hidden" name="cart_producto_id" value="' + it.id + '" />' +
           '<input type="hidden" name="cart_cantidad" value="' + it.cantidad + '" />' +
+          '<input type="hidden" name="cart_nota" value="" />' +
         '</div>'
       );
     }).join("");
   }
 
+  var descuentoPopup = document.getElementById("pos-descuento-popup");
+  var descuentoMontoInput = document.getElementById("pos-descuento-monto");
+  var descuentoJustificativoInput = document.getElementById("pos-descuento-justificativo");
+  var descuentoProductoPendiente = null;
+
   document.querySelectorAll(".pos-producto").forEach(function (btn) {
     btn.addEventListener("click", function () {
+      var precio = parseFloat(btn.getAttribute("data-precio") || "0");
+      if (precio < 0 && descuentoPopup) {
+        descuentoProductoPendiente = {
+          id: btn.getAttribute("data-id"),
+          nombre: btn.getAttribute("data-nombre"),
+          precio: precio,
+        };
+        descuentoMontoInput.value = "";
+        descuentoJustificativoInput.value = "";
+        descuentoPopup.classList.remove("oculto");
+        descuentoMontoInput.focus();
+        return;
+      }
       var id = btn.getAttribute("data-id");
-      var existente = carrito.find(function (it) { return it.id === id; });
+      var existente = carrito.find(function (it) { return it.id === id && !it.nota; });
       if (existente) {
         existente.cantidad += 1;
       } else {
         carrito.push({
           id: id,
           nombre: btn.getAttribute("data-nombre"),
-          precio: parseFloat(btn.getAttribute("data-precio") || "0"),
+          precio: precio,
           cantidad: 1,
         });
       }
       renderCarrito();
     });
   });
+
+  var descuentoAgregarBtn = document.getElementById("pos-descuento-agregar");
+  var descuentoCancelarBtn = document.getElementById("pos-descuento-cancelar");
+  if (descuentoAgregarBtn) {
+    descuentoAgregarBtn.addEventListener("click", function () {
+      var monto = parseFloat(descuentoMontoInput.value || "0");
+      var justificativo = descuentoJustificativoInput.value.trim();
+      if (!descuentoProductoPendiente || monto <= 0) {
+        alert("Ingresa un monto de descuento válido.");
+        return;
+      }
+      if (!justificativo) {
+        alert("Indica el justificativo del descuento.");
+        return;
+      }
+      var cantidad = monto / Math.abs(descuentoProductoPendiente.precio);
+      carrito.push({
+        id: descuentoProductoPendiente.id,
+        nombre: descuentoProductoPendiente.nombre,
+        precio: descuentoProductoPendiente.precio,
+        cantidad: cantidad,
+        nota: justificativo,
+      });
+      descuentoPopup.classList.add("oculto");
+      descuentoProductoPendiente = null;
+      renderCarrito();
+    });
+  }
+  if (descuentoCancelarBtn) {
+    descuentoCancelarBtn.addEventListener("click", function () {
+      descuentoPopup.classList.add("oculto");
+      descuentoProductoPendiente = null;
+    });
+  }
 
   itemsBox.addEventListener("click", function (e) {
     var accionBtn = e.target.closest("[data-accion]");

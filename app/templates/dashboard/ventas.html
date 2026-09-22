@@ -155,6 +155,16 @@
             <button type="button" class="pos-tab{{ ' activa' if loop.first else '' }}" data-panel="panel-{{ loop.index }}">{{ categoria }}</button>
             {% endfor %}
           </div>
+          <div class="pos-descuento-popup oculto" id="pos-descuento-popup">
+            <p class="field-label">Monto del descuento (Bs)</p>
+            <input type="number" step="0.01" min="0.01" class="input" id="pos-descuento-monto" />
+            <p class="field-label">Justificativo</p>
+            <input type="text" class="input" id="pos-descuento-justificativo" placeholder="Motivo del descuento" />
+            <div class="order-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="pos-descuento-agregar">Agregar</button>
+              <button type="button" class="btn btn-outline btn-sm" id="pos-descuento-cancelar">Cancelar</button>
+            </div>
+          </div>
           <div class="pos-paneles">
             {% for categoria, items in por_categoria.items() %}
             <div class="pos-panel{{ '' if loop.first else ' oculto' }}" id="panel-{{ loop.index }}">
@@ -214,7 +224,7 @@
               <label class="field-label">Monto pagado (Bs)</label>
               <input name="monto_pagado" type="number" step="0.01" class="input" id="monto-pagado-input" />
             </div>
-            <div>
+            <div id="cambio-wrap">
               <label class="field-label">Cambio</label>
               <p class="cart-total-value" id="cambio-calculado">Bs 0.00</p>
             </div>
@@ -222,6 +232,22 @@
               <label class="field-label">Observación</label>
               <input name="observacion" class="input" />
             </div>
+          </div>
+
+          <button type="button" class="link-muted" id="btn-dividir-pago">+ Dividir pago en 2 métodos</button>
+          <div class="pos-pago-fields oculto" id="pago-dividido-fields">
+            <div>
+              <label class="field-label">Método de pago 2</label>
+              <select name="tipo_pago2" class="input">
+                <option value="">—</option>
+                {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Monto método 2 (Bs)</label>
+              <input name="monto_pagado2" type="number" step="0.01" class="input" />
+            </div>
+            <p class="muted-sm">Los dos montos deben sumar exactamente el total.</p>
           </div>
 
           <div class="order-actions">
@@ -248,7 +274,7 @@
           {% if cobrar_id == o.id %}
           <tr class="editing-row">
             <td colspan="5">
-              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cobrar" class="inline-form">
+              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cobrar" class="inline-form form-cobrar-pendiente">
                 <span class="strong">{{ o.mesa }}</span>
                 <span class="mono">Bs {{ "%.2f"|format(o.total) }}</span>
                 <select name="tipo_pago" required class="input input-w36">
@@ -256,7 +282,15 @@
                   {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
                 </select>
                 <input name="monto_pagado" type="number" step="0.01" placeholder="{{ '%.2f'|format(o.total) }}" class="input input-w24 monto-pagado-pendiente" data-total="{{ o.total }}" />
-                <span class="small muted-inline">Cambio: <span class="strong cambio-pendiente">Bs 0.00</span></span>
+                <span class="small muted-inline cambio-pendiente-wrap">Cambio: <span class="strong cambio-pendiente">Bs 0.00</span></span>
+                <button type="button" class="link-muted btn-dividir-pago-pendiente">+ Dividir pago</button>
+                <span class="pago-dividido-pendiente oculto">
+                  <select name="tipo_pago2" class="input input-w36">
+                    <option value="">Método 2…</option>
+                    {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+                  </select>
+                  <input name="monto_pagado2" type="number" step="0.01" placeholder="Monto método 2" class="input input-w24" />
+                </span>
                 <button type="submit" class="btn btn-primary btn-sm">Confirmar</button>
                 <a href="/dashboard/ventas" class="btn btn-outline btn-sm">Cancelar</a>
               </form>
@@ -344,7 +378,16 @@
             </td>
             <td class="text-right mono small">{{ "-Bs %.2f"|format(descuentos_por_orden.get(o.id, 0)) if descuentos_por_orden.get(o.id, 0) > 0 else "—" }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
-            <td class="uppercase small">{{ o.tipo_pago }}</td>
+            <td class="uppercase small">
+              {% if o.tipo_pago == "MIXTO" %}
+              MIXTO
+              <span class="muted-sm">
+                {% for p in pagos_por_orden.get(o.id, []) %}{{ p.tipo_pago }} Bs {{ "%.2f"|format(p.monto) }}{{ " + " if not loop.last }}{% endfor %}
+              </span>
+              {% else %}
+              {{ o.tipo_pago }}
+              {% endif %}
+            </td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
             <td class="small muted-inline">{{ o.responsable }}</td>
             <td class="text-right">
@@ -466,6 +509,12 @@
     cambioOut.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
   }
 
+  function escapeHtml(texto) {
+    var div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
+  }
+
   function renderCarrito() {
     var subtotal = 0;
     var descuento = 0;
@@ -493,6 +542,19 @@
     }
 
     itemsBox.innerHTML = carrito.map(function (it, i) {
+      if (it.nota) {
+        var notaEscapada = escapeHtml(it.nota);
+        return (
+          '<div class="pos-item-row pos-item-nota" data-idx="' + i + '">' +
+            '<div class="pos-item-nombre">' + it.nombre + '<span class="muted-sm">' + notaEscapada + '</span></div>' +
+            '<div class="pos-item-subtotal">Bs ' + (it.precio * it.cantidad).toFixed(2) + '</div>' +
+            '<button type="button" class="pos-item-quitar" data-accion="quitar">×</button>' +
+            '<input type="hidden" name="cart_producto_id" value="' + it.id + '" />' +
+            '<input type="hidden" name="cart_cantidad" value="' + it.cantidad + '" />' +
+            '<input type="hidden" name="cart_nota" value="' + notaEscapada + '" />' +
+          '</div>'
+        );
+      }
       return (
         '<div class="pos-item-row" data-idx="' + i + '">' +
           '<div class="pos-item-nombre">' + it.nombre + '<span class="muted-sm">Bs ' + it.precio.toFixed(2) + ' c/u</span></div>' +
@@ -505,28 +567,83 @@
           '<button type="button" class="pos-item-quitar" data-accion="quitar">×</button>' +
           '<input type="hidden" name="cart_producto_id" value="' + it.id + '" />' +
           '<input type="hidden" name="cart_cantidad" value="' + it.cantidad + '" />' +
+          '<input type="hidden" name="cart_nota" value="" />' +
         '</div>'
       );
     }).join("");
   }
 
+  // Descuentos (precio negativo, p. ej. "DESCUENTO BS"): se escribe el monto y
+  // el justificativo en vez de sumar de a uno con los botones +/-.
+  var descuentoPopup = document.getElementById("pos-descuento-popup");
+  var descuentoMontoInput = document.getElementById("pos-descuento-monto");
+  var descuentoJustificativoInput = document.getElementById("pos-descuento-justificativo");
+  var descuentoProductoPendiente = null;
+
   document.querySelectorAll(".pos-producto").forEach(function (btn) {
     btn.addEventListener("click", function () {
+      var precio = parseFloat(btn.getAttribute("data-precio") || "0");
+      if (precio < 0 && descuentoPopup) {
+        descuentoProductoPendiente = {
+          id: btn.getAttribute("data-id"),
+          nombre: btn.getAttribute("data-nombre"),
+          precio: precio,
+        };
+        descuentoMontoInput.value = "";
+        descuentoJustificativoInput.value = "";
+        descuentoPopup.classList.remove("oculto");
+        descuentoMontoInput.focus();
+        return;
+      }
       var id = btn.getAttribute("data-id");
-      var existente = carrito.find(function (it) { return it.id === id; });
+      var existente = carrito.find(function (it) { return it.id === id && !it.nota; });
       if (existente) {
         existente.cantidad += 1;
       } else {
         carrito.push({
           id: id,
           nombre: btn.getAttribute("data-nombre"),
-          precio: parseFloat(btn.getAttribute("data-precio") || "0"),
+          precio: precio,
           cantidad: 1,
         });
       }
       renderCarrito();
     });
   });
+
+  var descuentoAgregarBtn = document.getElementById("pos-descuento-agregar");
+  var descuentoCancelarBtn = document.getElementById("pos-descuento-cancelar");
+  if (descuentoAgregarBtn) {
+    descuentoAgregarBtn.addEventListener("click", function () {
+      var monto = parseFloat(descuentoMontoInput.value || "0");
+      var justificativo = descuentoJustificativoInput.value.trim();
+      if (!descuentoProductoPendiente || monto <= 0) {
+        alert("Ingresa un monto de descuento válido.");
+        return;
+      }
+      if (!justificativo) {
+        alert("Indica el justificativo del descuento.");
+        return;
+      }
+      var cantidad = monto / Math.abs(descuentoProductoPendiente.precio);
+      carrito.push({
+        id: descuentoProductoPendiente.id,
+        nombre: descuentoProductoPendiente.nombre,
+        precio: descuentoProductoPendiente.precio,
+        cantidad: cantidad,
+        nota: justificativo,
+      });
+      descuentoPopup.classList.add("oculto");
+      descuentoProductoPendiente = null;
+      renderCarrito();
+    });
+  }
+  if (descuentoCancelarBtn) {
+    descuentoCancelarBtn.addEventListener("click", function () {
+      descuentoPopup.classList.add("oculto");
+      descuentoProductoPendiente = null;
+    });
+  }
 
   itemsBox.addEventListener("click", function (e) {
     var accionBtn = e.target.closest("[data-accion]");
@@ -544,6 +661,22 @@
 
   if (montoPagadoInput) montoPagadoInput.addEventListener("input", recalcularCambio);
 
+  // Dividir el cobro en dos métodos de pago.
+  var btnDividirPago = document.getElementById("btn-dividir-pago");
+  var camposPagoDividido = document.getElementById("pago-dividido-fields");
+  var cambioWrap = document.getElementById("cambio-wrap");
+  if (btnDividirPago && camposPagoDividido) {
+    btnDividirPago.addEventListener("click", function () {
+      var activar = camposPagoDividido.classList.contains("oculto");
+      camposPagoDividido.classList.toggle("oculto", !activar);
+      btnDividirPago.textContent = activar ? "− Quitar división de pago" : "+ Dividir pago en 2 métodos";
+      if (cambioWrap) cambioWrap.classList.toggle("oculto", activar);
+      if (!activar) {
+        camposPagoDividido.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
+      }
+    });
+  }
+
   form.addEventListener("submit", function (e) {
     if (!carrito.length) {
       e.preventDefault();
@@ -559,6 +692,22 @@
       var pagado = parseFloat(input.value || "0");
       var cambio = pagado - total;
       salida.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
+    });
+  });
+
+  // Dividir el pago en la fila "Cobrar" de cuentas pendientes.
+  document.querySelectorAll(".btn-dividir-pago-pendiente").forEach(function (btn) {
+    var campos = btn.parentElement.querySelector(".pago-dividido-pendiente");
+    var cambioWrapPendiente = btn.parentElement.querySelector(".cambio-pendiente-wrap");
+    if (!campos) return;
+    btn.addEventListener("click", function () {
+      var activar = campos.classList.contains("oculto");
+      campos.classList.toggle("oculto", !activar);
+      btn.textContent = activar ? "− Quitar división" : "+ Dividir pago";
+      if (cambioWrapPendiente) cambioWrapPendiente.classList.toggle("oculto", activar);
+      if (!activar) {
+        campos.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
+      }
     });
   });
 

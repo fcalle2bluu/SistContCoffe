@@ -41,8 +41,9 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
     factura quedan fuera a propósito: ese tratamiento lo sigue armando el
     contador a mano."""
     total = await pool().fetchval(
-        "SELECT COALESCE(SUM(total), 0) FROM ordenes "
-        "WHERE turno_id = $1 AND estado = 'cobrada' AND tipo_pago = 'EFECTIVO'",
+        "SELECT COALESCE(SUM(op.monto), 0) FROM orden_pagos op "
+        "JOIN ordenes o ON o.id = op.orden_id "
+        "WHERE o.turno_id = $1 AND o.estado = 'cobrada' AND op.tipo_pago = 'EFECTIVO'",
         turno_id,
     )
     if not total or total <= 0:
@@ -74,9 +75,10 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
     una comisión (1.8%) antes de depositar. Las ventas QR/POS sin factura
     siguen sin tocarse: ese tratamiento lo sigue armando el contador."""
     filas = await pool().fetch(
-        "SELECT tipo_pago, COALESCE(SUM(total), 0) AS total FROM ordenes "
-        "WHERE turno_id = $1 AND estado = 'cobrada' AND tipo_pago = ANY($2::text[]) "
-        "GROUP BY tipo_pago",
+        "SELECT op.tipo_pago, COALESCE(SUM(op.monto), 0) AS total FROM orden_pagos op "
+        "JOIN ordenes o ON o.id = op.orden_id "
+        "WHERE o.turno_id = $1 AND o.estado = 'cobrada' AND op.tipo_pago = ANY($2::text[]) "
+        "GROUP BY op.tipo_pago",
         turno_id,
         ["EFEC/FAC", "QR/FAC"],
     )
@@ -146,10 +148,17 @@ async def _productos_por_categoria() -> dict[str, list]:
     return por_categoria
 
 
-async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: list[str]) -> list[dict]:
+async def _resolver_items_pedido(
+    cart_producto_id: list[str], cart_cantidad: list[str], cart_nota: list[str] | None = None
+) -> tuple[list[dict], str | None]:
+    """Arma el carrito a partir de los ids/cantidades enviados. Los ítems con
+    precio negativo (p. ej. "DESCUENTO BS") son descuentos: cada uno necesita
+    un justificativo (cart_nota) y no se combinan entre sí aunque compartan
+    producto, para no mezclar justificativos distintos."""
+    cart_nota = cart_nota or []
     productos_map = {p["id"]: p for p in await pool().fetch("SELECT id, nombre, precio_venta FROM productos")}
-    cart: dict[int, dict] = {}
-    for pid_txt, cant_txt in zip(cart_producto_id, cart_cantidad):
+    cart: dict[tuple, dict] = {}
+    for i, (pid_txt, cant_txt) in enumerate(zip(cart_producto_id, cart_cantidad)):
         try:
             pid = int(pid_txt)
             cantidad = float(cant_txt)
@@ -158,16 +167,58 @@ async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: lis
         producto = productos_map.get(pid)
         if not producto or cantidad <= 0:
             continue
-        if pid in cart:
-            cart[pid]["cantidad"] += cantidad
+        precio = float(producto["precio_venta"])
+        nota = cart_nota[i].strip() if i < len(cart_nota) else ""
+        if precio < 0 and not nota:
+            return [], "Todo descuento debe indicar un justificativo."
+        nombre = f"{producto['nombre']}: {nota}" if nota else producto["nombre"]
+        key = (pid, nota)
+        if key in cart:
+            cart[key]["cantidad"] += cantidad
         else:
-            cart[pid] = {
+            cart[key] = {
                 "producto_id": pid,
-                "producto_nombre": producto["nombre"],
+                "producto_nombre": nombre,
                 "cantidad": cantidad,
-                "precio_unitario": float(producto["precio_venta"]),
+                "precio_unitario": precio,
             }
-    return list(cart.values())
+    return list(cart.values()), None
+
+
+def _resolver_pagos(
+    tipo_pago: str, monto_pagado: str, tipo_pago2: str, monto_pagado2: str, total: float
+) -> tuple[str, float | None, list[tuple[str, float]], str | None]:
+    """Valida el/los método(s) de pago de un cobro. Si se indica un segundo
+    método, exige que sea distinto del primero y que los dos montos sumen
+    exactamente el total; en ese caso el pago queda marcado como "MIXTO" y
+    se reparte en dos líneas en orden_pagos."""
+    tipo_pago = tipo_pago.strip()
+    tipo_pago2 = tipo_pago2.strip()
+
+    if not tipo_pago2:
+        if tipo_pago not in TIPOS_PAGO:
+            return tipo_pago, None, [], "Elige un método de pago válido."
+        return tipo_pago, (round(float(monto_pagado), 2) if monto_pagado else None), [(tipo_pago, round(total, 2))], None
+
+    if tipo_pago not in TIPOS_PAGO or tipo_pago2 not in TIPOS_PAGO:
+        return tipo_pago, None, [], "Elige métodos de pago válidos para dividir el cobro."
+    if tipo_pago2 == tipo_pago:
+        return tipo_pago, None, [], "Para dividir el pago, elige dos métodos distintos."
+    try:
+        monto1 = round(float(monto_pagado), 2) if monto_pagado else 0.0
+        monto2 = round(float(monto_pagado2), 2) if monto_pagado2 else 0.0
+    except ValueError:
+        return tipo_pago, None, [], "Ingresa montos válidos para el pago dividido."
+    if monto1 <= 0 or monto2 <= 0:
+        return tipo_pago, None, [], "Ambos montos del pago dividido deben ser mayores a 0."
+    if round(monto1 + monto2, 2) != round(total, 2):
+        return (
+            tipo_pago,
+            None,
+            [],
+            f"La suma de los dos montos (Bs {monto1 + monto2:.2f}) debe ser igual al total (Bs {total:.2f}).",
+        )
+    return "MIXTO", round(total, 2), [(tipo_pago, monto1), (tipo_pago2, monto2)], None
 
 
 async def _ventas_context(
@@ -188,6 +239,8 @@ async def _ventas_context(
 
     ordenes_abiertas, ordenes_cobradas, egresos_efectivo, egresos_totales = [], [], 0.0, 0.0
     items_por_orden: dict[int, list] = {}
+    pagos_por_orden: dict[int, list] = {}
+    ingresos_efectivo = 0.0
     egresos_lista: list = []
     if turno:
         ordenes_abiertas = await pool().fetch(
@@ -208,6 +261,16 @@ async def _ventas_context(
             )
             for r in item_rows:
                 items_por_orden.setdefault(r["orden_id"], []).append(r)
+
+            pago_rows = await pool().fetch(
+                "SELECT orden_id, tipo_pago, monto FROM orden_pagos WHERE orden_id = ANY($1::int[]) ORDER BY id",
+                [o["id"] for o in ordenes_cobradas],
+            )
+            for r in pago_rows:
+                pagos_por_orden.setdefault(r["orden_id"], []).append(r)
+            ingresos_efectivo = sum(
+                float(r["monto"]) for r in pago_rows if r["tipo_pago"] in PAGOS_EFECTIVO
+            )
         movimientos = await pool().fetch(
             "SELECT id, monto, tipo_pago, motivo, responsable, creado_en FROM movimientos_caja "
             "WHERE turno_id = $1 AND tipo = 'egreso' ORDER BY creado_en DESC",
@@ -217,7 +280,6 @@ async def _ventas_context(
         egresos_efectivo = sum(float(m["monto"]) for m in movimientos if m["tipo_pago"] in PAGOS_EFECTIVO)
         egresos_lista = movimientos
 
-    ingresos_efectivo = sum(float(o["total"]) for o in ordenes_cobradas if o["tipo_pago"] in PAGOS_EFECTIVO)
     ventas_totales = sum(float(o["total"]) for o in ordenes_cobradas)
 
     por_categoria: dict[str, list] = {}
@@ -227,11 +289,12 @@ async def _ventas_context(
     descuentos_por_orden = {oid: _calcular_descuento(items) for oid, items in items_por_orden.items()}
 
     resumen_pagos: dict[str, dict] = {t: {"cantidad": 0, "monto": 0.0} for t in TIPOS_PAGO}
-    for o in ordenes_cobradas:
-        tipo = o["tipo_pago"] or "—"
-        fila = resumen_pagos.setdefault(tipo, {"cantidad": 0, "monto": 0.0})
-        fila["cantidad"] += 1
-        fila["monto"] += float(o["total"])
+    for oid, pagos in pagos_por_orden.items():
+        for p in pagos:
+            tipo = p["tipo_pago"] or "—"
+            fila = resumen_pagos.setdefault(tipo, {"cantidad": 0, "monto": 0.0})
+            fila["cantidad"] += 1
+            fila["monto"] += float(p["monto"])
     resumen_pagos = {t: v for t, v in resumen_pagos.items() if v["cantidad"] > 0}
 
     return {
@@ -245,6 +308,7 @@ async def _ventas_context(
         "ordenes_abiertas": ordenes_abiertas,
         "ordenes_cobradas": ordenes_cobradas,
         "items_por_orden": items_por_orden,
+        "pagos_por_orden": pagos_por_orden,
         "descuentos_por_orden": descuentos_por_orden,
         "egresos_lista": egresos_lista,
         "ingresos_efectivo": ingresos_efectivo,
@@ -297,29 +361,39 @@ async def crear_orden(
     accion: str = Form("pendiente"),
     tipo_pago: str = Form(""),
     monto_pagado: str = Form(""),
+    tipo_pago2: str = Form(""),
+    monto_pagado2: str = Form(""),
     observacion: str = Form(""),
     cart_producto_id: list[str] = Form([]),
     cart_cantidad: list[str] = Form([]),
+    cart_nota: list[str] = Form([]),
 ):
     mesa = mesa.strip()
-    cart = await _resolver_items_pedido(cart_producto_id, cart_cantidad)
+    cart, cart_error = await _resolver_items_pedido(cart_producto_id, cart_cantidad, cart_nota)
+    cobrando = accion == "cobrar"
+    total = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
 
     error = None
+    pagos: list[tuple[str, float]] = []
+    tipo_pago_final = None
+    monto_pagado_final = None
     if not turno_id:
         error = "No hay un turno abierto."
     elif not mesa:
         error = "Indica la mesa o referencia del pedido."
+    elif cart_error:
+        error = cart_error
     elif not cart:
         error = "Agrega al menos un producto."
-    elif accion == "cobrar" and not tipo_pago.strip():
-        error = "Elige el método de pago para cobrar."
+    elif cobrando:
+        tipo_pago_final, monto_pagado_final, pagos, error = _resolver_pagos(
+            tipo_pago, monto_pagado, tipo_pago2, monto_pagado2, total
+        )
 
     if error:
         ctx = await _ventas_context(session, error=error, mesa_seleccionada=mesa)
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
-    total = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
-    cobrando = accion == "cobrar"
     ahora = datetime.now(timezone.utc) if cobrando else None
 
     async with pool().acquire() as conn:
@@ -332,8 +406,8 @@ async def crear_orden(
                 int(turno_id),
                 mesa,
                 "cobrada" if cobrando else "abierta",
-                tipo_pago.strip() if cobrando else None,
-                float(monto_pagado) if cobrando and monto_pagado else None,
+                tipo_pago_final,
+                monto_pagado_final,
                 session["nombre"],
                 observacion.strip() or None,
                 total,
@@ -351,30 +425,58 @@ async def crear_orden(
                     it["cantidad"],
                     it["precio_unitario"],
                 )
+            for pago_tipo, pago_monto in pagos:
+                await conn.execute(
+                    "INSERT INTO orden_pagos (orden_id, tipo_pago, monto) VALUES ($1, $2, $3)",
+                    orden_id, pago_tipo, pago_monto,
+                )
 
-    accion = "Cobró venta" if cobrando else "Creó pedido"
-    detalle = f"Mesa {mesa}, total Bs {total:.2f}" + (f", {tipo_pago.strip()}" if cobrando else "")
-    await bitacora.registrar(session, accion, detalle)
+    accion_texto = "Cobró venta" if cobrando else "Creó pedido"
+    detalle_pago = " + ".join(f"{t} Bs {m:.2f}" for t, m in pagos) if cobrando else ""
+    detalle = f"Mesa {mesa}, total Bs {total:.2f}" + (f", {detalle_pago}" if cobrando else "")
+    await bitacora.registrar(session, accion_texto, detalle)
 
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
 @router.post("/ordenes/{orden_id}/cobrar")
 async def cobrar_orden_pendiente(
+    request: Request,
     orden_id: int,
     session: dict = Depends(require_session),
     tipo_pago: str = Form(""),
     monto_pagado: str = Form(""),
+    tipo_pago2: str = Form(""),
+    monto_pagado2: str = Form(""),
 ):
-    if tipo_pago.strip():
-        await pool().execute(
-            "UPDATE ordenes SET estado = 'cobrada', tipo_pago = $1, monto_pagado = $2, cobrado_en = now() "
-            "WHERE id = $3 AND estado = 'abierta'",
-            tipo_pago.strip(),
-            float(monto_pagado) if monto_pagado else None,
-            orden_id,
-        )
-        await bitacora.registrar(session, "Cobró venta pendiente", f"Orden #{orden_id}, {tipo_pago.strip()}")
+    orden = await pool().fetchrow("SELECT total FROM ordenes WHERE id = $1 AND estado = 'abierta'", orden_id)
+    if not orden:
+        return RedirectResponse("/dashboard/ventas", status_code=303)
+
+    tipo_pago_final, monto_pagado_final, pagos, error = _resolver_pagos(
+        tipo_pago, monto_pagado, tipo_pago2, monto_pagado2, float(orden["total"])
+    )
+    if error:
+        ctx = await _ventas_context(session, error=error)
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "UPDATE ordenes SET estado = 'cobrada', tipo_pago = $1, monto_pagado = $2, cobrado_en = now() "
+                "WHERE id = $3 AND estado = 'abierta'",
+                tipo_pago_final,
+                monto_pagado_final,
+                orden_id,
+            )
+            for pago_tipo, pago_monto in pagos:
+                await conn.execute(
+                    "INSERT INTO orden_pagos (orden_id, tipo_pago, monto) VALUES ($1, $2, $3)",
+                    orden_id, pago_tipo, pago_monto,
+                )
+
+    detalle_pago = " + ".join(f"{t} Bs {m:.2f}" for t, m in pagos)
+    await bitacora.registrar(session, "Cobró venta pendiente", f"Orden #{orden_id}, {detalle_pago}")
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
@@ -463,13 +565,14 @@ async def editar_items_orden(
     session: dict = Depends(require_session),
     cart_producto_id: list[str] = Form([]),
     cart_cantidad: list[str] = Form([]),
+    cart_nota: list[str] = Form([]),
 ):
     orden = await pool().fetchrow("SELECT total, mesa, estado FROM ordenes WHERE id = $1", orden_id)
     if not orden or orden["estado"] not in ("abierta", "cobrada"):
         return RedirectResponse("/dashboard/ventas", status_code=303)
 
-    cart = await _resolver_items_pedido(cart_producto_id, cart_cantidad)
-    if not cart:
+    cart, cart_error = await _resolver_items_pedido(cart_producto_id, cart_cantidad, cart_nota)
+    if cart_error or not cart:
         return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
 
     agregado = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
