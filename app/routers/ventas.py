@@ -138,14 +138,6 @@ def _calcular_descuento(items) -> float:
     )
 
 
-async def _productos_por_categoria() -> dict[str, list]:
-    productos = await pool().fetch("SELECT id, nombre, categoria, precio_venta FROM productos ORDER BY categoria, nombre")
-    por_categoria: dict[str, list] = {}
-    for p in productos:
-        por_categoria.setdefault(p["categoria"], []).append(p)
-    return por_categoria
-
-
 async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: list[str]) -> list[dict]:
     productos_map = {p["id"]: p for p in await pool().fetch("SELECT id, nombre, precio_venta FROM productos")}
     cart: dict[int, dict] = {}
@@ -174,7 +166,6 @@ async def _ventas_context(
     session: dict,
     cobrar_id: int | None = None,
     descuento_id: int | None = None,
-    editar_venta_id: int | None = None,
     editar_egreso_id: int | None = None,
     error: str | None = None,
     mesa_seleccionada: str | None = None,
@@ -197,7 +188,7 @@ async def _ventas_context(
             turno["id"],
         )
         ordenes_cobradas = await pool().fetch(
-            "SELECT id, mesa, total, tipo_pago, monto_pagado, observacion, responsable, cobrado_en FROM ordenes "
+            "SELECT id, mesa, total, tipo_pago, responsable, cobrado_en FROM ordenes "
             "WHERE turno_id = $1 AND estado = 'cobrada' ORDER BY cobrado_en DESC",
             turno["id"],
         )
@@ -256,7 +247,6 @@ async def _ventas_context(
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
         "descuento_id": descuento_id,
-        "editar_venta_id": editar_venta_id,
         "editar_egreso_id": editar_egreso_id,
         "tipos_pago": TIPOS_PAGO,
         "denominaciones": DENOMINACIONES,
@@ -270,12 +260,9 @@ async def ventas_page(
     session: dict = Depends(require_session),
     cobrar: int | None = None,
     descuento: int | None = None,
-    editar_venta: int | None = None,
     editar_egreso: int | None = None,
 ):
-    ctx = await _ventas_context(
-        session, cobrar_id=cobrar, descuento_id=descuento, editar_venta_id=editar_venta, editar_egreso_id=editar_egreso
-    )
+    ctx = await _ventas_context(session, cobrar_id=cobrar, descuento_id=descuento, editar_egreso_id=editar_egreso)
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
 
@@ -430,114 +417,6 @@ async def aplicar_descuento_orden(
         "Aplicó descuento a venta",
         f"Orden #{orden_id} (mesa {orden['mesa']}): Bs {total_actual:.2f} → Bs {nuevo_precio_num:.2f} "
         f"(-Bs {monto_descuento:.2f}), motivo: {justificativo}",
-    )
-    return RedirectResponse("/dashboard/ventas", status_code=303)
-
-
-@router.post("/ordenes/{orden_id}/editar")
-async def editar_orden_cobrada(
-    request: Request,
-    orden_id: int,
-    session: dict = Depends(require_session),
-    mesa: str = Form(""),
-    tipo_pago: str = Form(""),
-    monto_pagado: str = Form(""),
-    observacion: str = Form(""),
-):
-    mesa = mesa.strip()
-    tipo_pago = tipo_pago.strip()
-    observacion = observacion.strip()
-
-    error = None
-    if not mesa:
-        error = "Indica la mesa o referencia."
-    elif tipo_pago not in TIPOS_PAGO:
-        error = "Elige un método de pago válido."
-
-    if error:
-        ctx = await _ventas_context(session, error=error)
-        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
-
-    await pool().execute(
-        "UPDATE ordenes SET mesa = $1, tipo_pago = $2, monto_pagado = $3, observacion = $4 "
-        "WHERE id = $5 AND estado = 'cobrada'",
-        mesa,
-        tipo_pago,
-        float(monto_pagado) if monto_pagado else None,
-        observacion or None,
-        orden_id,
-    )
-    await bitacora.registrar(session, "Editó venta cobrada", f"Orden #{orden_id}: mesa {mesa}, {tipo_pago}")
-    return RedirectResponse("/dashboard/ventas", status_code=303)
-
-
-@router.get("/ordenes/{orden_id}/items", response_class=HTMLResponse)
-async def editar_items_orden_form(request: Request, orden_id: int, session: dict = Depends(require_session)):
-    orden = await pool().fetchrow(
-        "SELECT id, mesa, estado, total, tipo_pago, responsable, creado_en, cobrado_en FROM ordenes WHERE id = $1",
-        orden_id,
-    )
-    if not orden or orden["estado"] not in ("abierta", "cobrada"):
-        return RedirectResponse("/dashboard/ventas", status_code=303)
-
-    items = await pool().fetch(
-        "SELECT producto_nombre, cantidad, precio_unitario FROM orden_items WHERE orden_id = $1 ORDER BY id",
-        orden_id,
-    )
-    por_categoria = await _productos_por_categoria()
-
-    return templates.TemplateResponse(
-        request,
-        "dashboard/orden_items.html",
-        {
-            "session": session,
-            "active": "ventas",
-            "orden": orden,
-            "items": items,
-            "por_categoria": por_categoria,
-        },
-    )
-
-
-@router.post("/ordenes/{orden_id}/items")
-async def editar_items_orden(
-    orden_id: int,
-    session: dict = Depends(require_session),
-    cart_producto_id: list[str] = Form([]),
-    cart_cantidad: list[str] = Form([]),
-):
-    orden = await pool().fetchrow("SELECT total, mesa, estado FROM ordenes WHERE id = $1", orden_id)
-    if not orden or orden["estado"] not in ("abierta", "cobrada"):
-        return RedirectResponse("/dashboard/ventas", status_code=303)
-
-    cart = await _resolver_items_pedido(cart_producto_id, cart_cantidad)
-    if not cart:
-        return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
-
-    agregado = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
-    async with pool().acquire() as conn:
-        async with conn.transaction():
-            for it in cart:
-                await conn.execute(
-                    """
-                    INSERT INTO orden_items (orden_id, producto_id, producto_nombre, cantidad, precio_unitario)
-                    VALUES ($1, $2, $3, $4, $5)
-                    """,
-                    orden_id,
-                    it["producto_id"],
-                    it["producto_nombre"],
-                    it["cantidad"],
-                    it["precio_unitario"],
-                )
-            await conn.execute(
-                "UPDATE ordenes SET total = total + $1 WHERE id = $2", agregado, orden_id
-            )
-
-    detalle_items = ", ".join(f"{it['cantidad']:g}x {it['producto_nombre']}" for it in cart)
-    await bitacora.registrar(
-        session,
-        "Agregó productos a un pedido",
-        f"Orden #{orden_id} (mesa {orden['mesa']}): +Bs {agregado:.2f} ({detalle_items})",
     )
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
