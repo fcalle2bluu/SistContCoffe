@@ -7,7 +7,6 @@ import os
 from fastapi import Response
 
 COOKIE_NAME = "yanaloma_session"
-MAX_AGE = 60 * 60 * 12  # 12 horas, un turno largo
 
 
 def _secret() -> bytes:
@@ -54,7 +53,6 @@ def set_session_cookie(response: Response, user: dict) -> None:
     response.set_cookie(
         COOKIE_NAME,
         encode_session(user),
-        max_age=MAX_AGE,
         httponly=True,
         samesite="lax",
         secure=os.environ.get("ENV") == "production",
