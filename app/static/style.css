@@ -370,6 +370,7 @@ a { color: inherit; }
 .pos-item-quitar { background: none; border: none; color: var(--red); font-size: 18px; font-weight: 700; cursor: pointer; line-height: 1; padding: 0 4px; }
 .pos-item-quitar:hover { color: #b91c1c; }
 .pos-pago-fields { display: flex; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+.pos-pago-fields.oculto { display: none; }
 .pos-pago-fields > div { flex: 1; min-width: 130px; }
 .pos-item-row.pos-item-nota { grid-template-columns: 1fr auto auto; }
 .pos-descuento-popup {

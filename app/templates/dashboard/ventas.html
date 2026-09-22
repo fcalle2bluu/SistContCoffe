@@ -684,13 +684,11 @@
   // Dividir el cobro en dos métodos de pago.
   var btnDividirPago = document.getElementById("btn-dividir-pago");
   var camposPagoDividido = document.getElementById("pago-dividido-fields");
-  var cambioWrap = document.getElementById("cambio-wrap");
   if (btnDividirPago && camposPagoDividido) {
     btnDividirPago.addEventListener("click", function () {
       var activar = camposPagoDividido.classList.contains("oculto");
       camposPagoDividido.classList.toggle("oculto", !activar);
       btnDividirPago.textContent = activar ? "− Quitar división de pago" : "+ Dividir pago en 2 métodos";
-      if (cambioWrap) cambioWrap.classList.toggle("oculto", activar);
       if (!activar) {
         camposPagoDividido.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
         if (typeof actualizarCamposFactura === "function") actualizarCamposFactura();
@@ -758,13 +756,11 @@
 
     var btn = formPendiente.querySelector(".btn-dividir-pago-pendiente");
     var campos = formPendiente.querySelector(".pago-dividido-pendiente");
-    var cambioWrapPendiente = formPendiente.querySelector(".cambio-pendiente-wrap");
     if (!btn || !campos) return;
     btn.addEventListener("click", function () {
       var activar = campos.classList.contains("oculto");
       campos.classList.toggle("oculto", !activar);
       btn.textContent = activar ? "− Quitar división" : "+ Dividir pago";
-      if (cambioWrapPendiente) cambioWrapPendiente.classList.toggle("oculto", activar);
       if (!activar) {
         campos.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
         actualizarFacturaPendiente();
