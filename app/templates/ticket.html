@@ -10,7 +10,7 @@
     body {
       font-family: "SFMono-Regular", Consolas, monospace;
       width: 320px;
-      margin: 24px auto;
+      margin: 0 auto;
       padding: 16px;
       color: #111;
       font-size: 13px;
@@ -35,7 +35,7 @@
     }
     @media print {
       .no-print { display: none; }
-      body { width: 100%; margin: 0; padding: 8px; }
+      body { width: 100%; margin: 0; }
     }
   </style>
 </head>
@@ -79,9 +79,9 @@
   <button class="btn-print no-print" onclick="window.print()">Imprimir</button>
   <script>
     window.onload = function () {
-      var boton = document.querySelector(".btn-print");
-      var alturaBoton = boton ? boton.offsetHeight + 16 : 0;
-      var alturaMm = ((document.body.scrollHeight - alturaBoton) * 25.4 / 96) + 4;
+      var total = document.querySelector(".total-final");
+      var alturaPx = total.getBoundingClientRect().bottom + 16;
+      var alturaMm = alturaPx * 25.4 / 96;
       var estilo = document.createElement("style");
       estilo.textContent = "@page { size: 80mm " + alturaMm.toFixed(1) + "mm; margin: 0; }";
       document.head.appendChild(estilo);
