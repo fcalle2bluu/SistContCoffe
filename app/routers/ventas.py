@@ -213,6 +213,14 @@ async def _ventas_context(
 
     descuentos_por_orden = {oid: _calcular_descuento(items) for oid, items in items_por_orden.items()}
 
+    resumen_pagos: dict[str, dict] = {t: {"cantidad": 0, "monto": 0.0} for t in TIPOS_PAGO}
+    for o in ordenes_cobradas:
+        tipo = o["tipo_pago"] or "—"
+        fila = resumen_pagos.setdefault(tipo, {"cantidad": 0, "monto": 0.0})
+        fila["cantidad"] += 1
+        fila["monto"] += float(o["total"])
+    resumen_pagos = {t: v for t, v in resumen_pagos.items() if v["cantidad"] > 0}
+
     return {
         "session": session,
         "active": "ventas",
@@ -230,6 +238,7 @@ async def _ventas_context(
         "egresos_efectivo": egresos_efectivo,
         "egresos_totales": egresos_totales,
         "ventas_totales": ventas_totales,
+        "resumen_pagos": resumen_pagos,
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
         "tipos_pago": TIPOS_PAGO,
