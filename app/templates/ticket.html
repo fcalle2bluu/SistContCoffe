@@ -29,9 +29,13 @@
       display: block; width: 100%; margin-top: 16px; padding: 10px;
       font-size: 13px; cursor: pointer; border: 1px solid #111; background: #fff;
     }
+    @page {
+      size: 80mm 200mm;
+      margin: 0;
+    }
     @media print {
       .no-print { display: none; }
-      body { width: auto; margin: 0; }
+      body { width: 100%; margin: 0; padding: 8px; }
     }
   </style>
 </head>
@@ -74,7 +78,15 @@
   <p class="total-final">TOTAL: {{ orden.total|bs }} Bs</p>
   <button class="btn-print no-print" onclick="window.print()">Imprimir</button>
   <script>
-    window.onload = function () { window.print(); };
+    window.onload = function () {
+      var boton = document.querySelector(".btn-print");
+      var alturaBoton = boton ? boton.offsetHeight + 16 : 0;
+      var alturaMm = ((document.body.scrollHeight - alturaBoton) * 25.4 / 96) + 4;
+      var estilo = document.createElement("style");
+      estilo.textContent = "@page { size: 80mm " + alturaMm.toFixed(1) + "mm; margin: 0; }";
+      document.head.appendChild(estilo);
+      window.print();
+    };
   </script>
 </body>
 </html>
