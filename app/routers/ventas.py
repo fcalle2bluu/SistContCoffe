@@ -166,6 +166,8 @@ async def _ventas_context(
     session: dict,
     cobrar_id: int | None = None,
     descuento_id: int | None = None,
+    editar_venta_id: int | None = None,
+    editar_egreso_id: int | None = None,
     error: str | None = None,
     mesa_seleccionada: str | None = None,
 ) -> dict:
@@ -187,7 +189,7 @@ async def _ventas_context(
             turno["id"],
         )
         ordenes_cobradas = await pool().fetch(
-            "SELECT id, mesa, total, tipo_pago, responsable, cobrado_en FROM ordenes "
+            "SELECT id, mesa, total, tipo_pago, monto_pagado, observacion, responsable, cobrado_en FROM ordenes "
             "WHERE turno_id = $1 AND estado = 'cobrada' ORDER BY cobrado_en DESC",
             turno["id"],
         )
@@ -246,6 +248,8 @@ async def _ventas_context(
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
         "descuento_id": descuento_id,
+        "editar_venta_id": editar_venta_id,
+        "editar_egreso_id": editar_egreso_id,
         "tipos_pago": TIPOS_PAGO,
         "denominaciones": DENOMINACIONES,
         "error": error,
@@ -258,8 +262,12 @@ async def ventas_page(
     session: dict = Depends(require_session),
     cobrar: int | None = None,
     descuento: int | None = None,
+    editar_venta: int | None = None,
+    editar_egreso: int | None = None,
 ):
-    ctx = await _ventas_context(session, cobrar_id=cobrar, descuento_id=descuento)
+    ctx = await _ventas_context(
+        session, cobrar_id=cobrar, descuento_id=descuento, editar_venta_id=editar_venta, editar_egreso_id=editar_egreso
+    )
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
 
@@ -415,6 +423,43 @@ async def aplicar_descuento_orden(
         f"Orden #{orden_id} (mesa {orden['mesa']}): Bs {total_actual:.2f} → Bs {nuevo_precio_num:.2f} "
         f"(-Bs {monto_descuento:.2f}), motivo: {justificativo}",
     )
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
+@router.post("/ordenes/{orden_id}/editar")
+async def editar_orden_cobrada(
+    request: Request,
+    orden_id: int,
+    session: dict = Depends(require_session),
+    mesa: str = Form(""),
+    tipo_pago: str = Form(""),
+    monto_pagado: str = Form(""),
+    observacion: str = Form(""),
+):
+    mesa = mesa.strip()
+    tipo_pago = tipo_pago.strip()
+    observacion = observacion.strip()
+
+    error = None
+    if not mesa:
+        error = "Indica la mesa o referencia."
+    elif tipo_pago not in TIPOS_PAGO:
+        error = "Elige un método de pago válido."
+
+    if error:
+        ctx = await _ventas_context(session, error=error)
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    await pool().execute(
+        "UPDATE ordenes SET mesa = $1, tipo_pago = $2, monto_pagado = $3, observacion = $4 "
+        "WHERE id = $5 AND estado = 'cobrada'",
+        mesa,
+        tipo_pago,
+        float(monto_pagado) if monto_pagado else None,
+        observacion or None,
+        orden_id,
+    )
+    await bitacora.registrar(session, "Editó venta cobrada", f"Orden #{orden_id}: mesa {mesa}, {tipo_pago}")
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
@@ -584,4 +629,46 @@ async def registrar_movimiento_caja(
         tipo_pago,
     )
     await bitacora.registrar(session, "Registró egreso de caja", f"Bs {monto_num:.2f} — {motivo}")
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
+@router.post("/movimientos/{movimiento_id}/editar", response_class=HTMLResponse)
+async def editar_movimiento_caja(
+    request: Request,
+    movimiento_id: int,
+    session: dict = Depends(require_session),
+    monto: str = Form(""),
+    motivo: str = Form(""),
+    tipo_pago: str = Form(""),
+):
+    motivo = motivo.strip()
+    tipo_pago = tipo_pago.strip()
+    try:
+        monto_num = float(monto)
+    except ValueError:
+        monto_num = 0
+
+    if monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO:
+        ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0).")
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    await pool().execute(
+        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3 WHERE id = $4",
+        monto_num,
+        motivo,
+        tipo_pago,
+        movimiento_id,
+    )
+    await bitacora.registrar(session, "Editó egreso de caja", f"Movimiento #{movimiento_id}: Bs {monto_num:.2f} — {motivo}")
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
+@router.post("/movimientos/{movimiento_id}/eliminar")
+async def eliminar_movimiento_caja(movimiento_id: int, session: dict = Depends(require_session)):
+    movimiento = await pool().fetchrow("SELECT motivo, monto FROM movimientos_caja WHERE id = $1", movimiento_id)
+    if movimiento:
+        await pool().execute("DELETE FROM movimientos_caja WHERE id = $1", movimiento_id)
+        await bitacora.registrar(
+            session, "Eliminó egreso de caja", f"Movimiento #{movimiento_id}, Bs {movimiento['monto']:.2f} — {movimiento['motivo']}"
+        )
     return RedirectResponse("/dashboard/ventas", status_code=303)
