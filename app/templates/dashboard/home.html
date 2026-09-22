@@ -52,8 +52,9 @@
 
   <div class="card" id="detalle-card">
     <h3 class="card-title" id="detalle-titulo">Detalle de productos</h3>
-    <div id="detalle-lista">
-      <p class="muted-sm">Haz clic en una barra, punto o segmento de cualquier gráfico para ver el detalle aquí.</p>
+    <p class="muted-sm" id="detalle-vacio">Haz clic en una barra, punto o segmento de cualquier gráfico para ver el detalle aquí.</p>
+    <div class="chart-wrap oculto" id="detalle-chart-wrap">
+      <canvas id="chartDetalle"></canvas>
     </div>
   </div>
 </div>
@@ -73,20 +74,43 @@
 
   function mostrarDetalle(titulo, items) {
     document.getElementById("detalle-titulo").textContent = titulo;
-    var cont = document.getElementById("detalle-lista");
+    var vacio = document.getElementById("detalle-vacio");
+    var wrap = document.getElementById("detalle-chart-wrap");
+
     if (!items || items.length === 0) {
-      cont.innerHTML = '<p class="muted-sm">No hay ventas registradas en este punto.</p>';
+      wrap.classList.add("oculto");
+      vacio.textContent = "No hay ventas registradas en este punto.";
+      vacio.classList.remove("oculto");
       return;
     }
-    var filas = items.map(function (it) {
-      return (
-        '<div class="detalle-fila">' +
-        '<span class="detalle-nombre">' + it.nombre + '</span>' +
-        '<span class="detalle-cifras">' + it.cantidad + ' unid. · ' + formatoBs(it.monto) + '</span>' +
-        "</div>"
-      );
+
+    vacio.classList.add("oculto");
+    wrap.classList.remove("oculto");
+    wrap.style.height = Math.max(120, Math.min(items.length * 32, 520)) + "px";
+
+    crearOActualizar("chartDetalle", {
+      type: "bar",
+      data: {
+        labels: items.map(function (it) { return it.nombre; }),
+        datasets: [{ label: "Monto (Bs)", data: items.map(function (it) { return it.monto; }), backgroundColor: "#d97706", borderRadius: 6 }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var it = items[ctx.dataIndex];
+                return it.cantidad + " unid. · " + formatoBs(it.monto);
+              },
+            },
+          },
+        },
+      },
     });
-    cont.innerHTML = '<div class="detalle-lista-wrap">' + filas.join("") + "</div>";
   }
 
   async function verDetalleTiempo(clave) {
