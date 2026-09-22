@@ -138,6 +138,14 @@ def _calcular_descuento(items) -> float:
     )
 
 
+async def _productos_por_categoria() -> dict[str, list]:
+    productos = await pool().fetch("SELECT id, nombre, categoria, precio_venta FROM productos ORDER BY categoria, nombre")
+    por_categoria: dict[str, list] = {}
+    for p in productos:
+        por_categoria.setdefault(p["categoria"], []).append(p)
+    return por_categoria
+
+
 async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: list[str]) -> list[dict]:
     productos_map = {p["id"]: p for p in await pool().fetch("SELECT id, nombre, precio_venta FROM productos")}
     cart: dict[int, dict] = {}
@@ -460,6 +468,77 @@ async def editar_orden_cobrada(
         orden_id,
     )
     await bitacora.registrar(session, "Editó venta cobrada", f"Orden #{orden_id}: mesa {mesa}, {tipo_pago}")
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
+@router.get("/ordenes/{orden_id}/items", response_class=HTMLResponse)
+async def editar_items_orden_form(request: Request, orden_id: int, session: dict = Depends(require_session)):
+    orden = await pool().fetchrow(
+        "SELECT id, mesa, estado, total, tipo_pago, responsable, creado_en, cobrado_en FROM ordenes WHERE id = $1",
+        orden_id,
+    )
+    if not orden or orden["estado"] not in ("abierta", "cobrada"):
+        return RedirectResponse("/dashboard/ventas", status_code=303)
+
+    items = await pool().fetch(
+        "SELECT producto_nombre, cantidad, precio_unitario FROM orden_items WHERE orden_id = $1 ORDER BY id",
+        orden_id,
+    )
+    por_categoria = await _productos_por_categoria()
+
+    return templates.TemplateResponse(
+        request,
+        "dashboard/orden_items.html",
+        {
+            "session": session,
+            "active": "ventas",
+            "orden": orden,
+            "items": items,
+            "por_categoria": por_categoria,
+        },
+    )
+
+
+@router.post("/ordenes/{orden_id}/items")
+async def editar_items_orden(
+    orden_id: int,
+    session: dict = Depends(require_session),
+    cart_producto_id: list[str] = Form([]),
+    cart_cantidad: list[str] = Form([]),
+):
+    orden = await pool().fetchrow("SELECT total, mesa, estado FROM ordenes WHERE id = $1", orden_id)
+    if not orden or orden["estado"] not in ("abierta", "cobrada"):
+        return RedirectResponse("/dashboard/ventas", status_code=303)
+
+    cart = await _resolver_items_pedido(cart_producto_id, cart_cantidad)
+    if not cart:
+        return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
+
+    agregado = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            for it in cart:
+                await conn.execute(
+                    """
+                    INSERT INTO orden_items (orden_id, producto_id, producto_nombre, cantidad, precio_unitario)
+                    VALUES ($1, $2, $3, $4, $5)
+                    """,
+                    orden_id,
+                    it["producto_id"],
+                    it["producto_nombre"],
+                    it["cantidad"],
+                    it["precio_unitario"],
+                )
+            await conn.execute(
+                "UPDATE ordenes SET total = total + $1 WHERE id = $2", agregado, orden_id
+            )
+
+    detalle_items = ", ".join(f"{it['cantidad']:g}x {it['producto_nombre']}" for it in cart)
+    await bitacora.registrar(
+        session,
+        "Agregó productos a un pedido",
+        f"Orden #{orden_id} (mesa {orden['mesa']}): +Bs {agregado:.2f} ({detalle_items})",
+    )
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 

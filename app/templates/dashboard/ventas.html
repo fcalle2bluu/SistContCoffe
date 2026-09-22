@@ -290,6 +290,7 @@
             <td class="text-right">
               <div class="row-actions">
                 <a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a>
+                <a href="/dashboard/ventas/ordenes/{{ o.id }}/items" class="link-muted">+ Productos</a>
                 <a href="/dashboard/ventas?cobrar={{ o.id }}" class="link-muted">Cobrar</a>
                 <a href="/dashboard/ventas?descuento={{ o.id }}" class="link-muted">Descuento</a>
                 <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cancelar" hx-confirm="¿Cancelar el pedido de &quot;{{ o.mesa }}&quot;?">
@@ -377,6 +378,7 @@
               <div class="row-actions">
                 <a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a>
                 <a href="/dashboard/ventas?editar_venta={{ o.id }}#ventas-cobradas" class="link-muted">Editar</a>
+                <a href="/dashboard/ventas/ordenes/{{ o.id }}/items" class="link-muted">+ Productos</a>
                 <a href="/dashboard/ventas?descuento={{ o.id }}#ventas-cobradas" class="link-muted">Descuento</a>
                 <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/eliminar"
                   onsubmit="return confirm('¿Eliminar esta venta? Esta acción no se puede deshacer.');">
