@@ -72,7 +72,7 @@
         </form>
       </details>
 
-      <details class="disclosure">
+      <details class="disclosure" id="disclosure-cerrar-turno">
         <summary class="btn btn-primary">Cerrar turno</summary>
         <div class="disclosure-content stack-4">
           {% if resumen_pagos %}
@@ -133,6 +133,7 @@
 
             <div class="order-actions">
               <button type="submit" class="btn btn-primary">Confirmar cierre</button>
+              <button type="button" class="btn btn-outline" id="btn-cancelar-cierre">Cancelar</button>
             </div>
           </form>
         </div>
@@ -508,6 +509,16 @@
 
     formArqueo.addEventListener("input", recalcularArqueo);
     recalcularArqueo();
+
+    var btnCancelar = document.getElementById("btn-cancelar-cierre");
+    var disclosureCierre = document.getElementById("disclosure-cerrar-turno");
+    if (btnCancelar && disclosureCierre) {
+      btnCancelar.addEventListener("click", function () {
+        formArqueo.reset();
+        recalcularArqueo();
+        disclosureCierre.open = false;
+      });
+    }
   }
 })();
 </script>
