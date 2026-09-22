@@ -44,6 +44,15 @@
     Mesa: {{ orden.mesa }}<br />
     Mes: {{ (orden.cobrado_en if orden.cobrado_en else orden.creado_en)|mes_anio }}
   </p>
+  {% if orden.factura_nit or orden.factura_celular or orden.factura_nombre %}
+  <hr />
+  <p class="datos">
+    Datos de facturación:<br />
+    {% if orden.factura_nombre %}Nombre: {{ orden.factura_nombre }}<br />{% endif %}
+    {% if orden.factura_nit %}NIT: {{ orden.factura_nit }}<br />{% endif %}
+    {% if orden.factura_celular %}Celular: {{ orden.factura_celular }}<br />{% endif %}
+  </p>
+  {% endif %}
   <hr />
   <table>
     <tr><th>Cant</th><th>Descripción</th><th class="num">Total</th></tr>

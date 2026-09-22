@@ -13,6 +13,7 @@ router = APIRouter(prefix="/dashboard/ventas")
 
 PAGOS_EFECTIVO = ("EFECTIVO", "EFEC/FAC")
 TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC")
+TIPOS_FACTURADOS = ("EFEC/FAC", "QR/FAC")
 
 DENOMINACIONES = (
     (200.0, "billete"), (100.0, "billete"), (50.0, "billete"), (20.0, "billete"), (10.0, "billete"),
@@ -363,6 +364,9 @@ async def crear_orden(
     monto_pagado: str = Form(""),
     tipo_pago2: str = Form(""),
     monto_pagado2: str = Form(""),
+    factura_nit: str = Form(""),
+    factura_celular: str = Form(""),
+    factura_nombre: str = Form(""),
     observacion: str = Form(""),
     cart_producto_id: list[str] = Form([]),
     cart_cantidad: list[str] = Form([]),
@@ -389,6 +393,9 @@ async def crear_orden(
         tipo_pago_final, monto_pagado_final, pagos, error = _resolver_pagos(
             tipo_pago, monto_pagado, tipo_pago2, monto_pagado2, total
         )
+        if not error and any(t in TIPOS_FACTURADOS for t, _ in pagos):
+            if not factura_nit.strip() or not factura_celular.strip() or not factura_nombre.strip():
+                error = "Para facturar, completa NIT, celular y nombre."
 
     if error:
         ctx = await _ventas_context(session, error=error, mesa_seleccionada=mesa)
@@ -400,8 +407,9 @@ async def crear_orden(
         async with conn.transaction():
             orden_id = await conn.fetchval(
                 """
-                INSERT INTO ordenes (turno_id, mesa, estado, tipo_pago, monto_pagado, responsable, observacion, total, cobrado_en)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+                INSERT INTO ordenes (turno_id, mesa, estado, tipo_pago, monto_pagado, responsable, observacion,
+                                      total, cobrado_en, factura_nit, factura_celular, factura_nombre)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id
                 """,
                 int(turno_id),
                 mesa,
@@ -412,6 +420,9 @@ async def crear_orden(
                 observacion.strip() or None,
                 total,
                 ahora,
+                factura_nit.strip() or None,
+                factura_celular.strip() or None,
+                factura_nombre.strip() or None,
             )
             for it in cart:
                 await conn.execute(
@@ -448,6 +459,9 @@ async def cobrar_orden_pendiente(
     monto_pagado: str = Form(""),
     tipo_pago2: str = Form(""),
     monto_pagado2: str = Form(""),
+    factura_nit: str = Form(""),
+    factura_celular: str = Form(""),
+    factura_nombre: str = Form(""),
 ):
     orden = await pool().fetchrow("SELECT total FROM ordenes WHERE id = $1 AND estado = 'abierta'", orden_id)
     if not orden:
@@ -456,6 +470,9 @@ async def cobrar_orden_pendiente(
     tipo_pago_final, monto_pagado_final, pagos, error = _resolver_pagos(
         tipo_pago, monto_pagado, tipo_pago2, monto_pagado2, float(orden["total"])
     )
+    if not error and any(t in TIPOS_FACTURADOS for t, _ in pagos):
+        if not factura_nit.strip() or not factura_celular.strip() or not factura_nombre.strip():
+            error = "Para facturar, completa NIT, celular y nombre."
     if error:
         ctx = await _ventas_context(session, error=error)
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
@@ -463,10 +480,14 @@ async def cobrar_orden_pendiente(
     async with pool().acquire() as conn:
         async with conn.transaction():
             await conn.execute(
-                "UPDATE ordenes SET estado = 'cobrada', tipo_pago = $1, monto_pagado = $2, cobrado_en = now() "
-                "WHERE id = $3 AND estado = 'abierta'",
+                "UPDATE ordenes SET estado = 'cobrada', tipo_pago = $1, monto_pagado = $2, cobrado_en = now(), "
+                "factura_nit = $3, factura_celular = $4, factura_nombre = $5 "
+                "WHERE id = $6 AND estado = 'abierta'",
                 tipo_pago_final,
                 monto_pagado_final,
+                factura_nit.strip() or None,
+                factura_celular.strip() or None,
+                factura_nombre.strip() or None,
                 orden_id,
             )
             for pago_tipo, pago_monto in pagos:
@@ -624,7 +645,8 @@ async def eliminar_orden(orden_id: int, session: dict = Depends(require_session)
 @router.get("/ordenes/{orden_id}/ticket", response_class=HTMLResponse)
 async def ticket_orden(request: Request, orden_id: int, session: dict = Depends(require_session)):
     orden = await pool().fetchrow(
-        "SELECT id, mesa, total, tipo_pago, responsable, creado_en, cobrado_en FROM ordenes WHERE id = $1",
+        "SELECT id, mesa, total, tipo_pago, responsable, creado_en, cobrado_en, "
+        "factura_nit, factura_celular, factura_nombre FROM ordenes WHERE id = $1",
         orden_id,
     )
     if not orden:

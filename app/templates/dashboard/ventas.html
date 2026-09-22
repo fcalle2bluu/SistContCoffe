@@ -215,7 +215,7 @@
           <div class="pos-pago-fields">
             <div>
               <label class="field-label">Método de pago</label>
-              <select name="tipo_pago" class="input">
+              <select name="tipo_pago" class="input pos-tipo-pago">
                 <option value="">—</option>
                 {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
               </select>
@@ -238,7 +238,7 @@
           <div class="pos-pago-fields oculto" id="pago-dividido-fields">
             <div>
               <label class="field-label">Método de pago 2</label>
-              <select name="tipo_pago2" class="input">
+              <select name="tipo_pago2" class="input pos-tipo-pago">
                 <option value="">—</option>
                 {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
               </select>
@@ -248,6 +248,21 @@
               <input name="monto_pagado2" type="number" step="0.01" class="input" />
             </div>
             <p class="muted-sm">Los dos montos deben sumar exactamente el total.</p>
+          </div>
+
+          <div class="pos-pago-fields oculto" id="pos-factura-fields">
+            <div>
+              <label class="field-label">NIT</label>
+              <input name="factura_nit" class="input" />
+            </div>
+            <div>
+              <label class="field-label">Celular</label>
+              <input name="factura_celular" class="input" />
+            </div>
+            <div class="flex-1">
+              <label class="field-label">Nombre / Razón social</label>
+              <input name="factura_nombre" class="input" />
+            </div>
           </div>
 
           <div class="order-actions">
@@ -277,7 +292,7 @@
               <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cobrar" class="inline-form form-cobrar-pendiente">
                 <span class="strong">{{ o.mesa }}</span>
                 <span class="mono">Bs {{ "%.2f"|format(o.total) }}</span>
-                <select name="tipo_pago" required class="input input-w36">
+                <select name="tipo_pago" required class="input input-w36 pos-tipo-pago-pendiente">
                   <option value="">Método de pago…</option>
                   {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
                 </select>
@@ -285,11 +300,16 @@
                 <span class="small muted-inline cambio-pendiente-wrap">Cambio: <span class="strong cambio-pendiente">Bs 0.00</span></span>
                 <button type="button" class="link-muted btn-dividir-pago-pendiente">+ Dividir pago</button>
                 <span class="pago-dividido-pendiente oculto">
-                  <select name="tipo_pago2" class="input input-w36">
+                  <select name="tipo_pago2" class="input input-w36 pos-tipo-pago-pendiente">
                     <option value="">Método 2…</option>
                     {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
                   </select>
                   <input name="monto_pagado2" type="number" step="0.01" placeholder="Monto método 2" class="input input-w24" />
+                </span>
+                <span class="factura-fields-pendiente oculto">
+                  <input name="factura_nit" placeholder="NIT" class="input input-w24" />
+                  <input name="factura_celular" placeholder="Celular" class="input input-w24" />
+                  <input name="factura_nombre" placeholder="Nombre / Razón social" class="input input-w36" />
                 </span>
                 <button type="submit" class="btn btn-primary btn-sm">Confirmar</button>
                 <a href="/dashboard/ventas" class="btn btn-outline btn-sm">Cancelar</a>
@@ -673,7 +693,28 @@
       if (cambioWrap) cambioWrap.classList.toggle("oculto", activar);
       if (!activar) {
         camposPagoDividido.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
+        if (typeof actualizarCamposFactura === "function") actualizarCamposFactura();
       }
+    });
+  }
+
+  // Datos de facturación: se habilitan cuando algún método de pago elegido es "/FAC".
+  var TIPOS_FACTURADOS = ["EFEC/FAC", "QR/FAC"];
+  var camposFactura = document.getElementById("pos-factura-fields");
+  if (camposFactura) {
+    function actualizarCamposFactura() {
+      var selects = form.querySelectorAll(".pos-tipo-pago");
+      var requiereFactura = Array.prototype.some.call(selects, function (s) {
+        return TIPOS_FACTURADOS.indexOf(s.value) !== -1;
+      });
+      camposFactura.classList.toggle("oculto", !requiereFactura);
+      camposFactura.querySelectorAll("input").forEach(function (input) {
+        if (requiereFactura) input.setAttribute("required", "required");
+        else input.removeAttribute("required");
+      });
+    }
+    form.querySelectorAll(".pos-tipo-pago").forEach(function (select) {
+      select.addEventListener("change", actualizarCamposFactura);
     });
   }
 
@@ -696,10 +737,29 @@
   });
 
   // Dividir el pago en la fila "Cobrar" de cuentas pendientes.
-  document.querySelectorAll(".btn-dividir-pago-pendiente").forEach(function (btn) {
-    var campos = btn.parentElement.querySelector(".pago-dividido-pendiente");
-    var cambioWrapPendiente = btn.parentElement.querySelector(".cambio-pendiente-wrap");
-    if (!campos) return;
+  var TIPOS_FACTURADOS_PENDIENTE = ["EFEC/FAC", "QR/FAC"];
+  document.querySelectorAll(".form-cobrar-pendiente").forEach(function (formPendiente) {
+    var camposFacturaPendiente = formPendiente.querySelector(".factura-fields-pendiente");
+    function actualizarFacturaPendiente() {
+      if (!camposFacturaPendiente) return;
+      var selects = formPendiente.querySelectorAll(".pos-tipo-pago-pendiente");
+      var requiere = Array.prototype.some.call(selects, function (s) {
+        return TIPOS_FACTURADOS_PENDIENTE.indexOf(s.value) !== -1;
+      });
+      camposFacturaPendiente.classList.toggle("oculto", !requiere);
+      camposFacturaPendiente.querySelectorAll("input").forEach(function (input) {
+        if (requiere) input.setAttribute("required", "required");
+        else input.removeAttribute("required");
+      });
+    }
+    formPendiente.querySelectorAll(".pos-tipo-pago-pendiente").forEach(function (select) {
+      select.addEventListener("change", actualizarFacturaPendiente);
+    });
+
+    var btn = formPendiente.querySelector(".btn-dividir-pago-pendiente");
+    var campos = formPendiente.querySelector(".pago-dividido-pendiente");
+    var cambioWrapPendiente = formPendiente.querySelector(".cambio-pendiente-wrap");
+    if (!btn || !campos) return;
     btn.addEventListener("click", function () {
       var activar = campos.classList.contains("oculto");
       campos.classList.toggle("oculto", !activar);
@@ -707,6 +767,7 @@
       if (cambioWrapPendiente) cambioWrapPendiente.classList.toggle("oculto", activar);
       if (!activar) {
         campos.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
+        actualizarFacturaPendiente();
       }
     });
   });
