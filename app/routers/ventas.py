@@ -21,6 +21,7 @@ DENOMINACIONES = (
 )
 
 CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
+CUENTA_BANCO = "1110103"  # BANCO BISA
 CUENTA_VENTAS = "5010101"  # Ventas
 
 TASA_IVA = 0.13
@@ -38,9 +39,10 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
     """Al cerrar un turno, asienta en el Libro Diario el total de ventas en
     efectivo SIN factura de ese turno (Debe Caja, Haber Ventas). Las ventas
     EFEC/FAC y QR/FAC no pasan por aquí: llevan su propio desglose de IT/IVA
-    en _registrar_ventas_facturadas_en_diario. Las ventas por QR/POS sin
-    factura quedan fuera a propósito: ese tratamiento lo sigue armando el
-    contador a mano."""
+    en _registrar_ventas_facturadas_en_diario. Las ventas por QR sin factura
+    se registran en _registrar_ventas_qr_en_diario. Las ventas por POS
+    (tarjeta) sin factura quedan fuera a propósito: ese tratamiento lo sigue
+    armando el contador a mano."""
     total = await pool().fetchval(
         "SELECT COALESCE(SUM(op.monto), 0) FROM orden_pagos op "
         "JOIN ordenes o ON o.id = op.orden_id "
@@ -61,6 +63,38 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
                 fecha, siguiente, CUENTA_CAJA_EFECTIVO, float(total), glosa,
+            )
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, 0, $4, $5)",
+                fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
+            )
+
+
+async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
+    """Al cerrar un turno, asienta en el Libro Diario el total de ventas por
+    QR SIN factura de ese turno (Debe Banco, Haber Ventas). QR/FAC no pasa
+    por aquí: se registra en _registrar_ventas_facturadas_en_diario."""
+    total = await pool().fetchval(
+        "SELECT COALESCE(SUM(op.monto), 0) FROM orden_pagos op "
+        "JOIN ordenes o ON o.id = op.orden_id "
+        "WHERE o.turno_id = $1 AND o.estado = 'cobrada' AND op.tipo_pago = 'QR'",
+        turno_id,
+    )
+    if not total or total <= 0:
+        return
+
+    turno = await pool().fetchrow("SELECT responsable FROM turnos WHERE id = $1", turno_id)
+    glosa = f"Ventas por QR del turno de {turno['responsable']} (cierre de caja, turno #{turno_id})."
+    fecha = hoy_bolivia()
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, $4, 0, $5)",
+                fecha, siguiente, CUENTA_BANCO, float(total), glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
@@ -755,6 +789,7 @@ async def cerrar_turno(
                         turno_id, c, t, q,
                     )
         await _registrar_ventas_efectivo_en_diario(turno_id)
+        await _registrar_ventas_qr_en_diario(turno_id)
         await _registrar_ventas_facturadas_en_diario(turno_id)
         await bitacora.registrar(session, "Cerró turno", f"Turno #{turno_id}, monto final Bs {total:.2f} (arqueo de caja)")
 
