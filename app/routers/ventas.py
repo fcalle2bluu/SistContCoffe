@@ -163,7 +163,11 @@ async def _resolver_items_pedido(cart_producto_id: list[str], cart_cantidad: lis
 
 
 async def _ventas_context(
-    session: dict, cobrar_id: int | None = None, error: str | None = None, mesa_seleccionada: str | None = None
+    session: dict,
+    cobrar_id: int | None = None,
+    descuento_id: int | None = None,
+    error: str | None = None,
+    mesa_seleccionada: str | None = None,
 ) -> dict:
     turno = await pool().fetchrow(
         "SELECT id, responsable, monto_inicial, abierto_en FROM turnos WHERE estado = 'abierto'"
@@ -241,6 +245,7 @@ async def _ventas_context(
         "resumen_pagos": resumen_pagos,
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
+        "descuento_id": descuento_id,
         "tipos_pago": TIPOS_PAGO,
         "denominaciones": DENOMINACIONES,
         "error": error,
@@ -248,8 +253,13 @@ async def _ventas_context(
 
 
 @router.get("", response_class=HTMLResponse)
-async def ventas_page(request: Request, session: dict = Depends(require_session), cobrar: int | None = None):
-    ctx = await _ventas_context(session, cobrar_id=cobrar)
+async def ventas_page(
+    request: Request,
+    session: dict = Depends(require_session),
+    cobrar: int | None = None,
+    descuento: int | None = None,
+):
+    ctx = await _ventas_context(session, cobrar_id=cobrar, descuento_id=descuento)
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
 
@@ -354,6 +364,57 @@ async def cobrar_orden_pendiente(
             orden_id,
         )
         await bitacora.registrar(session, "Cobró venta pendiente", f"Orden #{orden_id}, {tipo_pago.strip()}")
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
+@router.post("/ordenes/{orden_id}/descuento")
+async def aplicar_descuento_orden(
+    request: Request,
+    orden_id: int,
+    session: dict = Depends(require_session),
+    nuevo_precio: str = Form(""),
+    justificativo: str = Form(""),
+):
+    orden = await pool().fetchrow("SELECT total, mesa FROM ordenes WHERE id = $1", orden_id)
+    justificativo = justificativo.strip()
+    error = None
+    total_actual = float(orden["total"]) if orden else 0.0
+    if not orden:
+        error = "No se encontró esa venta."
+    elif not justificativo:
+        error = "Indica el justificativo del descuento."
+    else:
+        try:
+            nuevo_precio_num = round(float(nuevo_precio), 2)
+        except ValueError:
+            nuevo_precio_num = -1
+        if nuevo_precio_num < 0 or nuevo_precio_num >= total_actual:
+            error = "El nuevo precio debe ser menor al total actual y no puede ser negativo."
+
+    if error:
+        ctx = await _ventas_context(session, error=error)
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    monto_descuento = round(total_actual - nuevo_precio_num, 2)
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                """
+                INSERT INTO orden_items (orden_id, producto_id, producto_nombre, cantidad, precio_unitario)
+                VALUES ($1, NULL, $2, 1, $3)
+                """,
+                orden_id,
+                f"Descuento: {justificativo}",
+                -monto_descuento,
+            )
+            await conn.execute("UPDATE ordenes SET total = $1 WHERE id = $2", nuevo_precio_num, orden_id)
+
+    await bitacora.registrar(
+        session,
+        "Aplicó descuento a venta",
+        f"Orden #{orden_id} (mesa {orden['mesa']}): Bs {total_actual:.2f} → Bs {nuevo_precio_num:.2f} "
+        f"(-Bs {monto_descuento:.2f}), motivo: {justificativo}",
+    )
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
