@@ -74,13 +74,47 @@
 
       <details class="disclosure">
         <summary class="btn btn-primary">Cerrar turno</summary>
-        <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" class="inline-form">
-          <div>
-            <label class="field-label">Efectivo contado en caja (Bs)</label>
-            <input name="monto_final_declarado" type="number" step="0.01" required placeholder="{{ '%.2f'|format(efectivo_teorico) }}" class="input input-w44" />
-          </div>
-          <button type="submit" class="btn btn-primary">Confirmar cierre</button>
-        </form>
+        <div class="disclosure-content stack-4">
+          <p class="muted-sm">Arqueo de caja: cuenta los billetes y monedas físicos y el sistema calcula el total.</p>
+          <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" id="form-cerrar-turno" class="stack-4" data-esperado="{{ efectivo_teorico }}">
+            <div class="table-wrap">
+              <table class="capture-grid" id="tabla-arqueo">
+                <thead><tr><th>Corte</th><th class="col-monto">Cantidad</th><th class="col-monto">Subtotal</th></tr></thead>
+                <tbody>
+                  {% for valor, tipo in denominaciones %}
+                  <tr>
+                    <td>
+                      Bs {{ "%g"|format(valor) }} <span class="muted-sm">({{ tipo }})</span>
+                      <input type="hidden" name="corte" value="{{ valor }}" />
+                    </td>
+                    <td class="col-monto">
+                      <input type="number" name="cantidad" min="0" value="0" class="arqueo-cantidad" data-corte="{{ valor }}" />
+                    </td>
+                    <td class="col-monto mono arqueo-subtotal" data-corte="{{ valor }}">Bs 0.00</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="cart-total-row cart-total-row-sm">
+              <p class="cart-total-label">Efectivo esperado</p>
+              <p class="cart-total-value-sm">Bs {{ "%.2f"|format(efectivo_teorico) }}</p>
+            </div>
+            <div class="cart-total-row">
+              <p class="cart-total-label">Total contado</p>
+              <p class="cart-total-value" id="arqueo-total">Bs 0.00</p>
+            </div>
+            <div class="cart-total-row cart-total-row-sm">
+              <p class="cart-total-label">Diferencia</p>
+              <p class="cart-total-value-sm" id="arqueo-diferencia">Bs 0.00</p>
+            </div>
+
+            <div class="order-actions">
+              <button type="submit" class="btn btn-primary">Confirmar cierre</button>
+            </div>
+          </form>
+        </div>
       </details>
     </div>
 
@@ -427,6 +461,33 @@
       salida.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
     });
   });
+
+  // Arqueo de caja al cerrar turno: suma billetes/monedas contados y muestra la diferencia.
+  var formArqueo = document.getElementById("form-cerrar-turno");
+  if (formArqueo) {
+    var esperado = parseFloat(formArqueo.getAttribute("data-esperado") || "0");
+    var totalOutArqueo = document.getElementById("arqueo-total");
+    var diferenciaOut = document.getElementById("arqueo-diferencia");
+
+    function recalcularArqueo() {
+      var total = 0;
+      formArqueo.querySelectorAll(".arqueo-cantidad").forEach(function (input) {
+        var corte = parseFloat(input.getAttribute("data-corte") || "0");
+        var cantidad = parseInt(input.value || "0", 10);
+        var subtotal = corte * (cantidad > 0 ? cantidad : 0);
+        total += subtotal;
+        var celda = formArqueo.querySelector('.arqueo-subtotal[data-corte="' + input.getAttribute("data-corte") + '"]');
+        if (celda) celda.textContent = "Bs " + subtotal.toFixed(2);
+      });
+      totalOutArqueo.textContent = "Bs " + total.toFixed(2);
+      var diferencia = total - esperado;
+      diferenciaOut.textContent = (diferencia >= 0 ? "+Bs " : "-Bs ") + Math.abs(diferencia).toFixed(2);
+      diferenciaOut.style.color = diferencia < 0 ? "#dc2626" : (diferencia > 0 ? "#059669" : "");
+    }
+
+    formArqueo.addEventListener("input", recalcularArqueo);
+    recalcularArqueo();
+  }
 })();
 </script>
 {% endblock %}

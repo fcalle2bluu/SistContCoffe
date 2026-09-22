@@ -14,6 +14,11 @@ router = APIRouter(prefix="/dashboard/ventas")
 PAGOS_EFECTIVO = ("EFECTIVO", "EFEC/FAC")
 TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC")
 
+DENOMINACIONES = (
+    (200.0, "billete"), (100.0, "billete"), (50.0, "billete"), (20.0, "billete"), (10.0, "billete"),
+    (5.0, "moneda"), (2.0, "moneda"), (1.0, "moneda"), (0.5, "moneda"), (0.2, "moneda"), (0.1, "moneda"),
+)
+
 CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
 CUENTA_VENTAS = "5010101"  # Ventas
 
@@ -228,6 +233,7 @@ async def _ventas_context(
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
         "tipos_pago": TIPOS_PAGO,
+        "denominaciones": DENOMINACIONES,
         "error": error,
     }
 
@@ -433,24 +439,47 @@ async def editar_apertura_turno(
 
 @router.post("/turno/{turno_id}/cerrar", response_class=HTMLResponse)
 async def cerrar_turno(
-    request: Request, turno_id: int, session: dict = Depends(require_session), monto_final_declarado: str = Form("")
+    request: Request,
+    turno_id: int,
+    session: dict = Depends(require_session),
+    corte: list[str] = Form([]),
+    cantidad: list[str] = Form([]),
 ):
-    try:
-        monto_final = float(monto_final_declarado)
-    except ValueError:
-        ctx = await _ventas_context(session, error="Ingresa el monto final contado en caja.")
+    cortes_validos = {c: t for c, t in DENOMINACIONES}
+    conteo: list[tuple[float, str, int]] = []
+    total = 0.0
+    for c_txt, q_txt in zip(corte, cantidad):
+        try:
+            c = float(c_txt)
+            q = int(q_txt)
+        except ValueError:
+            continue
+        if c not in cortes_validos or q <= 0:
+            continue
+        conteo.append((c, cortes_validos[c], q))
+        total += c * q
+
+    if not conteo:
+        ctx = await _ventas_context(session, error="Ingresa el arqueo de caja (cantidad de billetes y monedas) para cerrar el turno.")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     resultado = await pool().execute(
         "UPDATE turnos SET estado = 'cerrado', monto_final_declarado = $1, cerrado_en = now() "
         "WHERE id = $2 AND estado = 'abierto'",
-        monto_final,
+        total,
         turno_id,
     )
     if resultado == "UPDATE 1":
+        async with pool().acquire() as conn:
+            async with conn.transaction():
+                for c, t, q in conteo:
+                    await conn.execute(
+                        "INSERT INTO conteo_caja (turno_id, corte, tipo, cantidad) VALUES ($1, $2, $3, $4)",
+                        turno_id, c, t, q,
+                    )
         await _registrar_ventas_efectivo_en_diario(turno_id)
         await _registrar_ventas_facturadas_en_diario(turno_id)
-        await bitacora.registrar(session, "Cerró turno", f"Turno #{turno_id}, monto final Bs {monto_final:.2f}")
+        await bitacora.registrar(session, "Cerró turno", f"Turno #{turno_id}, monto final Bs {total:.2f} (arqueo de caja)")
 
     return RedirectResponse("/dashboard/ventas", status_code=303)
 

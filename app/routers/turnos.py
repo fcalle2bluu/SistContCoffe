@@ -63,6 +63,11 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
         turno_id,
     )
 
+    arqueo = await pool().fetch(
+        "SELECT corte, tipo, cantidad, subtotal FROM conteo_caja WHERE turno_id = $1 ORDER BY corte DESC",
+        turno_id,
+    )
+
     return templates.TemplateResponse(
         request,
         "dashboard/turno_detalle.html",
@@ -74,6 +79,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "items_por_orden": items_por_orden,
             "descuentos_por_orden": descuentos_por_orden,
             "movimientos": movimientos,
+            "arqueo": arqueo,
         },
     )
 
