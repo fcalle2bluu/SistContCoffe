@@ -506,7 +506,7 @@ async def aplicar_descuento_orden(
     request: Request,
     orden_id: int,
     session: dict = Depends(require_session),
-    nuevo_precio: str = Form(""),
+    monto_descuento: str = Form(""),
     justificativo: str = Form(""),
 ):
     orden = await pool().fetchrow("SELECT total, mesa FROM ordenes WHERE id = $1", orden_id)
@@ -519,17 +519,17 @@ async def aplicar_descuento_orden(
         error = "Indica el justificativo del descuento."
     else:
         try:
-            nuevo_precio_num = round(float(nuevo_precio), 2)
+            monto_num = round(float(monto_descuento), 2)
         except ValueError:
-            nuevo_precio_num = -1
-        if nuevo_precio_num < 0 or nuevo_precio_num >= total_actual:
-            error = "El nuevo precio debe ser menor al total actual y no puede ser negativo."
+            monto_num = -1
+        if monto_num <= 0 or monto_num > total_actual:
+            error = "La cantidad a descontar debe ser mayor a 0 y no puede superar el total actual."
 
     if error:
         ctx = await _ventas_context(session, error=error)
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
-    monto_descuento = round(total_actual - nuevo_precio_num, 2)
+    nuevo_precio_num = round(total_actual - monto_num, 2)
     async with pool().acquire() as conn:
         async with conn.transaction():
             await conn.execute(
@@ -539,7 +539,7 @@ async def aplicar_descuento_orden(
                 """,
                 orden_id,
                 f"Descuento: {justificativo}",
-                -monto_descuento,
+                -monto_num,
             )
             await conn.execute("UPDATE ordenes SET total = $1 WHERE id = $2", nuevo_precio_num, orden_id)
 
@@ -547,7 +547,7 @@ async def aplicar_descuento_orden(
         session,
         "Aplicó descuento a venta",
         f"Orden #{orden_id} (mesa {orden['mesa']}): Bs {total_actual:.2f} → Bs {nuevo_precio_num:.2f} "
-        f"(-Bs {monto_descuento:.2f}), motivo: {justificativo}",
+        f"(-Bs {monto_num:.2f}), motivo: {justificativo}",
     )
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
