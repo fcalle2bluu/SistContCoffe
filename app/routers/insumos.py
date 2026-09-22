@@ -16,9 +16,20 @@ SELECT_INSUMOS = (
 )
 
 
+async def _solicitantes():
+    return await pool().fetch(
+        """
+        SELECT nombre FROM solicitantes_referencia
+        UNION
+        SELECT nombre FROM usuarios WHERE nombre IS NOT NULL AND nombre <> ''
+        ORDER BY nombre
+        """
+    )
+
+
 async def _listas_referencia():
     medidas = await pool().fetch("SELECT id, nombre FROM medidas_referencia ORDER BY nombre")
-    solicitantes = await pool().fetch("SELECT id, nombre FROM solicitantes_referencia ORDER BY nombre")
+    solicitantes = await _solicitantes()
     return medidas, solicitantes
 
 
@@ -66,7 +77,7 @@ async def agregar_solicitante(
         await pool().execute(
             "INSERT INTO solicitantes_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING", nombre_nueva
         )
-    solicitantes = await pool().fetch("SELECT id, nombre FROM solicitantes_referencia ORDER BY nombre")
+    solicitantes = await _solicitantes()
     return templates.TemplateResponse(
         request,
         "partials/_solicitante_select.html",
