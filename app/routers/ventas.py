@@ -331,6 +331,7 @@ async def _ventas_context(
     descuento_id: int | None = None,
     metodo_pago_id: int | None = None,
     editar_egreso_id: int | None = None,
+    editar_ingreso_id: int | None = None,
     error: str | None = None,
     mesa_seleccionada: str | None = None,
 ) -> dict:
@@ -351,6 +352,9 @@ async def _ventas_context(
     pagos_por_orden: dict[int, list] = {}
     ingresos_efectivo = 0.0
     egresos_lista: list = []
+    ingresos_lista: list = []
+    ingresos_caja_totales = 0.0
+    ingresos_caja_efectivo = 0.0
     if turno:
         ordenes_abiertas = await pool().fetch(
             "SELECT id, mesa, total, responsable, creado_en FROM ordenes "
@@ -382,13 +386,16 @@ async def _ventas_context(
                 float(r["monto"]) for r in pago_rows if r["tipo_pago"] in PAGOS_EFECTIVO
             )
         movimientos = await pool().fetch(
-            "SELECT id, monto, tipo_pago, motivo, categoria, responsable, creado_en FROM movimientos_caja "
-            "WHERE turno_id = $1 AND tipo = 'egreso' ORDER BY creado_en DESC",
+            "SELECT id, tipo, monto, tipo_pago, motivo, categoria, responsable, creado_en FROM movimientos_caja "
+            "WHERE turno_id = $1 ORDER BY creado_en DESC",
             turno["id"],
         )
-        egresos_totales = sum(float(m["monto"]) for m in movimientos)
-        egresos_efectivo = sum(float(m["monto"]) for m in movimientos if m["tipo_pago"] in PAGOS_EFECTIVO)
-        egresos_lista = movimientos
+        egresos_lista = [m for m in movimientos if m["tipo"] == "egreso"]
+        ingresos_lista = [m for m in movimientos if m["tipo"] == "ingreso"]
+        egresos_totales = sum(float(m["monto"]) for m in egresos_lista)
+        egresos_efectivo = sum(float(m["monto"]) for m in egresos_lista if m["tipo_pago"] in PAGOS_EFECTIVO)
+        ingresos_caja_totales = sum(float(m["monto"]) for m in ingresos_lista)
+        ingresos_caja_efectivo = sum(float(m["monto"]) for m in ingresos_lista if m["tipo_pago"] in PAGOS_EFECTIVO)
 
     ventas_totales = sum(float(o["total"]) for o in ordenes_cobradas)
 
@@ -423,16 +430,21 @@ async def _ventas_context(
         "pagos_por_orden": pagos_por_orden,
         "descuentos_por_orden": descuentos_por_orden,
         "egresos_lista": egresos_lista,
+        "ingresos_lista": ingresos_lista,
         "ingresos_efectivo": ingresos_efectivo,
         "egresos_efectivo": egresos_efectivo,
         "egresos_totales": egresos_totales,
+        "ingresos_caja_totales": ingresos_caja_totales,
         "ventas_totales": ventas_totales,
         "resumen_pagos": resumen_pagos,
-        "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
+        "efectivo_teorico": (
+            float(turno["monto_inicial"]) + ingresos_efectivo + ingresos_caja_efectivo - egresos_efectivo
+        ) if turno else 0,
         "cobrar_id": cobrar_id,
         "descuento_id": descuento_id,
         "metodo_pago_id": metodo_pago_id,
         "editar_egreso_id": editar_egreso_id,
+        "editar_ingreso_id": editar_ingreso_id,
         "tipos_pago": TIPOS_PAGO,
         "denominaciones": DENOMINACIONES,
         "error": error,
@@ -447,9 +459,11 @@ async def ventas_page(
     descuento: int | None = None,
     metodo_pago: int | None = None,
     editar_egreso: int | None = None,
+    editar_ingreso: int | None = None,
 ):
     ctx = await _ventas_context(
-        session, cobrar_id=cobrar, descuento_id=descuento, metodo_pago_id=metodo_pago, editar_egreso_id=editar_egreso
+        session, cobrar_id=cobrar, descuento_id=descuento, metodo_pago_id=metodo_pago,
+        editar_egreso_id=editar_egreso, editar_ingreso_id=editar_ingreso,
     )
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
@@ -972,6 +986,70 @@ async def registrar_movimiento_caja(
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
+@router.post("/movimientos/ingreso", response_class=HTMLResponse)
+async def registrar_ingreso_caja(
+    request: Request,
+    session: dict = Depends(require_session),
+    turno_id: str = Form(""),
+    monto: str = Form(""),
+    motivo: str = Form(""),
+    tipo_pago: str = Form(""),
+):
+    motivo = motivo.strip()
+    tipo_pago = tipo_pago.strip()
+    try:
+        monto_num = float(monto)
+    except ValueError:
+        monto_num = 0
+
+    if not turno_id or monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO:
+        ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0) para el ingreso.")
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    await pool().execute(
+        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago) "
+        "VALUES ($1, 'ingreso', $2, $3, $4, $5)",
+        int(turno_id),
+        monto_num,
+        motivo,
+        session["nombre"],
+        tipo_pago,
+    )
+    await bitacora.registrar(session, "Registró ingreso a caja", f"Bs {monto_num:.2f} — {motivo} ({tipo_pago})")
+    return RedirectResponse("/dashboard/ventas#ingresos-turno", status_code=303)
+
+
+@router.post("/movimientos/{movimiento_id}/editar-ingreso", response_class=HTMLResponse)
+async def editar_ingreso_caja(
+    request: Request,
+    movimiento_id: int,
+    session: dict = Depends(require_session),
+    monto: str = Form(""),
+    motivo: str = Form(""),
+    tipo_pago: str = Form(""),
+):
+    motivo = motivo.strip()
+    tipo_pago = tipo_pago.strip()
+    try:
+        monto_num = float(monto)
+    except ValueError:
+        monto_num = 0
+
+    if monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO:
+        ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0) para el ingreso.")
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    await pool().execute(
+        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3 WHERE id = $4",
+        monto_num, motivo, tipo_pago, movimiento_id,
+    )
+    await bitacora.registrar(
+        session, "Editó ingreso a caja",
+        f"Movimiento #{movimiento_id}: Bs {monto_num:.2f} — {motivo} ({tipo_pago})",
+    )
+    return RedirectResponse("/dashboard/ventas#ingresos-turno", status_code=303)
+
+
 @router.post("/movimientos/categorias", response_class=HTMLResponse)
 async def agregar_categoria_egreso(
     request: Request, session: dict = Depends(require_session), nombre_nueva: str = Form("")
@@ -1029,10 +1107,11 @@ async def editar_movimiento_caja(
 
 @router.post("/movimientos/{movimiento_id}/eliminar")
 async def eliminar_movimiento_caja(movimiento_id: int, session: dict = Depends(require_session)):
-    movimiento = await pool().fetchrow("SELECT motivo, monto FROM movimientos_caja WHERE id = $1", movimiento_id)
+    movimiento = await pool().fetchrow("SELECT tipo, motivo, monto FROM movimientos_caja WHERE id = $1", movimiento_id)
     if movimiento:
         await pool().execute("DELETE FROM movimientos_caja WHERE id = $1", movimiento_id)
+        accion = "Eliminó ingreso a caja" if movimiento["tipo"] == "ingreso" else "Eliminó egreso de caja"
         await bitacora.registrar(
-            session, "Eliminó egreso de caja", f"Movimiento #{movimiento_id}, Bs {movimiento['monto']:.2f} — {movimiento['motivo']}"
+            session, accion, f"Movimiento #{movimiento_id}, Bs {movimiento['monto']:.2f} — {movimiento['motivo']}"
         )
     return RedirectResponse("/dashboard/ventas", status_code=303)

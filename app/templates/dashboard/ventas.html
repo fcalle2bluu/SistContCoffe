@@ -36,6 +36,7 @@
     <dl class="stats-grid">
       <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
       <div class="stat-box"><dt><a href="#ventas-cobradas">Ventas totales</a></dt><dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd></div>
+      <div class="stat-box"><dt><a href="#ingresos-turno">Ingresos a caja</a></dt><dd>Bs {{ "%.2f"|format(ingresos_caja_totales) }}</dd></div>
       <div class="stat-box"><dt><a href="#egresos-turno">Egresos</a></dt><dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd></div>
       <div class="stat-box stat-box-highlight"><dt>Efectivo teórico</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
     </dl>
@@ -88,6 +89,29 @@
             hx-post="/dashboard/ventas/movimientos/categorias" hx-include="#nueva-categoria-input"
             hx-target="#categoria-egreso-select" hx-swap="outerHTML">+ Agregar categoría</button>
         </div>
+      </details>
+
+      <details class="disclosure">
+        <summary class="btn btn-outline">Registrar ingreso a caja</summary>
+        <form method="post" action="/dashboard/ventas/movimientos/ingreso" class="inline-form">
+          <input type="hidden" name="turno_id" value="{{ turno.id }}" />
+          <div class="flex-1">
+            <label class="field-label">Motivo</label>
+            <input name="motivo" required placeholder="Ej: traslado de la caja de ventas a la caja moneda nacional" class="input" />
+          </div>
+          <div>
+            <label class="field-label">Método de pago</label>
+            <select name="tipo_pago" required class="input input-w36">
+              <option value="">—</option>
+              {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Monto (Bs)</label>
+            <input name="monto" type="number" step="0.01" required class="input input-w32" />
+          </div>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
       </details>
 
       <details class="disclosure" id="disclosure-cerrar-turno">
@@ -462,6 +486,64 @@
                 <a href="/dashboard/ventas?metodo_pago={{ o.id }}#ventas-cobradas" class="link-muted">Cambiar pago</a>
                 <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/eliminar"
                   onsubmit="return confirm('¿Eliminar esta venta? Esta acción no se puede deshacer.');">
+                  <button type="submit" class="link-danger">Eliminar</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="ingresos-turno">
+    <h3 class="subsection-title">Ingresos a caja del turno ({{ ingresos_lista|length }})</h3>
+    {% if ingresos_lista|length == 0 %}
+    <p class="muted">Todavía no hay ingresos a caja registrados en este turno.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
+        <tbody>
+          {% for m in ingresos_lista %}
+          {% if editar_ingreso_id == m.id %}
+          <tr class="editing-row">
+            <td colspan="6">
+              <form method="post" action="/dashboard/ventas/movimientos/{{ m.id }}/editar-ingreso" class="inline-form">
+                <div class="flex-1">
+                  <label class="field-label">Motivo</label>
+                  <input name="motivo" value="{{ m.motivo }}" required class="input" />
+                </div>
+                <div>
+                  <label class="field-label">Método de pago</label>
+                  <select name="tipo_pago" required class="input input-w36">
+                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == m.tipo_pago }}>{{ t }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <label class="field-label">Monto (Bs)</label>
+                  <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                <a href="/dashboard/ventas#ingresos-turno" class="btn btn-outline btn-sm">Cancelar</a>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td class="strong">{{ m.motivo }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(m.monto) }}</td>
+            <td class="uppercase small">{{ m.tipo_pago }}</td>
+            <td class="small">{{ m.creado_en|hora if m.creado_en else "—" }}</td>
+            <td class="small muted-inline">{{ m.responsable }}</td>
+            <td class="text-right">
+              <div class="row-actions">
+                <a href="/dashboard/ventas?editar_ingreso={{ m.id }}#ingresos-turno" class="link-muted">Editar</a>
+                <form method="post" action="/dashboard/ventas/movimientos/{{ m.id }}/eliminar"
+                  onsubmit="return confirm('¿Eliminar este ingreso a caja? Esta acción no se puede deshacer.');">
                   <button type="submit" class="link-danger">Eliminar</button>
                 </form>
               </div>
