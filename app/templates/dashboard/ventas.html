@@ -118,25 +118,42 @@
         <summary class="btn btn-primary">Cerrar turno</summary>
         <div class="disclosure-content stack-4">
           {% if resumen_pagos %}
+          {% set cuentas_destino = {
+            'EFECTIVO': 'Caja Moneda Nacional (1110101)',
+            'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA',
+            'QR': 'Banco Bisa (1110103)',
+            'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
+            'POS': 'Sin asiento automático (lo registra el contador a mano)',
+            'POS/FAC': 'Banco Bisa (1110103) + IT/IVA',
+            'MIXTO': 'Según cada método (ver desglose)',
+          } %}
           <div class="table-wrap">
             <table class="data-table" id="tabla-resumen-pagos">
-              <thead><tr><th>Método de pago</th><th class="text-right">Cantidad de ventas</th><th class="text-right">Monto ingresado</th></tr></thead>
+              <thead><tr><th>Método de pago</th><th class="text-right">Cantidad de ventas</th><th class="text-right">Monto ingresado</th><th>Va a la cuenta</th></tr></thead>
               <tbody>
                 {% for tipo, datos in resumen_pagos.items() %}
                 <tr>
                   <td class="uppercase small">{{ tipo }}</td>
                   <td class="text-right mono">{{ datos.cantidad }}</td>
                   <td class="text-right mono">Bs {{ "%.2f"|format(datos.monto) }}</td>
+                  <td class="small">{{ cuentas_destino.get(tipo, "—") }}</td>
                 </tr>
                 {% endfor %}
                 <tr>
                   <td class="strong">Total</td>
                   <td class="text-right mono strong">{{ ordenes_cobradas|length }}</td>
                   <td class="text-right mono strong">Bs {{ "%.2f"|format(ventas_totales) }}</td>
+                  <td></td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <p class="muted-sm">
+            Los <a href="#egresos-turno">egresos</a> se descuentan cada uno de la cuenta de su categoría
+            (o Gastos Administrativos si la categoría todavía no tiene una cuenta propia asignada).
+            Los <a href="#ingresos-turno">ingresos a caja</a> (traslados internos, no ventas) no generan
+            asiento automático en el Libro Diario todavía.
+          </p>
           {% endif %}
           <p class="muted-sm">Arqueo de caja: cuenta los billetes y monedas físicos y el sistema calcula el total.</p>
           <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" id="form-cerrar-turno" class="stack-4" data-esperado="{{ efectivo_teorico }}">
