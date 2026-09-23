@@ -447,6 +447,11 @@
               {% else %}
               {{ o.tipo_pago }}
               {% endif %}
+              {% if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') %}
+              <span class="muted-sm normal-case">
+                NIT {{ o.factura_nit or "—" }} · {{ o.factura_celular or "—" }} · {{ o.factura_nombre or "—" }}
+              </span>
+              {% endif %}
             </td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
             <td class="small muted-inline">{{ o.responsable }}</td>

@@ -384,6 +384,7 @@ a { color: inherit; }
 .nowrap { white-space: nowrap; }
 .uppercase { text-transform: uppercase; }
 .truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.normal-case { text-transform: none; display: block; }
 .flex-between { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .row-warning { background: #fff4e5; }
 .badge-warning {

@@ -35,7 +35,14 @@
             <td class="text-right mono small">{{ "-Bs %.2f"|format(descuentos_por_orden.get(o.id, 0)) if descuentos_por_orden.get(o.id, 0) > 0 else "—" }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
             <td class="small uppercase">{{ o.estado }}</td>
-            <td class="uppercase small">{{ o.tipo_pago or "—" }}</td>
+            <td class="uppercase small">
+              {{ o.tipo_pago or "—" }}
+              {% if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') %}
+              <span class="muted-sm normal-case">
+                NIT {{ o.factura_nit or "—" }} · {{ o.factura_celular or "—" }} · {{ o.factura_nombre or "—" }}
+              </span>
+              {% endif %}
+            </td>
             <td class="small">{{ (o.cobrado_en|hora) if o.cobrado_en else (o.creado_en|hora) }}</td>
             <td class="small muted-inline">{{ o.responsable }}</td>
           </tr>
