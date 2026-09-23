@@ -22,7 +22,7 @@
       <tbody>
         {% for t in turnos %}
         <tr>
-          <td class="strong">#{{ t.id }}</td>
+          <td class="strong">#{{ t.numero }}</td>
           <td>{{ t.responsable }}</td>
           <td class="small uppercase">{{ t.estado }}</td>
           <td class="small">{{ t.abierto_en|fechahora }}</td>

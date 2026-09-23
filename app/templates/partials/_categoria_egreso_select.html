@@ -1,0 +1,6 @@
+<select name="categoria" id="{{ categoria_select_id or 'categoria-egreso-select' }}" required class="input">
+  <option value="">—</option>
+  {% for c in categorias_egreso %}
+  <option value="{{ c.nombre }}" {{ "selected" if c.nombre == categoria_seleccionada }}>{{ c.nombre }}</option>
+  {% endfor %}
+</select>

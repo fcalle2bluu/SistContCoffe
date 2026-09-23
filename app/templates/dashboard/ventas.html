@@ -10,6 +10,9 @@
   {% if not turno %}
   <div class="card">
     <h3 class="card-title">No hay turno abierto</h3>
+    {% if turno_anterior %}
+    <p class="muted-sm">Antecedente: la apertura anterior fue de {{ turno_anterior.responsable }}, el {{ turno_anterior.abierto_en|fechahora }}.</p>
+    {% endif %}
     <p class="muted-sm">Abre caja para empezar a registrar ventas.</p>
     <form method="post" action="/dashboard/ventas/turno/abrir" class="inline-form">
       <div>
@@ -38,6 +41,7 @@
     </dl>
 
     <div class="disclosure-row">
+      {% if session.role == 'admin' %}
       <details class="disclosure">
         <summary class="btn btn-outline">Corregir apertura</summary>
         <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/apertura" class="inline-form">
@@ -48,11 +52,16 @@
           <button type="submit" class="btn btn-primary">Guardar</button>
         </form>
       </details>
+      {% endif %}
 
       <details class="disclosure">
         <summary class="btn btn-outline">Registrar egreso</summary>
         <form method="post" action="/dashboard/ventas/movimientos" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
+          <div>
+            <label class="field-label">Categoría</label>
+            {% include "partials/_categoria_egreso_select.html" %}
+          </div>
           <div class="flex-1">
             <label class="field-label">Motivo</label>
             <input name="motivo" required placeholder="Ej: pago servicio de limpieza" class="input" />
@@ -70,6 +79,15 @@
           </div>
           <button type="submit" class="btn btn-primary">Guardar</button>
         </form>
+        <div class="order-row" style="margin-top:8px;">
+          <div>
+            <label class="field-label">Nueva categoría</label>
+            <input type="text" id="nueva-categoria-input" name="nombre_nueva" placeholder="Ej: Mantenimiento" class="input input-w32" />
+          </div>
+          <button type="button" class="btn btn-outline btn-sm"
+            hx-post="/dashboard/ventas/movimientos/categorias" hx-include="#nueva-categoria-input"
+            hx-target="#categoria-egreso-select" hx-swap="outerHTML">+ Agregar categoría</button>
+        </div>
       </details>
 
       <details class="disclosure" id="disclosure-cerrar-turno">
@@ -436,13 +454,19 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
+        <thead><tr><th>Categoría</th><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for m in egresos_lista %}
           {% if editar_egreso_id == m.id %}
           <tr class="editing-row">
-            <td colspan="6">
+            <td colspan="7">
               <form method="post" action="/dashboard/ventas/movimientos/{{ m.id }}/editar" class="inline-form">
+                <div>
+                  <label class="field-label">Categoría</label>
+                  {% set categoria_seleccionada = m.categoria %}
+                  {% set categoria_select_id = "categoria-egreso-select-" ~ m.id %}
+                  {% include "partials/_categoria_egreso_select.html" %}
+                </div>
                 <div class="flex-1">
                   <label class="field-label">Motivo</label>
                   <input name="motivo" value="{{ m.motivo }}" required class="input" />
@@ -464,6 +488,7 @@
           </tr>
           {% else %}
           <tr>
+            <td class="small">{{ m.categoria or "—" }}</td>
             <td class="strong">{{ m.motivo }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(m.monto) }}</td>
             <td class="uppercase small">{{ m.tipo_pago }}</td>

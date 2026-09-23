@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app import bitacora
 from app.db import pool
-from app.deps import require_session
+from app.deps import require_admin, require_session
 from app.templating import templates
 from app.tz import hoy_bolivia
 
@@ -23,6 +23,7 @@ DENOMINACIONES = (
 CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
 CUENTA_BANCO = "1110103"  # BANCO BISA
 CUENTA_VENTAS = "5010101"  # Ventas
+CUENTA_GASTOS_ADMINISTRATIVOS = "405"  # GASTOS ADMINISTRATIVOS (egresos de caja, todas las categorías por ahora)
 
 TASA_IVA = 0.13
 TASA_IT = 0.03
@@ -100,6 +101,38 @@ async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
                 fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
+            )
+
+
+async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: str | None, motivo: str, responsable: str) -> None:
+    """Asienta un egreso de caja en el Libro Diario apenas se registra (no se
+    espera al cierre de turno, porque el dinero sale de inmediato). Por ahora
+    todas las categorías van a la cuenta genérica de Gastos Administrativos;
+    cuando haya una lista definitiva de categorías se puede desglosar por
+    cuenta. Solo se asienta para EFECTIVO y QR (mismo criterio que las
+    ventas): un egreso por POS/otro medio no tiene contrapartida de caja/banco
+    automática todavía."""
+    if tipo_pago == "EFECTIVO":
+        cuenta_contrapartida = CUENTA_CAJA_EFECTIVO
+    elif tipo_pago == "QR":
+        cuenta_contrapartida = CUENTA_BANCO
+    else:
+        return
+
+    glosa = f"Egreso de caja — {categoria + ': ' if categoria else ''}{motivo} (responsable: {responsable})."
+    fecha = hoy_bolivia()
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, $4, 0, $5)",
+                fecha, siguiente, CUENTA_GASTOS_ADMINISTRATIVOS, monto, glosa,
+            )
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, 0, $4, $5)",
+                fecha, siguiente, cuenta_contrapartida, monto, glosa,
             )
 
 
@@ -267,6 +300,10 @@ async def _ventas_context(
     turno = await pool().fetchrow(
         "SELECT id, responsable, monto_inicial, abierto_en FROM turnos WHERE estado = 'abierto'"
     )
+    turno_anterior = await pool().fetchrow(
+        "SELECT responsable, abierto_en FROM turnos ORDER BY abierto_en DESC LIMIT 1"
+    )
+    categorias_egreso = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
     mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
     productos = await pool().fetch(
         "SELECT id, nombre, categoria, precio_venta FROM productos ORDER BY categoria, nombre"
@@ -307,7 +344,7 @@ async def _ventas_context(
                 float(r["monto"]) for r in pago_rows if r["tipo_pago"] in PAGOS_EFECTIVO
             )
         movimientos = await pool().fetch(
-            "SELECT id, monto, tipo_pago, motivo, responsable, creado_en FROM movimientos_caja "
+            "SELECT id, monto, tipo_pago, motivo, categoria, responsable, creado_en FROM movimientos_caja "
             "WHERE turno_id = $1 AND tipo = 'egreso' ORDER BY creado_en DESC",
             turno["id"],
         )
@@ -336,6 +373,8 @@ async def _ventas_context(
         "session": session,
         "active": "ventas",
         "turno": turno,
+        "turno_anterior": turno_anterior,
+        "categorias_egreso": categorias_egreso,
         "mesas": mesas,
         "mesa_seleccionada": mesa_seleccionada,
         "productos": productos,
@@ -723,7 +762,7 @@ async def abrir_turno(request: Request, session: dict = Depends(require_session)
 
 @router.post("/turno/{turno_id}/apertura", response_class=HTMLResponse)
 async def editar_apertura_turno(
-    request: Request, turno_id: int, session: dict = Depends(require_session), monto_inicial: str = Form("")
+    request: Request, turno_id: int, session: dict = Depends(require_admin), monto_inicial: str = Form("")
 ):
     try:
         monto = float(monto_inicial)
@@ -804,29 +843,50 @@ async def registrar_movimiento_caja(
     monto: str = Form(""),
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
+    categoria: str = Form(""),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
+    categoria = categoria.strip()
     try:
         monto_num = float(monto)
     except ValueError:
         monto_num = 0
 
-    if not turno_id or monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO:
-        ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0).")
+    if not turno_id or monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO or not categoria:
+        ctx = await _ventas_context(session, error="Completa categoría, motivo, método de pago y monto (mayor a 0).")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     await pool().execute(
-        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago) "
-        "VALUES ($1, 'egreso', $2, $3, $4, $5)",
+        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, categoria) "
+        "VALUES ($1, 'egreso', $2, $3, $4, $5, $6)",
         int(turno_id),
         monto_num,
         motivo,
         session["nombre"],
         tipo_pago,
+        categoria,
     )
-    await bitacora.registrar(session, "Registró egreso de caja", f"Bs {monto_num:.2f} — {motivo}")
+    await _registrar_egreso_en_diario(monto_num, tipo_pago, categoria, motivo, session["nombre"])
+    await bitacora.registrar(session, "Registró egreso de caja", f"{categoria} — Bs {monto_num:.2f} — {motivo}")
     return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
+@router.post("/movimientos/categorias", response_class=HTMLResponse)
+async def agregar_categoria_egreso(
+    request: Request, session: dict = Depends(require_session), nombre_nueva: str = Form("")
+):
+    nombre_nueva = nombre_nueva.strip()
+    if nombre_nueva:
+        await pool().execute(
+            "INSERT INTO categorias_egreso_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING",
+            nombre_nueva,
+        )
+    categorias = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
+    return templates.TemplateResponse(
+        request, "partials/_categoria_egreso_select.html",
+        {"categorias_egreso": categorias, "categoria_seleccionada": nombre_nueva},
+    )
 
 
 @router.post("/movimientos/{movimiento_id}/editar", response_class=HTMLResponse)
@@ -837,26 +897,33 @@ async def editar_movimiento_caja(
     monto: str = Form(""),
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
+    categoria: str = Form(""),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
+    categoria = categoria.strip()
     try:
         monto_num = float(monto)
     except ValueError:
         monto_num = 0
 
-    if monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO:
-        ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0).")
+    if monto_num <= 0 or not motivo or tipo_pago not in TIPOS_PAGO or not categoria:
+        ctx = await _ventas_context(session, error="Completa categoría, motivo, método de pago y monto (mayor a 0).")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     await pool().execute(
-        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3 WHERE id = $4",
+        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3, categoria = $4 WHERE id = $5",
         monto_num,
         motivo,
         tipo_pago,
+        categoria,
         movimiento_id,
     )
-    await bitacora.registrar(session, "Editó egreso de caja", f"Movimiento #{movimiento_id}: Bs {monto_num:.2f} — {motivo}")
+    await bitacora.registrar(
+        session, "Editó egreso de caja",
+        f"Movimiento #{movimiento_id}: {categoria} — Bs {monto_num:.2f} — {motivo} "
+        f"(si ya estaba contabilizado en el Libro Diario, el asiento original no se ajusta solo — revísalo a mano).",
+    )
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 

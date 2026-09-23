@@ -16,6 +16,7 @@ async def turnos_page(request: Request, session: dict = Depends(require_admin)):
         """
         SELECT t.id, t.responsable, t.estado, t.monto_inicial, t.monto_final_declarado,
                t.abierto_en, t.cerrado_en,
+               ROW_NUMBER() OVER (ORDER BY t.abierto_en) AS numero,
                COALESCE(v.cantidad_ventas, 0) AS cantidad_ventas,
                COALESCE(v.total_ventas, 0) AS total_ventas,
                COALESCE(m.cantidad_movimientos, 0) AS cantidad_movimientos

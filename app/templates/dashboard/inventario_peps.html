@@ -47,10 +47,26 @@
           {% if ledger %} · Valor en libros: <span class="mono strong">Bs {{ "%.2f"|format(ledger[-1].saldo_valor) }}</span>{% endif %}
         </p>
       </div>
-      <form method="post" action="/dashboard/inventario-peps/productos/{{ producto_id }}/eliminar"
-            hx-confirm="¿Eliminar este producto y TODOS sus movimientos? No se puede deshacer.">
-        <button type="submit" class="link-danger">Eliminar producto</button>
-      </form>
+      <div class="row-actions">
+        <details class="disclosure">
+          <summary class="btn btn-outline btn-sm">Editar nombre</summary>
+          <form method="post" action="/dashboard/inventario-peps/productos/{{ producto_id }}/editar" class="inline-form">
+            <div>
+              <label class="field-label">Nombre</label>
+              <input name="nombre" value="{{ producto_actual.nombre if producto_actual else '' }}" required class="input input-w32" />
+            </div>
+            <div>
+              <label class="field-label">Unidad</label>
+              <input name="unidad" value="{{ producto_actual.unidad if producto_actual else 'kg' }}" class="input" style="width:80px;" />
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+          </form>
+        </details>
+        <form method="post" action="/dashboard/inventario-peps/productos/{{ producto_id }}/eliminar"
+              hx-confirm="¿Eliminar este producto y TODOS sus movimientos? No se puede deshacer.">
+          <button type="submit" class="link-danger">Eliminar producto</button>
+        </form>
+      </div>
     </div>
   </div>
 

@@ -133,6 +133,31 @@ async def crear_producto_peps(
     return RedirectResponse(f"/dashboard/inventario-peps?producto_id={fila['id']}", status_code=303)
 
 
+@router.post("/productos/{producto_id}/editar", response_class=HTMLResponse)
+async def editar_producto_peps(
+    request: Request,
+    producto_id: int,
+    session: dict = Depends(require_session),
+    nombre: str = Form(""),
+    unidad: str = Form("kg"),
+):
+    nombre = nombre.strip()
+    unidad = unidad.strip() or "kg"
+    if not nombre:
+        ctx = await _context(session, producto_id, error="Escribe el nombre del producto o materia prima.")
+        return templates.TemplateResponse(request, "dashboard/inventario_peps.html", ctx, status_code=400)
+
+    anterior = await pool().fetchval("SELECT nombre FROM peps_productos WHERE id = $1", producto_id)
+    if anterior is None:
+        return RedirectResponse("/dashboard/inventario-peps", status_code=303)
+
+    await pool().execute(
+        "UPDATE peps_productos SET nombre = $1, unidad = $2 WHERE id = $3", nombre, unidad, producto_id
+    )
+    await bitacora.registrar(session, "Editó producto PEPS", f"{anterior} → {nombre}")
+    return RedirectResponse(f"/dashboard/inventario-peps?producto_id={producto_id}", status_code=303)
+
+
 @router.post("/productos/{producto_id}/eliminar")
 async def eliminar_producto_peps(producto_id: int, session: dict = Depends(require_session)):
     producto = await pool().fetchrow("SELECT nombre FROM peps_productos WHERE id = $1", producto_id)
