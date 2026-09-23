@@ -354,10 +354,19 @@ async def actividad_ventas(fecha: str, session: dict = Depends(require_dashboard
     inicio_semana = datetime.combine(domingo, time.min, BOLIVIA_TZ)
     fin_semana = datetime.combine(sabado, time.min, BOLIVIA_TZ) + timedelta(days=1)
     inicio_semana_ant = inicio_semana - timedelta(days=7)
+    # Para "vs semana anterior" solo hace falta el total del mismo rango parcial
+    # (domingo hasta el día equivalente), no el desglose día por día de toda esa
+    # semana — un SUM directo es más liviano que agrupar y sumar en Python.
+    fin_parcial_ant = inicio_semana_ant + timedelta(days=indice_dia + 1)
 
-    por_dia, por_dia_ant, categorias = await asyncio.gather(
+    por_dia, parcial_anterior, categorias = await asyncio.gather(
         _totales_por_dia(inicio_semana, fin_semana),
-        _totales_por_dia(inicio_semana_ant, inicio_semana),
+        pool().fetchval(
+            "SELECT COALESCE(SUM(total), 0) FROM ordenes "
+            "WHERE estado = 'cobrada' AND cobrado_en >= $1 AND cobrado_en < $2",
+            inicio_semana_ant,
+            fin_parcial_ant,
+        ),
         pool().fetch(
             "SELECT COALESCE(p.categoria, 'Otros') AS nombre, SUM(oi.cantidad * oi.precio_unitario) AS monto "
             "FROM orden_items oi JOIN ordenes o ON o.id = oi.orden_id "
@@ -368,6 +377,7 @@ async def actividad_ventas(fecha: str, session: dict = Depends(require_dashboard
             datetime.combine(dia, time.min, BOLIVIA_TZ) + timedelta(days=1),
         ),
     )
+    parcial_anterior = float(parcial_anterior)
 
     serie = []
     for i in range(7):
@@ -387,7 +397,6 @@ async def actividad_ventas(fecha: str, session: dict = Depends(require_dashboard
     vs_promedio_pct = ((total_dia - promedio_dia) / promedio_dia * 100) if promedio_dia else 0.0
 
     parcial_actual = sum(s["monto"] for s in serie[: indice_dia + 1])
-    parcial_anterior = sum(por_dia_ant.get(domingo - timedelta(days=7) + timedelta(days=i), 0.0) for i in range(indice_dia + 1))
     vs_semana_anterior_pct = (
         ((parcial_actual - parcial_anterior) / parcial_anterior * 100) if parcial_anterior else 0.0
     )

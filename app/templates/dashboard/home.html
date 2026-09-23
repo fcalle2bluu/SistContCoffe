@@ -544,6 +544,17 @@
           y: { display: false },
           x: { grid: { display: false } },
         },
+        onClick: function (evt, elementos) {
+          if (!elementos.length) return;
+          var dia = serie[elementos[0].index];
+          if (dia.es_futuro || dia.fecha === diaActividad) return;
+          diaActividad = dia.fecha;
+          cargarActividad();
+        },
+        onHover: function (evt, elementos) {
+          var sobreBarraValida = elementos.length && !serie[elementos[0].index].es_futuro;
+          evt.native.target.style.cursor = sobreBarraValida ? "pointer" : "default";
+        },
       },
     });
   }
