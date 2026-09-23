@@ -6,6 +6,7 @@ from app.db import pool
 from app.deps import get_session, require_dashboard
 from app.session import clear_session_cookie, set_session_cookie
 from app.templating import templates
+from app.tz import hoy_bolivia
 
 router = APIRouter()
 
@@ -91,5 +92,6 @@ async def _datos_dashboard() -> dict:
 async def dashboard_home(request: Request, session: dict = Depends(require_dashboard)):
     datos = await _datos_dashboard()
     return templates.TemplateResponse(
-        request, "dashboard/home.html", {"session": session, "active": "home", **datos}
+        request, "dashboard/home.html",
+        {"session": session, "active": "home", "hoy_iso": hoy_bolivia().isoformat(), **datos},
     )

@@ -209,3 +209,110 @@ async def detalle_pago(periodo: str, metodo: str, session: dict = Depends(requir
     _, inicio, fin = _rango_periodo(periodo)
     items = await _productos_vendidos(inicio, fin, None, metodo)
     return {"titulo": f"Productos vendidos — pagado con {metodo}", "items": items}
+
+
+PALETA_TURNOS = ("#d97706", "#2563eb", "#059669", "#dc2626", "#7c3aed", "#0891b2", "#db2777", "#65a30d")
+
+
+@router.get("/ventas-por-hora")
+async def ventas_por_hora(fecha: str, session: dict = Depends(require_dashboard)):
+    try:
+        dia = date.fromisoformat(fecha)
+    except ValueError:
+        dia = ahora_bolivia().date()
+    inicio = datetime.combine(dia, time.min, BOLIVIA_TZ)
+    fin = inicio + timedelta(days=1)
+
+    filas = await pool().fetch(
+        """
+        SELECT o.turno_id, COALESCE(t.responsable, 'Sin turno') AS turno_responsable,
+               date_trunc('hour', o.cobrado_en AT TIME ZONE 'America/La_Paz') AS hora,
+               SUM(o.total) AS total
+        FROM ordenes o
+        LEFT JOIN turnos t ON t.id = o.turno_id
+        WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2
+        GROUP BY o.turno_id, t.responsable, date_trunc('hour', o.cobrado_en AT TIME ZONE 'America/La_Paz')
+        ORDER BY MIN(date_trunc('hour', o.cobrado_en AT TIME ZONE 'America/La_Paz')) OVER (PARTITION BY o.turno_id),
+                 date_trunc('hour', o.cobrado_en AT TIME ZONE 'America/La_Paz')
+        """,
+        inicio,
+        fin,
+    )
+
+    turnos_orden: list[int | None] = []
+    turnos_info: dict[int | None, dict] = {}
+    for r in filas:
+        tid = r["turno_id"]
+        if tid not in turnos_info:
+            turnos_info[tid] = {"responsable": r["turno_responsable"], "horas": {}}
+            turnos_orden.append(tid)
+        turnos_info[tid]["horas"][r["hora"]] = float(r["total"])
+
+    etiquetas = [f"{h:02d}:00" for h in range(24)]
+    datasets = []
+    for i, tid in enumerate(turnos_orden):
+        info = turnos_info[tid]
+        datos = [info["horas"].get(datetime.combine(dia, time(hour=h)), 0.0) for h in range(24)]
+        datasets.append({
+            "turno_id": tid,
+            "responsable": info["responsable"],
+            "color": PALETA_TURNOS[i % len(PALETA_TURNOS)],
+            "datos": datos,
+        })
+
+    return {"fecha": dia.isoformat(), "etiquetas": etiquetas, "datasets": datasets}
+
+
+@router.get("/detalle-hora")
+async def detalle_hora(
+    fecha: str, hora: int, turno_id: int | None = None, session: dict = Depends(require_dashboard)
+):
+    try:
+        dia = date.fromisoformat(fecha)
+    except ValueError:
+        dia = ahora_bolivia().date()
+    inicio = datetime.combine(dia, time(hour=hora), BOLIVIA_TZ)
+    fin = inicio + timedelta(hours=1)
+
+    condiciones = ["o.estado = 'cobrada'", "o.cobrado_en >= $1", "o.cobrado_en < $2"]
+    args: list = [inicio, fin]
+    if turno_id is not None:
+        args.append(turno_id)
+        condiciones.append(f"o.turno_id = ${len(args)}")
+
+    ordenes = await pool().fetch(
+        "SELECT o.id, o.mesa, o.total, o.tipo_pago, o.cobrado_en, o.responsable, "
+        "COALESCE(t.responsable, 'Sin turno') AS turno_responsable "
+        "FROM ordenes o LEFT JOIN turnos t ON t.id = o.turno_id "
+        f"WHERE {' AND '.join(condiciones)} ORDER BY o.cobrado_en",
+        *args,
+    )
+
+    items_por_orden: dict[int, list] = {}
+    if ordenes:
+        item_rows = await pool().fetch(
+            "SELECT orden_id, producto_nombre, cantidad FROM orden_items "
+            "WHERE orden_id = ANY($1::int[]) ORDER BY id",
+            [o["id"] for o in ordenes],
+        )
+        for r in item_rows:
+            items_por_orden.setdefault(r["orden_id"], []).append(r)
+
+    ventas = [
+        {
+            "mesa": o["mesa"],
+            "hora": o["cobrado_en"].astimezone(BOLIVIA_TZ).strftime("%H:%M"),
+            "total": float(o["total"]),
+            "tipo_pago": o["tipo_pago"] or "—",
+            "responsable": o["responsable"],
+            "turno_responsable": o["turno_responsable"],
+            "items": ", ".join(
+                f"{float(it['cantidad']):g}x {it['producto_nombre']}" for it in items_por_orden.get(o["id"], [])
+            ) or "—",
+        }
+        for o in ordenes
+    ]
+    return {
+        "titulo": f"Ventas de las {hora:02d}:00 a las {hora:02d}:59 — {dia.strftime('%d/%m/%Y')}",
+        "ventas": ventas,
+    }

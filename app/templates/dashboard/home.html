@@ -57,6 +57,31 @@
       <canvas id="chartDetalle"></canvas>
     </div>
   </div>
+
+  <div class="card">
+    <div class="flex-between">
+      <div>
+        <h3 class="card-title">Ventas por hora</h3>
+        <p class="muted-sm">Cada color es un turno distinto. Haz clic en una barra para ver el detalle de esas ventas.</p>
+      </div>
+      <div>
+        <label class="field-label">Día</label>
+        <input type="date" id="filtro-fecha-horas" class="input" value="{{ hoy_iso }}" max="{{ hoy_iso }}" />
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:320px;"><canvas id="chartHoras"></canvas></div>
+  </div>
+
+  <div class="card" id="detalle-horas-card">
+    <h3 class="card-title" id="detalle-horas-titulo">Detalle de ventas por hora</h3>
+    <p class="muted-sm" id="detalle-horas-vacio">Haz clic en una barra del gráfico "Ventas por hora" para ver aquí el detalle de cada venta.</p>
+    <div class="table-wrap oculto" id="detalle-horas-wrap">
+      <table class="data-table" id="tabla-detalle-horas">
+        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th>Turno</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -278,6 +303,104 @@
 
   selectPeriodo.addEventListener("change", cargarResumen);
   cargarResumen();
+
+  // Ventas por hora de un día, separadas por turno (una barra apilada por
+  // hora, un color por turno) — hace clic en un segmento para ver el
+  // detalle completo de esas ventas (mesa, productos, pago, responsable).
+  var filtroFechaHoras = document.getElementById("filtro-fecha-horas");
+  var ultimoHoras = null;
+
+  function mostrarDetalleHoras(titulo, ventas) {
+    document.getElementById("detalle-horas-titulo").textContent = titulo;
+    var vacio = document.getElementById("detalle-horas-vacio");
+    var wrap = document.getElementById("detalle-horas-wrap");
+    var tbody = document.querySelector("#tabla-detalle-horas tbody");
+
+    if (!ventas || ventas.length === 0) {
+      wrap.classList.add("oculto");
+      vacio.textContent = "No hay ventas registradas en esa hora.";
+      vacio.classList.remove("oculto");
+      return;
+    }
+
+    vacio.classList.add("oculto");
+    wrap.classList.remove("oculto");
+    tbody.innerHTML = ventas.map(function (v) {
+      return (
+        "<tr>" +
+          "<td class=\"strong\">" + v.mesa + "</td>" +
+          "<td class=\"small\">" + v.items + "</td>" +
+          "<td class=\"text-right mono\">" + formatoBs(v.total) + "</td>" +
+          "<td class=\"uppercase small\">" + v.tipo_pago + "</td>" +
+          "<td class=\"small\">" + v.hora + "</td>" +
+          "<td class=\"small muted-inline\">" + v.responsable + "</td>" +
+          "<td class=\"small muted-inline\">" + v.turno_responsable + "</td>" +
+        "</tr>"
+      );
+    }).join("");
+  }
+
+  async function verDetalleHora(fecha, hora, turnoId) {
+    var url = "/dashboard/api/detalle-hora?fecha=" + fecha + "&hora=" + hora;
+    if (turnoId !== null && turnoId !== undefined) url += "&turno_id=" + turnoId;
+    var r = await fetch(url);
+    var data = await r.json();
+    mostrarDetalleHoras(data.titulo, data.ventas);
+  }
+
+  function pintarHoras(data) {
+    ultimoHoras = data;
+    crearOActualizar("chartHoras", {
+      type: "bar",
+      data: {
+        labels: data.etiquetas,
+        datasets: data.datasets.map(function (ds) {
+          return {
+            label: ds.responsable,
+            data: ds.datos,
+            backgroundColor: ds.color,
+            borderRadius: 4,
+          };
+        }),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { x: { stacked: true }, y: { stacked: true } },
+        plugins: {
+          legend: { display: data.datasets.length > 1 },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                return ctx.dataset.label + ": " + formatoBs(ctx.raw);
+              },
+            },
+          },
+        },
+        onClick: function (evt, elementos) {
+          if (!elementos.length) return;
+          var el = elementos[0];
+          var ds = ultimoHoras.datasets[el.datasetIndex];
+          if (!ds.datos[el.index]) return; // hora sin ventas en ese turno
+          verDetalleHora(ultimoHoras.fecha, el.index, ds.turno_id);
+        },
+        onHover: function (evt, elementos) {
+          evt.native.target.style.cursor = elementos.length ? "pointer" : "default";
+        },
+      },
+    });
+  }
+
+  async function cargarHoras() {
+    var r = await fetch("/dashboard/api/ventas-por-hora?fecha=" + filtroFechaHoras.value);
+    var data = await r.json();
+    pintarHoras(data);
+  }
+
+  if (filtroFechaHoras) {
+    filtroFechaHoras.addEventListener("change", cargarHoras);
+    cargarHoras();
+  }
 })();
 </script>
 {% endblock %}
