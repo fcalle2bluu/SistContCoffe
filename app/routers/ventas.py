@@ -526,6 +526,28 @@ async def ventas_page(
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
 
+async def _guardar_cliente_desde_factura(nombre: str, ci_nit: str, telefono: str) -> None:
+    """Cada vez que se factura una venta (NIT/celular/nombre), se aprovecha
+    para ir armando la base de clientes solo. Si el NIT ya está registrado,
+    no se pisa el nombre ni el teléfono que ya haya (puede haber sido
+    cargado/corregido a mano) — como mucho se completa el teléfono si
+    estaba vacío. Si el NIT es nuevo, se crea el cliente."""
+    nombre = nombre.strip()
+    ci_nit = ci_nit.strip()
+    telefono = telefono.strip()
+    if not nombre or not ci_nit:
+        return
+    existente = await pool().fetchrow("SELECT id, telefono FROM clientes WHERE ci_nit = $1", ci_nit)
+    if existente:
+        if not existente["telefono"] and telefono:
+            await pool().execute("UPDATE clientes SET telefono = $1 WHERE id = $2", telefono, existente["id"])
+        return
+    await pool().execute(
+        "INSERT INTO clientes (nombre, ci_nit, telefono) VALUES ($1, $2, $3)",
+        nombre, ci_nit, telefono or None,
+    )
+
+
 @router.post("/mesas", response_class=HTMLResponse)
 async def agregar_mesa(request: Request, session: dict = Depends(require_session), nombre_nueva: str = Form("")):
     nombre_nueva = nombre_nueva.strip().upper()
@@ -629,6 +651,9 @@ async def crear_orden(
                     orden_id, pago_tipo, pago_monto,
                 )
 
+    if cobrando and any(t in TIPOS_FACTURADOS for t, _ in pagos):
+        await _guardar_cliente_desde_factura(factura_nombre, factura_nit, factura_celular)
+
     accion_texto = "Cobró venta" if cobrando else "Creó pedido"
     detalle_pago = " + ".join(f"{t} Bs {m:.2f}" for t, m in pagos) if cobrando else ""
     detalle = f"Mesa {mesa}, total Bs {total:.2f}" + (f", {detalle_pago}" if cobrando else "")
@@ -682,6 +707,9 @@ async def cobrar_orden_pendiente(
                     "INSERT INTO orden_pagos (orden_id, tipo_pago, monto) VALUES ($1, $2, $3)",
                     orden_id, pago_tipo, pago_monto,
                 )
+
+    if any(t in TIPOS_FACTURADOS for t, _ in pagos):
+        await _guardar_cliente_desde_factura(factura_nombre, factura_nit, factura_celular)
 
     detalle_pago = " + ".join(f"{t} Bs {m:.2f}" for t, m in pagos)
     await bitacora.registrar(session, "Cobró venta pendiente", f"Orden #{orden_id}, {detalle_pago}")
@@ -789,6 +817,9 @@ async def cambiar_metodo_pago_orden(
                 "INSERT INTO orden_pagos (orden_id, tipo_pago, monto) VALUES ($1, $2, $3)",
                 orden_id, tipo_pago, orden["total"],
             )
+
+    if tipo_pago in TIPOS_FACTURADOS:
+        await _guardar_cliente_desde_factura(factura_nombre, factura_nit, factura_celular)
 
     detalle = f"Orden #{orden_id} (mesa {orden['mesa']}) → {tipo_pago}"
     if tipo_pago in TIPOS_FACTURADOS:
