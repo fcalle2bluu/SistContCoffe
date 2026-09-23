@@ -787,7 +787,7 @@ async def editar_items_orden_form(request: Request, orden_id: int, session: dict
         return RedirectResponse("/dashboard/ventas", status_code=303)
 
     items = await pool().fetch(
-        "SELECT producto_nombre, cantidad, precio_unitario FROM orden_items WHERE orden_id = $1 ORDER BY id",
+        "SELECT id, producto_nombre, cantidad, precio_unitario FROM orden_items WHERE orden_id = $1 ORDER BY id",
         orden_id,
     )
     por_categoria = await _productos_por_categoria()
@@ -803,6 +803,73 @@ async def editar_items_orden_form(request: Request, orden_id: int, session: dict
             "por_categoria": por_categoria,
         },
     )
+
+
+async def _recalcular_total_orden(conn, orden_id: int) -> None:
+    total = await conn.fetchval(
+        "SELECT COALESCE(SUM(cantidad * precio_unitario), 0) FROM orden_items WHERE orden_id = $1",
+        orden_id,
+    )
+    await conn.execute("UPDATE ordenes SET total = $1 WHERE id = $2", float(total), orden_id)
+
+
+@router.post("/ordenes/{orden_id}/items/{item_id}/editar")
+async def editar_item_orden(
+    orden_id: int, item_id: int, session: dict = Depends(require_session), cantidad: str = Form("")
+):
+    orden = await pool().fetchrow("SELECT mesa, estado FROM ordenes WHERE id = $1", orden_id)
+    if not orden or orden["estado"] not in ("abierta", "cobrada"):
+        return RedirectResponse("/dashboard/ventas", status_code=303)
+
+    item = await pool().fetchrow(
+        "SELECT producto_nombre, cantidad AS cantidad_anterior FROM orden_items WHERE id = $1 AND orden_id = $2",
+        item_id, orden_id,
+    )
+    if not item:
+        return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
+
+    try:
+        cantidad_num = float(cantidad)
+    except ValueError:
+        cantidad_num = 0
+    if cantidad_num <= 0:
+        return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("UPDATE orden_items SET cantidad = $1 WHERE id = $2", cantidad_num, item_id)
+            await _recalcular_total_orden(conn, orden_id)
+
+    await bitacora.registrar(
+        session, "Cambió cantidad de un producto en un pedido",
+        f"Orden #{orden_id} (mesa {orden['mesa']}): {item['producto_nombre']} "
+        f"{item['cantidad_anterior']:g} → {cantidad_num:g}",
+    )
+    return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
+
+
+@router.post("/ordenes/{orden_id}/items/{item_id}/eliminar")
+async def eliminar_item_orden(orden_id: int, item_id: int, session: dict = Depends(require_session)):
+    orden = await pool().fetchrow("SELECT mesa, estado FROM ordenes WHERE id = $1", orden_id)
+    if not orden or orden["estado"] not in ("abierta", "cobrada"):
+        return RedirectResponse("/dashboard/ventas", status_code=303)
+
+    item = await pool().fetchrow(
+        "SELECT producto_nombre, cantidad FROM orden_items WHERE id = $1 AND orden_id = $2", item_id, orden_id
+    )
+    if not item:
+        return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("DELETE FROM orden_items WHERE id = $1", item_id)
+            await _recalcular_total_orden(conn, orden_id)
+
+    await bitacora.registrar(
+        session, "Quitó un producto de un pedido",
+        f"Orden #{orden_id} (mesa {orden['mesa']}): {item['cantidad']:g}x {item['producto_nombre']}",
+    )
+    return RedirectResponse(f"/dashboard/ventas/ordenes/{orden_id}/items", status_code=303)
 
 
 @router.post("/ordenes/{orden_id}/items")
