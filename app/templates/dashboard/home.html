@@ -16,6 +16,33 @@
     <div class="stat-box"><dt>Clientes</dt><dd>{{ kpi_clientes }}</dd></div>
   </dl>
 
+  <div class="charts-grid">
+    <div class="card">
+      <div class="flex-between">
+        <div>
+          <h3 class="card-title">Ventas por hora</h3>
+          <p class="muted-sm">Cada color es un turno distinto. Haz clic en un punto para ver el detalle de esas ventas.</p>
+        </div>
+        <div>
+          <label class="field-label">Día</label>
+          <input type="date" id="filtro-fecha-horas" class="input" value="{{ hoy_iso }}" max="{{ hoy_iso }}" />
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:360px;"><canvas id="chartHoras"></canvas></div>
+    </div>
+
+    <div class="card" id="detalle-horas-card">
+      <h3 class="card-title" id="detalle-horas-titulo">Detalle de ventas por hora</h3>
+      <p class="muted-sm" id="detalle-horas-vacio">Haz clic en un punto del gráfico "Ventas por hora" para ver aquí el detalle de cada venta.</p>
+      <div class="table-wrap oculto" id="detalle-horas-wrap">
+        <table class="data-table" id="tabla-detalle-horas">
+          <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th>Turno</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="dashboard-toolbar">
     <div>
       <label class="field-label">Período de análisis</label>
@@ -55,31 +82,6 @@
     <p class="muted-sm" id="detalle-vacio">Haz clic en una barra, punto o segmento de cualquier gráfico para ver el detalle aquí.</p>
     <div class="chart-wrap oculto" id="detalle-chart-wrap">
       <canvas id="chartDetalle"></canvas>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="flex-between">
-      <div>
-        <h3 class="card-title">Ventas por hora</h3>
-        <p class="muted-sm">Cada color es un turno distinto. Haz clic en una barra para ver el detalle de esas ventas.</p>
-      </div>
-      <div>
-        <label class="field-label">Día</label>
-        <input type="date" id="filtro-fecha-horas" class="input" value="{{ hoy_iso }}" max="{{ hoy_iso }}" />
-      </div>
-    </div>
-    <div class="chart-wrap" style="height:360px;"><canvas id="chartHoras"></canvas></div>
-  </div>
-
-  <div class="card" id="detalle-horas-card">
-    <h3 class="card-title" id="detalle-horas-titulo">Detalle de ventas por hora</h3>
-    <p class="muted-sm" id="detalle-horas-vacio">Haz clic en una barra del gráfico "Ventas por hora" para ver aquí el detalle de cada venta.</p>
-    <div class="table-wrap oculto" id="detalle-horas-wrap">
-      <table class="data-table" id="tabla-detalle-horas">
-        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th>Turno</th></tr></thead>
-        <tbody></tbody>
-      </table>
     </div>
   </div>
 </div>
