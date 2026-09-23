@@ -1,0 +1,73 @@
+<div class="modal-overlay" id="modal-overlay" onclick="if (event.target === this) cerrarModalPedido();">
+  <div class="modal-box" id="orden-items-modal-content">
+    <div class="modal-header">
+      <div>
+        <h3 class="card-title">Mesa {{ orden.mesa }}</h3>
+        <p class="muted-sm">Total: <span class="strong">Bs {{ "%.2f"|format(orden.total) }}</span></p>
+      </div>
+      <button type="button" class="modal-close" onclick="cerrarModalPedido();" aria-label="Cerrar">✕</button>
+    </div>
+
+    {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+
+    {% if items|length == 0 %}
+    <p class="muted-sm">Este pedido todavía no tiene productos.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Cant.</th><th>Producto</th><th class="text-right">Subtotal</th><th></th></tr></thead>
+        <tbody>
+          {% for it in items %}
+          <tr>
+            <td>
+              <form hx-post="/dashboard/ventas/ordenes/{{ orden.id }}/items/{{ it.id }}/editar"
+                    hx-target="#orden-items-modal-content" hx-swap="outerHTML"
+                    class="inline-form" style="gap:6px; flex-wrap:nowrap;">
+                <input name="cantidad" type="number" step="0.001" min="0.001" value="{{ '%g'|format(it.cantidad) }}" class="input input-w20 mono" />
+                <button type="submit" class="btn btn-outline btn-sm" title="Guardar cantidad">✓</button>
+              </form>
+            </td>
+            <td>{{ it.producto_nombre }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(it.cantidad * it.precio_unitario) }}</td>
+            <td class="text-right">
+              <form hx-post="/dashboard/ventas/ordenes/{{ orden.id }}/items/{{ it.id }}/eliminar"
+                    hx-target="#orden-items-modal-content" hx-swap="outerHTML"
+                    hx-confirm="¿Quitar {{ it.producto_nombre }} de este pedido?">
+                <button type="submit" class="link-danger">Quitar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <form hx-post="/dashboard/ventas/ordenes/{{ orden.id }}/items"
+          hx-target="#orden-items-modal-content" hx-swap="outerHTML"
+          class="order-row" style="margin-top:14px; align-items:flex-end;">
+      <div class="flex-1">
+        <label class="field-label">Agregar producto</label>
+        <select name="producto_id" required class="input">
+          <option value="">— Selecciona —</option>
+          {% for categoria, lista in por_categoria.items() %}
+          <optgroup label="{{ categoria }}">
+            {% for p in lista %}
+            <option value="{{ p.id }}">{{ p.nombre }} — Bs {{ "%.2f"|format(p.precio_venta) }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Cantidad</label>
+        <input name="cantidad" type="number" step="0.001" min="0.001" value="1" class="input" style="width:80px;" />
+      </div>
+      <button type="submit" class="btn btn-primary">+ Agregar</button>
+    </form>
+
+    <div class="order-actions" style="margin-top:16px;">
+      <button type="button" class="btn btn-outline" onclick="cerrarModalPedido();">Listo</button>
+    </div>
+  </div>
+</div>

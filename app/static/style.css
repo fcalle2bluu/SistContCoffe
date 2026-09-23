@@ -406,6 +406,20 @@ a { color: inherit; }
 .inline-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; width: 100%; }
 .inline-form > div { display: block; }
 
+/* Modal flotante genérico */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(16, 24, 40, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; z-index: 1000;
+}
+.modal-box {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-md, var(--shadow-sm));
+  padding: 20px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto;
+}
+.modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.modal-close { background: none; border: none; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; }
+.modal-close:hover { color: var(--ink); }
+
 /* Turno / ventas */
 .turno-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .stats-grid { margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px; }

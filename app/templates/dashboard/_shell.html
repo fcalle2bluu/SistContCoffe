@@ -36,4 +36,16 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+
+<div id="modal-root"></div>
+<script>
+  function cerrarModalPedido() {
+    var root = document.getElementById("modal-root");
+    if (root) root.innerHTML = "";
+    location.reload();
+  }
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && document.getElementById("modal-overlay")) cerrarModalPedido();
+  });
+</script>
 {% endblock %}
