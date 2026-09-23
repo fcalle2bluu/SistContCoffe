@@ -13,6 +13,7 @@
       {% endif %}
       <a href="/dashboard/ventas" class="nav-link {{ 'active' if active == 'ventas' else '' }}">Ventas / Caja</a>
       <a href="/dashboard/insumos" class="nav-link {{ 'active' if active == 'insumos' else '' }}">Control de Insumos</a>
+      <a href="/dashboard/inventario-peps" class="nav-link {{ 'active' if active == 'inventario_peps' else '' }}">Inventario PEPS</a>
       {% if session.role == 'admin' %}
       <a href="/dashboard/clientes" class="nav-link {{ 'active' if active == 'clientes' else '' }}">Clientes</a>
       <a href="/dashboard/productos" class="nav-link {{ 'active' if active == 'productos' else '' }}">Productos</a>

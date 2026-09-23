@@ -384,6 +384,12 @@ a { color: inherit; }
 .nowrap { white-space: nowrap; }
 .uppercase { text-transform: uppercase; }
 .truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flex-between { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.row-warning { background: #fff4e5; }
+.badge-warning {
+  display: inline-block; padding: 1px 6px; border-radius: 999px; background: #fdecc8; color: #92620a;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; margin-left: 4px;
+}
 
 .link-danger { background: none; border: none; padding: 0; font-size: 12px; font-weight: 600; color: var(--red); cursor: pointer; text-decoration: none; }
 .link-danger:hover { text-decoration: underline; }
