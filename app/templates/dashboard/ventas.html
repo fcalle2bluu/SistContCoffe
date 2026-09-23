@@ -151,8 +151,35 @@
           <p class="muted-sm">
             Los <a href="#egresos-turno">egresos</a> se descuentan cada uno de la cuenta de su categoría
             (o Gastos Administrativos si la categoría todavía no tiene una cuenta propia asignada).
-            Los <a href="#ingresos-turno">ingresos a caja</a> (traslados internos, no ventas) no generan
-            asiento automático en el Libro Diario todavía.
+          </p>
+          {% endif %}
+
+          {% if resumen_ingresos_caja %}
+          {% set cuentas_origen_ingreso = {'EFECTIVO': 'Caja Moneda Nacional', 'QR': 'Banco Bisa'} %}
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Ingreso a caja</th><th class="text-right">Cantidad</th><th class="text-right">Monto</th><th>Va a la cuenta</th></tr></thead>
+              <tbody>
+                {% for tipo, datos in resumen_ingresos_caja.items() %}
+                <tr>
+                  <td class="uppercase small">{{ tipo }}</td>
+                  <td class="text-right mono">{{ datos.cantidad }}</td>
+                  <td class="text-right mono">Bs {{ "%.2f"|format(datos.monto) }}</td>
+                  <td class="small">
+                    {% if tipo in cuentas_origen_ingreso %}
+                    Caja Chica (1110102) — sale de {{ cuentas_origen_ingreso[tipo] }}
+                    {% else %}
+                    Sin asiento automático (lo registra el contador a mano)
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <p class="muted-sm">
+            Los <a href="#ingresos-turno">ingresos a caja</a> son traslados internos (no ventas): se
+            descuentan del efectivo teórico porque esa plata ya salió de la caja hacia Caja Chica.
           </p>
           {% endif %}
           <p class="muted-sm">Arqueo de caja: cuenta los billetes y monedas físicos y el sistema calcula el total.</p>

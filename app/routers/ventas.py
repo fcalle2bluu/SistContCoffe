@@ -21,6 +21,7 @@ DENOMINACIONES = (
 )
 
 CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
+CUENTA_CAJA_CHICA = "1110102"  # CAJA CHICA — adonde va la plata cuando se traslada desde la caja
 CUENTA_BANCO = "1110103"  # BANCO BISA
 CUENTA_VENTAS = "5010101"  # Ventas
 CUENTA_GASTOS_ADMINISTRATIVOS = "405"  # GASTOS ADMINISTRATIVOS (categorías de egreso sin cuenta propia todavía)
@@ -155,6 +156,35 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
                 fecha, siguiente, cuenta_contrapartida, monto, glosa,
+            )
+
+
+async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
+    """Asienta un ingreso a caja en el Libro Diario apenas se registra: es un
+    traslado interno (Debe Caja Chica) desde donde salió la plata (Haber Caja
+    Moneda Nacional si fue en efectivo, Banco Bisa si fue por QR). Solo se
+    asienta para EFECTIVO y QR, mismo criterio que egresos y ventas."""
+    if tipo_pago == "EFECTIVO":
+        cuenta_origen = CUENTA_CAJA_EFECTIVO
+    elif tipo_pago == "QR":
+        cuenta_origen = CUENTA_BANCO
+    else:
+        return
+
+    glosa = f"Ingreso a caja chica — {motivo} (responsable: {responsable})."
+    fecha = hoy_bolivia()
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, $4, 0, $5)",
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
+            )
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, 0, $4, $5)",
+                fecha, siguiente, cuenta_origen, monto, glosa,
             )
 
 
@@ -414,6 +444,13 @@ async def _ventas_context(
             fila["monto"] += float(p["monto"])
     resumen_pagos = {t: v for t, v in resumen_pagos.items() if v["cantidad"] > 0}
 
+    resumen_ingresos_caja: dict[str, dict] = {}
+    for m in ingresos_lista:
+        tipo = m["tipo_pago"] or "—"
+        fila = resumen_ingresos_caja.setdefault(tipo, {"cantidad": 0, "monto": 0.0})
+        fila["cantidad"] += 1
+        fila["monto"] += float(m["monto"])
+
     return {
         "session": session,
         "active": "ventas",
@@ -437,8 +474,9 @@ async def _ventas_context(
         "ingresos_caja_totales": ingresos_caja_totales,
         "ventas_totales": ventas_totales,
         "resumen_pagos": resumen_pagos,
+        "resumen_ingresos_caja": resumen_ingresos_caja,
         "efectivo_teorico": (
-            float(turno["monto_inicial"]) + ingresos_efectivo + ingresos_caja_efectivo - egresos_efectivo
+            float(turno["monto_inicial"]) + ingresos_efectivo - ingresos_caja_efectivo - egresos_efectivo
         ) if turno else 0,
         "cobrar_id": cobrar_id,
         "descuento_id": descuento_id,
@@ -1015,6 +1053,7 @@ async def registrar_ingreso_caja(
         session["nombre"],
         tipo_pago,
     )
+    await _registrar_ingreso_caja_en_diario(monto_num, tipo_pago, motivo, session["nombre"])
     await bitacora.registrar(session, "Registró ingreso a caja", f"Bs {monto_num:.2f} — {motivo} ({tipo_pago})")
     return RedirectResponse("/dashboard/ventas#ingresos-turno", status_code=303)
 
@@ -1045,7 +1084,8 @@ async def editar_ingreso_caja(
     )
     await bitacora.registrar(
         session, "Editó ingreso a caja",
-        f"Movimiento #{movimiento_id}: Bs {monto_num:.2f} — {motivo} ({tipo_pago})",
+        f"Movimiento #{movimiento_id}: Bs {monto_num:.2f} — {motivo} ({tipo_pago}) "
+        f"(si ya estaba contabilizado en el Libro Diario, el asiento original no se ajusta solo — revísalo a mano).",
     )
     return RedirectResponse("/dashboard/ventas#ingresos-turno", status_code=303)
 
