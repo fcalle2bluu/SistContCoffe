@@ -389,7 +389,29 @@
         <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Descuento</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for o in ordenes_cobradas %}
-          {% if descuento_id == o.id %}
+          {% if metodo_pago_id == o.id %}
+          <tr class="editing-row">
+            <td colspan="8">
+              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/metodo-pago" class="inline-form form-cambiar-pago">
+                <span class="strong">{{ o.mesa }}</span>
+                <span class="mono">Bs {{ "%.2f"|format(o.total) }}</span>
+                <div>
+                  <label class="field-label">Método de pago</label>
+                  <select name="tipo_pago" required class="input input-w36 pos-tipo-pago-cambio">
+                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == o.tipo_pago }}>{{ t }}</option>{% endfor %}
+                  </select>
+                </div>
+                <span class="factura-fields-cambio{{ '' if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') else ' oculto' }}">
+                  <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
+                  <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
+                  <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
+                </span>
+                <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                <a href="/dashboard/ventas#ventas-cobradas" class="btn btn-outline btn-sm">Cancelar</a>
+              </form>
+            </td>
+          </tr>
+          {% elif descuento_id == o.id %}
           <tr class="editing-row">
             <td colspan="8">
               <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/descuento" class="inline-form">
@@ -432,6 +454,7 @@
               <div class="row-actions">
                 <a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a>
                 <a href="/dashboard/ventas?descuento={{ o.id }}#ventas-cobradas" class="link-muted">Descuento</a>
+                <a href="/dashboard/ventas?metodo_pago={{ o.id }}#ventas-cobradas" class="link-muted">Cambiar pago</a>
                 <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/eliminar"
                   onsubmit="return confirm('¿Eliminar esta venta? Esta acción no se puede deshacer.');">
                   <button type="submit" class="link-danger">Eliminar</button>
@@ -792,6 +815,23 @@
       }
     });
   });
+
+  // Cambiar método de pago de una venta ya cobrada (por si el cliente pide factura después).
+  var formCambiarPago = document.querySelector(".form-cambiar-pago");
+  if (formCambiarPago) {
+    var TIPOS_FACTURADOS_CAMBIO = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
+    var selectCambio = formCambiarPago.querySelector(".pos-tipo-pago-cambio");
+    var camposCambio = formCambiarPago.querySelector(".factura-fields-cambio");
+    function actualizarFacturaCambio() {
+      var requiere = TIPOS_FACTURADOS_CAMBIO.indexOf(selectCambio.value) !== -1;
+      camposCambio.classList.toggle("oculto", !requiere);
+      camposCambio.querySelectorAll("input").forEach(function (input) {
+        if (requiere) input.setAttribute("required", "required");
+        else input.removeAttribute("required");
+      });
+    }
+    selectCambio.addEventListener("change", actualizarFacturaCambio);
+  }
 
   // Arqueo de caja al cerrar turno: suma billetes/monedas contados y muestra la diferencia.
   var formArqueo = document.getElementById("form-cerrar-turno");

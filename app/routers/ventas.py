@@ -307,6 +307,7 @@ async def _ventas_context(
     session: dict,
     cobrar_id: int | None = None,
     descuento_id: int | None = None,
+    metodo_pago_id: int | None = None,
     editar_egreso_id: int | None = None,
     error: str | None = None,
     mesa_seleccionada: str | None = None,
@@ -335,7 +336,8 @@ async def _ventas_context(
             turno["id"],
         )
         ordenes_cobradas = await pool().fetch(
-            "SELECT id, mesa, total, tipo_pago, responsable, cobrado_en FROM ordenes "
+            "SELECT id, mesa, total, tipo_pago, responsable, cobrado_en, "
+            "factura_nit, factura_celular, factura_nombre FROM ordenes "
             "WHERE turno_id = $1 AND estado = 'cobrada' ORDER BY cobrado_en DESC",
             turno["id"],
         )
@@ -407,6 +409,7 @@ async def _ventas_context(
         "efectivo_teorico": (float(turno["monto_inicial"]) + ingresos_efectivo - egresos_efectivo) if turno else 0,
         "cobrar_id": cobrar_id,
         "descuento_id": descuento_id,
+        "metodo_pago_id": metodo_pago_id,
         "editar_egreso_id": editar_egreso_id,
         "tipos_pago": TIPOS_PAGO,
         "denominaciones": DENOMINACIONES,
@@ -420,9 +423,12 @@ async def ventas_page(
     session: dict = Depends(require_session),
     cobrar: int | None = None,
     descuento: int | None = None,
+    metodo_pago: int | None = None,
     editar_egreso: int | None = None,
 ):
-    ctx = await _ventas_context(session, cobrar_id=cobrar, descuento_id=descuento, editar_egreso_id=editar_egreso)
+    ctx = await _ventas_context(
+        session, cobrar_id=cobrar, descuento_id=descuento, metodo_pago_id=metodo_pago, editar_egreso_id=editar_egreso
+    )
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
 
@@ -636,6 +642,64 @@ async def aplicar_descuento_orden(
         f"Orden #{orden_id} (mesa {orden['mesa']}): Bs {total_actual:.2f} → Bs {nuevo_precio_num:.2f} "
         f"(-Bs {monto_num:.2f}), motivo: {justificativo}",
     )
+    return RedirectResponse("/dashboard/ventas", status_code=303)
+
+
+@router.post("/ordenes/{orden_id}/metodo-pago")
+async def cambiar_metodo_pago_orden(
+    request: Request,
+    orden_id: int,
+    session: dict = Depends(require_session),
+    tipo_pago: str = Form(""),
+    factura_nit: str = Form(""),
+    factura_celular: str = Form(""),
+    factura_nombre: str = Form(""),
+):
+    tipo_pago = tipo_pago.strip()
+    factura_nit = factura_nit.strip()
+    factura_celular = factura_celular.strip()
+    factura_nombre = factura_nombre.strip()
+
+    orden = await pool().fetchrow(
+        "SELECT o.total, o.mesa, t.estado AS turno_estado FROM ordenes o "
+        "JOIN turnos t ON t.id = o.turno_id WHERE o.id = $1 AND o.estado = 'cobrada'",
+        orden_id,
+    )
+    error = None
+    if not orden:
+        error = "No se encontró esa venta."
+    elif orden["turno_estado"] != "abierto":
+        error = "Ya no se puede cambiar el método de pago: el turno de esta venta ya está cerrado."
+    elif tipo_pago not in TIPOS_PAGO:
+        error = "Elige un método de pago válido."
+    elif tipo_pago in TIPOS_FACTURADOS and not (factura_nit and factura_celular and factura_nombre):
+        error = "Para facturar, completa NIT, celular y nombre."
+
+    if error:
+        ctx = await _ventas_context(session, error=error)
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "UPDATE ordenes SET tipo_pago = $1, factura_nit = $2, factura_celular = $3, factura_nombre = $4 "
+                "WHERE id = $5",
+                tipo_pago,
+                factura_nit or None,
+                factura_celular or None,
+                factura_nombre or None,
+                orden_id,
+            )
+            await conn.execute("DELETE FROM orden_pagos WHERE orden_id = $1", orden_id)
+            await conn.execute(
+                "INSERT INTO orden_pagos (orden_id, tipo_pago, monto) VALUES ($1, $2, $3)",
+                orden_id, tipo_pago, orden["total"],
+            )
+
+    detalle = f"Orden #{orden_id} (mesa {orden['mesa']}) → {tipo_pago}"
+    if tipo_pago in TIPOS_FACTURADOS:
+        detalle += f", factura a nombre de {factura_nombre} (NIT {factura_nit})"
+    await bitacora.registrar(session, "Cambió método de pago de venta", detalle)
     return RedirectResponse("/dashboard/ventas", status_code=303)
 
 
