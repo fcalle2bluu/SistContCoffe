@@ -316,3 +316,110 @@ async def detalle_hora(
         "titulo": f"Ventas de las {hora:02d}:00 a las {hora:02d}:59 — {dia.strftime('%d/%m/%Y')}",
         "ventas": ventas,
     }
+
+
+DIAS_CORTOS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"]
+DIAS_LARGOS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+
+
+def _domingo_de_semana(dia: date) -> date:
+    # date.weekday(): lunes=0 ... domingo=6. Queremos que la semana empiece domingo.
+    dias_desde_domingo = (dia.weekday() + 1) % 7
+    return dia - timedelta(days=dias_desde_domingo)
+
+
+async def _totales_por_dia(inicio: datetime, fin: datetime) -> dict[date, float]:
+    filas = await pool().fetch(
+        "SELECT (cobrado_en AT TIME ZONE 'America/La_Paz')::date AS dia, SUM(total) AS total "
+        "FROM ordenes WHERE estado = 'cobrada' AND cobrado_en >= $1 AND cobrado_en < $2 GROUP BY dia",
+        inicio,
+        fin,
+    )
+    return {f["dia"]: float(f["total"]) for f in filas}
+
+
+@router.get("/actividad-ventas")
+async def actividad_ventas(fecha: str, session: dict = Depends(require_dashboard)):
+    hoy = ahora_bolivia().date()
+    try:
+        dia = date.fromisoformat(fecha)
+    except ValueError:
+        dia = hoy
+
+    domingo = _domingo_de_semana(dia)
+    sabado = domingo + timedelta(days=6)
+    indice_dia = (dia - domingo).days  # 0=domingo .. 6=sábado
+
+    inicio_semana = datetime.combine(domingo, time.min, BOLIVIA_TZ)
+    fin_semana = datetime.combine(sabado, time.min, BOLIVIA_TZ) + timedelta(days=1)
+    inicio_semana_ant = inicio_semana - timedelta(days=7)
+
+    por_dia, por_dia_ant, categorias = await asyncio.gather(
+        _totales_por_dia(inicio_semana, fin_semana),
+        _totales_por_dia(inicio_semana_ant, inicio_semana),
+        pool().fetch(
+            "SELECT COALESCE(p.categoria, 'Otros') AS nombre, SUM(oi.cantidad * oi.precio_unitario) AS monto "
+            "FROM orden_items oi JOIN ordenes o ON o.id = oi.orden_id "
+            "LEFT JOIN productos p ON p.id = oi.producto_id "
+            "WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 "
+            "GROUP BY p.categoria ORDER BY monto DESC",
+            datetime.combine(dia, time.min, BOLIVIA_TZ),
+            datetime.combine(dia, time.min, BOLIVIA_TZ) + timedelta(days=1),
+        ),
+    )
+
+    serie = []
+    for i in range(7):
+        d = domingo + timedelta(days=i)
+        serie.append({
+            "fecha": d.isoformat(),
+            "etiqueta": DIAS_CORTOS[i],
+            "monto": por_dia.get(d, 0.0),
+            "es_actual": d == dia,
+            "es_futuro": d > hoy,
+        })
+
+    total_dia = por_dia.get(dia, 0.0)
+    total_semana = sum(s["monto"] for s in serie if not s["es_futuro"])
+    dias_con_ventas = sum(1 for s in serie if not s["es_futuro"] and s["monto"] > 0)
+    promedio_dia = (total_semana / dias_con_ventas) if dias_con_ventas else 0.0
+    vs_promedio_pct = ((total_dia - promedio_dia) / promedio_dia * 100) if promedio_dia else 0.0
+
+    parcial_actual = sum(s["monto"] for s in serie[: indice_dia + 1])
+    parcial_anterior = sum(por_dia_ant.get(domingo - timedelta(days=7) + timedelta(days=i), 0.0) for i in range(indice_dia + 1))
+    vs_semana_anterior_pct = (
+        ((parcial_actual - parcial_anterior) / parcial_anterior * 100) if parcial_anterior else 0.0
+    )
+
+    dias_con_datos = [s for s in serie if s["monto"] > 0]
+    mejor = max(dias_con_datos, key=lambda s: s["monto"]) if dias_con_datos else None
+    mejor_dia = None
+    if mejor:
+        idx = serie.index(mejor)
+        mejor_dia = {"etiqueta": DIAS_LARGOS[idx], "monto": mejor["monto"]}
+
+    total_categorias = sum(float(c["monto"]) for c in categorias) or 1.0
+    categorias_out = [
+        {
+            "nombre": c["nombre"],
+            "monto": float(c["monto"]),
+            "pct": round(float(c["monto"]) / total_categorias * 100, 1),
+        }
+        for c in categorias
+    ]
+
+    return {
+        "fecha": dia.isoformat(),
+        "es_hoy": dia == hoy,
+        "es_hoy_min": (dia >= hoy),  # deshabilita "siguiente" cuando ya se llegó a hoy
+        "etiqueta_fecha": f"{DIAS_CORTOS[indice_dia]} {dia.day} de {MESES_CORTOS[dia.month - 1]}",
+        "total_dia": total_dia,
+        "vs_promedio_pct": round(vs_promedio_pct, 1),
+        "total_semana": total_semana,
+        "promedio_dia": round(promedio_dia, 2),
+        "vs_semana_anterior_pct": round(vs_semana_anterior_pct, 1),
+        "mejor_dia": mejor_dia,
+        "serie_semana": serie,
+        "categorias": categorias_out,
+    }

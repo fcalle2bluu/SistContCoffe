@@ -18,6 +18,39 @@
 
   <div class="charts-grid" style="align-items:start;">
     <div class="card">
+      <span class="actividad-pill">Actividad de ventas</span>
+      <div class="actividad-kpi-row">
+        <span class="actividad-kpi" id="act-total-dia">Bs 0,00</span>
+        <span class="actividad-badge" id="act-badge-promedio">— vs promedio</span>
+      </div>
+      <p class="actividad-subtitulo" id="act-subtitulo">Hoy</p>
+
+      <dl class="mini-stats-row">
+        <div class="mini-stat"><dt>Total semana</dt><dd id="act-total-semana">Bs 0,00</dd></div>
+        <div class="mini-stat"><dt>Promedio / día</dt><dd id="act-promedio-dia">Bs 0,00</dd></div>
+        <div class="mini-stat"><dt>Vs sem. anterior</dt><dd id="act-vs-semana">—</dd></div>
+        <div class="mini-stat"><dt>Mejor día</dt><dd id="act-mejor-dia">—</dd></div>
+      </dl>
+
+      <div class="chart-wrap" style="height:220px;"><canvas id="chartActividad"></canvas></div>
+
+      <div class="dia-nav">
+        <button type="button" class="dia-nav-btn" id="act-dia-prev" aria-label="Día anterior">‹</button>
+        <span class="dia-nav-label" id="act-dia-label">—</span>
+        <button type="button" class="dia-nav-btn" id="act-dia-next" aria-label="Día siguiente">›</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">Ventas por categoría</h3>
+      <p class="muted-sm" id="act-cat-subtitulo" style="margin-bottom:14px;">Del día seleccionado arriba.</p>
+      <div class="categoria-list" id="act-categorias"></div>
+      <p class="muted-sm oculto" id="act-categorias-vacio">No hay ventas registradas ese día.</p>
+    </div>
+  </div>
+
+  <div class="charts-grid" style="align-items:start;">
+    <div class="card">
       <div class="flex-between">
         <div>
           <h3 class="card-title">Ventas por hora</h3>
@@ -425,6 +458,140 @@
   if (filtroFechaHoras) {
     filtroFechaHoras.addEventListener("change", cargarHoras);
     cargarHoras();
+  }
+
+  // Actividad de ventas: resumen del día con navegación ‹ › y comparativas.
+  var hoyIso = "{{ hoy_iso }}";
+  var diaActividad = hoyIso;
+  var iconoCategoria = (
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.57 3.24L3 3v6.57a2 2 0 0 0 .59 1.42l9.58 9.58a2 2 0 0 0 2.82 0l4.6-4.6a2 2 0 0 0 0-2.82Z"/>' +
+    '<circle cx="7.5" cy="7.5" r="1.5"/></svg>'
+  );
+
+  function sumarDias(iso, delta) {
+    var d = new Date(iso + "T00:00:00");
+    d.setDate(d.getDate() + delta);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function pintarCategoriasActividad(categorias) {
+    var box = document.getElementById("act-categorias");
+    var vacio = document.getElementById("act-categorias-vacio");
+    if (!categorias || !categorias.length) {
+      box.innerHTML = "";
+      vacio.classList.remove("oculto");
+      return;
+    }
+    vacio.classList.add("oculto");
+    box.innerHTML = categorias.map(function (c) {
+      return (
+        '<div class="categoria-row">' +
+          '<div class="categoria-icono">' + iconoCategoria + "</div>" +
+          '<div class="categoria-info">' +
+            '<div class="categoria-nombre-fila">' +
+              '<span class="categoria-nombre">' + c.nombre + "</span>" +
+              '<span class="categoria-monto">' + formatoBs(c.monto) + "</span>" +
+            "</div>" +
+            '<div class="categoria-bar-track"><div class="categoria-bar-fill" style="width:' + Math.max(0, Math.min(100, c.pct)) + '%"></div></div>' +
+            '<div class="categoria-pct">' + c.pct + "%</div>" +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  function pintarChartActividad(serie, promedio) {
+    var colorActual = "#d97706";
+    var colorMuted = "rgba(217, 119, 6, 0.25)";
+    crearOActualizar("chartActividad", {
+      data: {
+        labels: serie.map(function (s) { return s.etiqueta; }),
+        datasets: [
+          {
+            type: "bar",
+            label: "Ventas",
+            data: serie.map(function (s) { return s.monto; }),
+            backgroundColor: serie.map(function (s) { return s.es_actual ? colorActual : colorMuted; }),
+            borderRadius: 6,
+            order: 2,
+          },
+          {
+            type: "line",
+            label: "Promedio",
+            data: serie.map(function () { return promedio; }),
+            borderColor: "#98a2b3",
+            borderDash: [5, 4],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false,
+            order: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) { return ctx.dataset.label + ": " + formatoBs(ctx.raw); },
+            },
+          },
+        },
+        scales: {
+          y: { display: false },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  async function cargarActividad() {
+    var r = await fetch("/dashboard/api/actividad-ventas?fecha=" + diaActividad);
+    var data = await r.json();
+
+    document.getElementById("act-total-dia").textContent = formatoBs(data.total_dia);
+    document.getElementById("act-subtitulo").textContent = data.es_hoy ? "Hoy" : data.etiqueta_fecha;
+
+    var badge = document.getElementById("act-badge-promedio");
+    var pct = data.vs_promedio_pct;
+    badge.className = "actividad-badge " + (pct >= 0 ? "actividad-badge-up" : "actividad-badge-down");
+    badge.textContent = (pct >= 0 ? "↗ +" : "↘ ") + pct + "% vs promedio";
+
+    document.getElementById("act-total-semana").textContent = formatoBs(data.total_semana);
+    document.getElementById("act-promedio-dia").textContent = formatoBs(data.promedio_dia);
+
+    var vsSemana = document.getElementById("act-vs-semana");
+    var pctSemana = data.vs_semana_anterior_pct;
+    vsSemana.textContent = (pctSemana >= 0 ? "↗ +" : "↘ ") + pctSemana + "%";
+    vsSemana.className = pctSemana >= 0 ? "positivo" : "negativo";
+
+    document.getElementById("act-mejor-dia").textContent = data.mejor_dia
+      ? data.mejor_dia.etiqueta + " · " + formatoBs(data.mejor_dia.monto)
+      : "—";
+
+    document.getElementById("act-dia-label").textContent = data.etiqueta_fecha;
+    document.getElementById("act-dia-next").disabled = data.fecha >= hoyIso;
+
+    pintarChartActividad(data.serie_semana, data.promedio_dia);
+    pintarCategoriasActividad(data.categorias);
+  }
+
+  var btnDiaPrev = document.getElementById("act-dia-prev");
+  var btnDiaNext = document.getElementById("act-dia-next");
+  if (btnDiaPrev && btnDiaNext) {
+    btnDiaPrev.addEventListener("click", function () {
+      diaActividad = sumarDias(diaActividad, -1);
+      cargarActividad();
+    });
+    btnDiaNext.addEventListener("click", function () {
+      if (diaActividad >= hoyIso) return;
+      diaActividad = sumarDias(diaActividad, 1);
+      cargarActividad();
+    });
+    cargarActividad();
   }
 })();
 </script>
