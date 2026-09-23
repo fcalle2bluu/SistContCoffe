@@ -10,10 +10,37 @@
   {% if not turno %}
   <div class="card">
     <h3 class="card-title">No hay turno abierto</h3>
-    {% if turno_anterior %}
-    <p class="muted-sm">Antecedente: la apertura anterior fue de {{ turno_anterior.responsable }}, el {{ turno_anterior.abierto_en|fechahora }}.</p>
+
+    {% if turnos_hoy|length > 0 %}
+    <p class="muted-sm strong" style="margin-top:8px;">Turnos de hoy ({{ turnos_hoy|length }})</p>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Responsable</th><th>Apertura</th><th>Cierre</th><th class="text-right">Ventas</th><th class="text-right">Total ventas</th></tr></thead>
+        <tbody>
+          {% for t in turnos_hoy %}
+          <tr>
+            <td class="small">{{ t.responsable }}</td>
+            <td class="small">{{ t.abierto_en|hora }}</td>
+            <td class="small">{{ (t.cerrado_en|hora) if t.cerrado_en else "abierto" }}</td>
+            <td class="text-right mono">{{ t.cantidad_ventas }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(t.total_ventas) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="muted-sm">Todavía no hubo ningún turno hoy.</p>
     {% endif %}
-    <p class="muted-sm">Abre caja para empezar a registrar ventas.</p>
+
+    {% if ordenes_abiertas|length > 0 %}
+    <p class="muted-sm" style="margin-top:8px;">
+      Hay {{ ordenes_abiertas|length }} cuenta(s) pendiente(s) de un turno anterior por Bs {{ "%.2f"|format(pendientes_totales) }} —
+      van a seguir apareciendo en "Cuentas pendientes" cuando abras el turno.
+    </p>
+    {% endif %}
+
+    <p class="muted-sm" style="margin-top:8px;">Abre caja para empezar a registrar ventas.</p>
     <form method="post" action="/dashboard/ventas/turno/abrir" class="inline-form">
       <div>
         <label class="field-label">Monto inicial en caja (Bs)</label>
@@ -182,6 +209,18 @@
             descuentan del efectivo teórico porque esa plata ya salió de la caja hacia Caja Chica.
           </p>
           {% endif %}
+
+          {% if ordenes_abiertas|length > 0 %}
+          <div class="error-box">
+            <p><strong>Hay {{ ordenes_abiertas|length }} cuenta(s) pendiente(s) por Bs {{ "%.2f"|format(pendientes_totales) }}.</strong></p>
+            <p class="muted-sm">
+              Puedes <a href="#cuentas-pendientes">cobrarlas ahora</a> antes de cerrar. Si prefieres dejarlas para
+              el siguiente turno, marca la casilla de abajo — van a seguir apareciendo en "Cuentas pendientes"
+              cuando se abra el próximo turno.
+            </p>
+          </div>
+          {% endif %}
+
           <p class="muted-sm">Arqueo de caja: cuenta los billetes y monedas físicos y el sistema calcula el total.</p>
           <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" id="form-cerrar-turno" class="stack-4" data-esperado="{{ efectivo_teorico }}">
             <div class="table-wrap">
@@ -216,6 +255,13 @@
               <p class="cart-total-label">Diferencia</p>
               <p class="cart-total-value-sm" id="arqueo-diferencia">Bs 0.00</p>
             </div>
+
+            {% if ordenes_abiertas|length > 0 %}
+            <label class="muted-sm" style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" name="confirmar_pendientes" value="si" required />
+              Entiendo, quiero cerrar el turno dejando las cuentas pendientes para el siguiente turno.
+            </label>
+            {% endif %}
 
             <div class="order-actions">
               <button type="submit" class="btn btn-primary">Confirmar cierre</button>
@@ -362,7 +408,7 @@
     </form>
   </div>
 
-  <div>
+  <div id="cuentas-pendientes">
     <h3 class="subsection-title">Cuentas pendientes ({{ ordenes_abiertas|length }})</h3>
     {% if ordenes_abiertas|length == 0 %}
     <p class="muted">No hay cuentas pendientes por cobrar.</p>

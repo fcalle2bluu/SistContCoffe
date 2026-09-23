@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -7,7 +7,7 @@ from app import bitacora
 from app.db import pool
 from app.deps import require_admin, require_session
 from app.templating import templates
-from app.tz import hoy_bolivia
+from app.tz import BOLIVIA_TZ, hoy_bolivia
 
 router = APIRouter(prefix="/dashboard/ventas")
 
@@ -368,8 +368,23 @@ async def _ventas_context(
     turno = await pool().fetchrow(
         "SELECT id, responsable, monto_inicial, abierto_en FROM turnos WHERE estado = 'abierto'"
     )
-    turno_anterior = await pool().fetchrow(
-        "SELECT responsable, abierto_en FROM turnos ORDER BY abierto_en DESC LIMIT 1"
+    hoy = hoy_bolivia()
+    inicio_dia = datetime.combine(hoy, time.min, BOLIVIA_TZ)
+    fin_dia = inicio_dia + timedelta(days=1)
+    turnos_hoy = await pool().fetch(
+        """
+        SELECT t.id, t.responsable, t.estado, t.abierto_en, t.cerrado_en,
+               COALESCE(v.cantidad_ventas, 0) AS cantidad_ventas,
+               COALESCE(v.total_ventas, 0) AS total_ventas
+        FROM turnos t
+        LEFT JOIN (
+            SELECT turno_id, COUNT(*) AS cantidad_ventas, SUM(total) AS total_ventas
+            FROM ordenes WHERE estado = 'cobrada' GROUP BY turno_id
+        ) v ON v.turno_id = t.id
+        WHERE t.abierto_en >= $1 AND t.abierto_en < $2
+        ORDER BY t.abierto_en
+        """,
+        inicio_dia, fin_dia,
     )
     categorias_egreso = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
     mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
@@ -385,12 +400,14 @@ async def _ventas_context(
     ingresos_lista: list = []
     ingresos_caja_totales = 0.0
     ingresos_caja_efectivo = 0.0
+    # Sin filtrar por turno_id: una cuenta pendiente sigue viéndose aunque el
+    # turno en que se creó ya haya cerrado, hasta que se cobre o se cancele
+    # (puede quedar pendiente de un turno anterior y pasar al siguiente).
+    ordenes_abiertas = await pool().fetch(
+        "SELECT id, mesa, total, responsable, creado_en FROM ordenes "
+        "WHERE estado = 'abierta' ORDER BY creado_en DESC"
+    )
     if turno:
-        ordenes_abiertas = await pool().fetch(
-            "SELECT id, mesa, total, responsable, creado_en FROM ordenes "
-            "WHERE turno_id = $1 AND estado = 'abierta' ORDER BY creado_en DESC",
-            turno["id"],
-        )
         ordenes_cobradas = await pool().fetch(
             "SELECT id, mesa, total, tipo_pago, responsable, cobrado_en, "
             "factura_nit, factura_celular, factura_nombre FROM ordenes "
@@ -451,17 +468,20 @@ async def _ventas_context(
         fila["cantidad"] += 1
         fila["monto"] += float(m["monto"])
 
+    pendientes_totales = sum(float(o["total"]) for o in ordenes_abiertas)
+
     return {
         "session": session,
         "active": "ventas",
         "turno": turno,
-        "turno_anterior": turno_anterior,
+        "turnos_hoy": turnos_hoy,
         "categorias_egreso": categorias_egreso,
         "mesas": mesas,
         "mesa_seleccionada": mesa_seleccionada,
         "productos": productos,
         "por_categoria": por_categoria,
         "ordenes_abiertas": ordenes_abiertas,
+        "pendientes_totales": pendientes_totales,
         "ordenes_cobradas": ordenes_cobradas,
         "items_por_orden": items_por_orden,
         "pagos_por_orden": pagos_por_orden,
@@ -1035,6 +1055,7 @@ async def cerrar_turno(
     session: dict = Depends(require_session),
     corte: list[str] = Form([]),
     cantidad: list[str] = Form([]),
+    confirmar_pendientes: str = Form(""),
 ):
     cortes_validos = {c: t for c, t in DENOMINACIONES}
     conteo: list[tuple[float, str, int]] = []
@@ -1052,6 +1073,15 @@ async def cerrar_turno(
 
     if not conteo:
         ctx = await _ventas_context(session, error="Ingresa el arqueo de caja (cantidad de billetes y monedas) para cerrar el turno.")
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    pendientes = await pool().fetchval("SELECT COUNT(*) FROM ordenes WHERE estado = 'abierta'")
+    if pendientes and not confirmar_pendientes:
+        ctx = await _ventas_context(
+            session,
+            error=f"Hay {pendientes} cuenta(s) pendiente(s) por cobrar. Cóbralas antes de cerrar, "
+            "o marca la casilla de \"dejar pendientes para el siguiente turno\" en Cerrar turno.",
+        )
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     resultado = await pool().execute(

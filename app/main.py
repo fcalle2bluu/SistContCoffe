@@ -40,6 +40,20 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 
+@app.middleware("http")
+async def _no_cache_dashboard(request: Request, call_next):
+    """Evita que el navegador guarde en caché las páginas del dashboard/POS.
+    Sin esto, al apretar "atrás" después de una acción que cambia el estado
+    (p. ej. cerrar turno) el navegador puede mostrar la página vieja desde su
+    caché en vez de pedirla de nuevo, dejando ver datos que ya no son
+    válidos."""
+    response = await call_next(request)
+    if request.method == "GET" and request.url.path.startswith(("/dashboard", "/pos")):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
+
 @app.exception_handler(RedirectTo)
 async def _redirect_to(request: Request, exc: RedirectTo):
     return RedirectResponse(exc.path, status_code=303)
