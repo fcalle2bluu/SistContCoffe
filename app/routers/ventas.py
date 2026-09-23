@@ -12,8 +12,8 @@ from app.tz import hoy_bolivia
 router = APIRouter(prefix="/dashboard/ventas")
 
 PAGOS_EFECTIVO = ("EFECTIVO", "EFEC/FAC")
-TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC")
-TIPOS_FACTURADOS = ("EFEC/FAC", "QR/FAC")
+TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC", "POS/FAC")
+TIPOS_FACTURADOS = ("EFEC/FAC", "QR/FAC", "POS/FAC")
 
 DENOMINACIONES = (
     (200.0, "billete"), (100.0, "billete"), (50.0, "billete"), (20.0, "billete"), (10.0, "billete"),
@@ -137,18 +137,19 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
 
 
 async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
-    """Al cerrar un turno, asienta las ventas con factura (EFEC/FAC y QR/FAC)
-    desglosando IT (3%) e IVA (13%) sobre el total, igual que se calculaba a
-    mano en el Excel. Las ventas QR/FAC pasan primero por Linkser, que cobra
-    una comisión (1.8%) antes de depositar. Las ventas QR/POS sin factura
-    siguen sin tocarse: ese tratamiento lo sigue armando el contador."""
+    """Al cerrar un turno, asienta las ventas con factura (EFEC/FAC, QR/FAC y
+    POS/FAC) desglosando IT (3%) e IVA (13%) sobre el total, igual que se
+    calculaba a mano en el Excel. Las ventas QR/FAC pasan primero por
+    Linkser, que cobra una comisión (1.8%) antes de depositar. Las ventas
+    QR/POS sin factura siguen sin tocarse: ese tratamiento lo sigue armando
+    el contador."""
     filas = await pool().fetch(
         "SELECT op.tipo_pago, COALESCE(SUM(op.monto), 0) AS total FROM orden_pagos op "
         "JOIN ordenes o ON o.id = op.orden_id "
         "WHERE o.turno_id = $1 AND o.estado = 'cobrada' AND op.tipo_pago = ANY($2::text[]) "
         "GROUP BY op.tipo_pago",
         turno_id,
-        ["EFEC/FAC", "QR/FAC"],
+        ["EFEC/FAC", "QR/FAC", "POS/FAC"],
     )
     totales = {f["tipo_pago"]: float(f["total"]) for f in filas if f["total"] and f["total"] > 0}
     if not totales:
@@ -191,6 +192,19 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
                 glosa = f"Ventas QR con factura (vía Linkser) del turno de {turno['responsable']} (turno #{turno_id})."
                 await linea(siguiente, CUENTA_LINKSER, neto_linkser, 0, glosa)
                 await linea(siguiente, CUENTA_COMISION_LINKSER, comision, 0, glosa)
+                await linea(siguiente, CUENTA_IT, it, 0, glosa)
+                await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
+                await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
+                await linea(siguiente, CUENTA_VENTAS, 0, venta_neta, glosa)
+                siguiente += 1
+
+            if "POS/FAC" in totales:
+                total = totales["POS/FAC"]
+                it = round(total * TASA_IT, 2)
+                iva = round(total * TASA_IVA, 2)
+                venta_neta = round(total - iva, 2)
+                glosa = f"Ventas POS con factura del turno de {turno['responsable']} (turno #{turno_id})."
+                await linea(siguiente, CUENTA_BANCO, total, 0, glosa)
                 await linea(siguiente, CUENTA_IT, it, 0, glosa)
                 await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
                 await linea(siguiente, CUENTA_IVA, 0, iva, glosa)

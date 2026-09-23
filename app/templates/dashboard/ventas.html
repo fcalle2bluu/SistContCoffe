@@ -722,7 +722,7 @@
   }
 
   // Datos de facturación: se habilitan cuando algún método de pago elegido es "/FAC".
-  var TIPOS_FACTURADOS = ["EFEC/FAC", "QR/FAC"];
+  var TIPOS_FACTURADOS = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
   var camposFactura = document.getElementById("pos-factura-fields");
   if (camposFactura) {
     function actualizarCamposFactura() {
@@ -760,7 +760,7 @@
   });
 
   // Dividir el pago en la fila "Cobrar" de cuentas pendientes.
-  var TIPOS_FACTURADOS_PENDIENTE = ["EFEC/FAC", "QR/FAC"];
+  var TIPOS_FACTURADOS_PENDIENTE = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
   document.querySelectorAll(".form-cobrar-pendiente").forEach(function (formPendiente) {
     var camposFacturaPendiente = formPendiente.querySelector(".factura-fields-pendiente");
     function actualizarFacturaPendiente() {
