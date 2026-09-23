@@ -23,7 +23,28 @@ DENOMINACIONES = (
 CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
 CUENTA_BANCO = "1110103"  # BANCO BISA
 CUENTA_VENTAS = "5010101"  # Ventas
-CUENTA_GASTOS_ADMINISTRATIVOS = "405"  # GASTOS ADMINISTRATIVOS (egresos de caja, todas las categorías por ahora)
+CUENTA_GASTOS_ADMINISTRATIVOS = "405"  # GASTOS ADMINISTRATIVOS (categorías de egreso sin cuenta propia todavía)
+CUENTA_INSUMOS_ALIMENTICIOS = "11506"  # INSUMOS ALIMENTICIOS
+CUENTA_PRODUCTOS_LIMPIEZA = "11402"  # PRODUCTOS DE LIMPIEZA
+CUENTA_SERVICIOS_EXTERNOS = "900008"  # SERVICIOS EXTERNOS
+
+# Categoría de egreso (en minúsculas) → cuenta contable a la que se debita.
+# Las categorías que no están acá (p. ej. "Servicios de limpieza", "Publicidad
+# y marketing", "Impuestos") todavía no tienen una cuenta propia en el plan de
+# cuentas, así que siguen yendo a Gastos Administrativos hasta que se cree una.
+CUENTAS_POR_CATEGORIA_EGRESO = {
+    "insumos alimenticios": CUENTA_INSUMOS_ALIMENTICIOS,
+    "productos de limpieza": CUENTA_PRODUCTOS_LIMPIEZA,
+    "servicios externos": CUENTA_SERVICIOS_EXTERNOS,
+}
+
+
+def _cuenta_egreso_por_categoria(categoria: str | None) -> str:
+    if categoria:
+        cuenta = CUENTAS_POR_CATEGORIA_EGRESO.get(categoria.strip().lower())
+        if cuenta:
+            return cuenta
+    return CUENTA_GASTOS_ADMINISTRATIVOS
 
 TASA_IVA = 0.13
 TASA_IT = 0.03
@@ -106,12 +127,12 @@ async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
 
 async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: str | None, motivo: str, responsable: str) -> None:
     """Asienta un egreso de caja en el Libro Diario apenas se registra (no se
-    espera al cierre de turno, porque el dinero sale de inmediato). Por ahora
-    todas las categorías van a la cuenta genérica de Gastos Administrativos;
-    cuando haya una lista definitiva de categorías se puede desglosar por
-    cuenta. Solo se asienta para EFECTIVO y QR (mismo criterio que las
-    ventas): un egreso por POS/otro medio no tiene contrapartida de caja/banco
-    automática todavía."""
+    espera al cierre de turno, porque el dinero sale de inmediato). Se debita
+    la cuenta propia de la categoría cuando existe (ver
+    CUENTAS_POR_CATEGORIA_EGRESO); si la categoría todavía no tiene cuenta
+    asignada, se usa Gastos Administrativos. Solo se asienta para EFECTIVO y
+    QR (mismo criterio que las ventas): un egreso por POS/otro medio no tiene
+    contrapartida de caja/banco automática todavía."""
     if tipo_pago == "EFECTIVO":
         cuenta_contrapartida = CUENTA_CAJA_EFECTIVO
     elif tipo_pago == "QR":
@@ -119,6 +140,7 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
     else:
         return
 
+    cuenta_debito = _cuenta_egreso_por_categoria(categoria)
     glosa = f"Egreso de caja — {categoria + ': ' if categoria else ''}{motivo} (responsable: {responsable})."
     fecha = hoy_bolivia()
     async with pool().acquire() as conn:
@@ -127,7 +149,7 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_GASTOS_ADMINISTRATIVOS, monto, glosa,
+                fecha, siguiente, cuenta_debito, monto, glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
