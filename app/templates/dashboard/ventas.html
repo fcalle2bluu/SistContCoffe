@@ -282,6 +282,7 @@
 
       <div class="pos-layout">
         <div class="pos-catalogo">
+          <input type="text" id="pos-buscar-producto" class="input" placeholder="Buscar producto…" autocomplete="off" style="margin-bottom:10px;" />
           <div class="pos-tabs" id="pos-tabs">
             {% for categoria in por_categoria.keys() %}
             <button type="button" class="pos-tab{{ ' activa' if loop.first else '' }}" data-panel="panel-{{ loop.index }}">{{ categoria }}</button>
@@ -736,7 +737,41 @@
     });
   }
 
-  // Carrito en memoria: se agregan productos con un clic (sin buscador, sin desplegables).
+  // Buscador de productos: filtra por nombre en todas las categorías a la
+  // vez (ignora tildes/mayúsculas), sin pisar el estado de las pestañas —
+  // al borrar la búsqueda, vuelve a mostrar solo la pestaña activa.
+  var buscarProducto = document.getElementById("pos-buscar-producto");
+  if (buscarProducto) {
+    function normalizar(texto) {
+      return (texto || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    }
+    buscarProducto.addEventListener("input", function () {
+      var q = normalizar(buscarProducto.value.trim());
+      var panels = document.querySelectorAll(".pos-panel");
+      if (!q) {
+        if (tabs) tabs.classList.remove("oculto");
+        var activa = tabs ? tabs.querySelector(".pos-tab.activa") : null;
+        var panelIdActivo = activa ? activa.getAttribute("data-panel") : null;
+        panels.forEach(function (p) {
+          p.classList.toggle("oculto", p.id !== panelIdActivo);
+          p.querySelectorAll(".pos-producto").forEach(function (btn) { btn.classList.remove("oculto"); });
+        });
+        return;
+      }
+      if (tabs) tabs.classList.add("oculto");
+      panels.forEach(function (p) {
+        var hayVisible = false;
+        p.querySelectorAll(".pos-producto").forEach(function (btn) {
+          var coincide = normalizar(btn.getAttribute("data-nombre")).indexOf(q) !== -1;
+          btn.classList.toggle("oculto", !coincide);
+          if (coincide) hayVisible = true;
+        });
+        p.classList.toggle("oculto", !hayVisible);
+      });
+    });
+  }
+
+  // Carrito en memoria: se agregan productos con un clic.
   var carrito = [];
   var itemsBox = document.getElementById("pos-items");
   var totalOut = document.getElementById("total-estimado");
