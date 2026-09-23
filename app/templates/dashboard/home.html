@@ -69,7 +69,7 @@
         <input type="date" id="filtro-fecha-horas" class="input" value="{{ hoy_iso }}" max="{{ hoy_iso }}" />
       </div>
     </div>
-    <div class="chart-wrap" style="height:320px;"><canvas id="chartHoras"></canvas></div>
+    <div class="chart-wrap" style="height:360px;"><canvas id="chartHoras"></canvas></div>
   </div>
 
   <div class="card" id="detalle-horas-card">
@@ -348,27 +348,50 @@
     mostrarDetalleHoras(data.titulo, data.ventas);
   }
 
+  function gradienteArea(context, color) {
+    var chart = context.chart;
+    var chartArea = chart.chartArea;
+    if (!chartArea) return color + "22";
+    var gradiente = chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradiente.addColorStop(0, color + "66");
+    gradiente.addColorStop(1, color + "03");
+    return gradiente;
+  }
+
   function pintarHoras(data) {
     ultimoHoras = data;
     crearOActualizar("chartHoras", {
-      type: "bar",
+      type: "line",
       data: {
         labels: data.etiquetas,
         datasets: data.datasets.map(function (ds) {
           return {
             label: ds.responsable,
             data: ds.datos,
-            backgroundColor: ds.color,
-            borderRadius: 4,
+            borderColor: ds.color,
+            backgroundColor: function (context) { return gradienteArea(context, ds.color); },
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            pointHitRadius: 10,
+            pointBackgroundColor: ds.color,
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
           };
         }),
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { x: { stacked: true }, y: { stacked: true } },
+        interaction: { mode: "point", intersect: true },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: function (v) { return "Bs " + v; } } },
+          x: { grid: { display: false } },
+        },
         plugins: {
-          legend: { display: data.datasets.length > 1 },
+          legend: { display: data.datasets.length > 1, position: "bottom" },
           tooltip: {
             callbacks: {
               label: function (ctx) {
