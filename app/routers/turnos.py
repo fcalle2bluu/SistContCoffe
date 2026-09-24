@@ -64,6 +64,26 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
         "WHERE turno_id = $1 ORDER BY creado_en",
         turno_id,
     )
+    egresos_lista = [m for m in movimientos if m["tipo"] == "egreso"]
+    ingresos_lista = [m for m in movimientos if m["tipo"] == "ingreso"]
+    ventas_totales = sum(float(o["total"]) for o in ordenes if o["estado"] == "cobrada")
+    egresos_totales = sum(float(m["monto"]) for m in egresos_lista)
+    ingresos_caja_totales = sum(float(m["monto"]) for m in ingresos_lista)
+
+    pago_rows = await pool().fetch(
+        "SELECT op.tipo_pago, COUNT(*) AS cantidad, SUM(op.monto) AS monto FROM orden_pagos op "
+        "JOIN ordenes o ON o.id = op.orden_id WHERE o.turno_id = $1 GROUP BY op.tipo_pago",
+        turno_id,
+    )
+    resumen_pagos = {
+        r["tipo_pago"] or "—": {"cantidad": r["cantidad"], "monto": float(r["monto"])} for r in pago_rows
+    }
+    resumen_ingresos_caja: dict[str, dict] = {}
+    for m in ingresos_lista:
+        tipo = m["tipo_pago"] or "—"
+        fila = resumen_ingresos_caja.setdefault(tipo, {"cantidad": 0, "monto": 0.0})
+        fila["cantidad"] += 1
+        fila["monto"] += float(m["monto"])
 
     arqueo = await pool().fetch(
         "SELECT corte, tipo, cantidad, subtotal FROM conteo_caja WHERE turno_id = $1 ORDER BY corte DESC",
@@ -105,6 +125,11 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "efectivo_teorico": teorico,
             "estado_arqueo": estado_arqueo,
             "diferencia_arqueo": abs(diferencia_arqueo),
+            "ventas_totales": ventas_totales,
+            "egresos_totales": egresos_totales,
+            "ingresos_caja_totales": ingresos_caja_totales,
+            "resumen_pagos": resumen_pagos,
+            "resumen_ingresos_caja": resumen_ingresos_caja,
         },
     )
 

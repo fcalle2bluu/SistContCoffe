@@ -30,10 +30,77 @@
 
   <dl class="stats-grid">
     <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
-    <div class="stat-box"><dt>Cierre declarado</dt><dd>{{ ("Bs " + "%.2f"|format(turno.monto_final_declarado)) if turno.monto_final_declarado is not none else "—" }}</dd></div>
+    <div class="stat-box"><dt><a href="#ventas-turno">Ventas totales</a></dt><dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd></div>
+    <div class="stat-box"><dt><a href="#movimientos-turno">Ingresos a caja</a></dt><dd>Bs {{ "%.2f"|format(ingresos_caja_totales) }}</dd></div>
+    <div class="stat-box"><dt><a href="#movimientos-turno">Egresos</a></dt><dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd></div>
     <div class="stat-box stat-box-highlight"><dt>Efectivo esperado</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
+    <div class="stat-box"><dt>Cierre declarado</dt><dd>{{ ("Bs " + "%.2f"|format(turno.monto_final_declarado)) if turno.monto_final_declarado is not none else "—" }}</dd></div>
     <div class="stat-box"><dt>Estado</dt><dd class="uppercase">{{ turno.estado }}</dd></div>
   </dl>
+
+  {% if resumen_pagos %}
+  <div>
+    <h3 class="subsection-title">Ventas por método de pago</h3>
+    {% set cuentas_destino = {
+      'EFECTIVO': 'Caja Moneda Nacional (1110101)',
+      'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA',
+      'QR': 'Banco Bisa (1110103)',
+      'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
+      'POS': 'Sin asiento automático (lo registra el contador a mano)',
+      'POS/FAC': 'Banco Bisa (1110103) + IT/IVA',
+      'MIXTO': 'Según cada método (ver desglose)',
+    } %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Método de pago</th><th class="text-right">Cantidad</th><th class="text-right">Monto</th><th>Va a la cuenta</th></tr></thead>
+        <tbody>
+          {% for tipo, datos in resumen_pagos.items() %}
+          <tr>
+            <td class="uppercase small">{{ tipo }}</td>
+            <td class="text-right mono">{{ datos.cantidad }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(datos.monto) }}</td>
+            <td class="small">{{ cuentas_destino.get(tipo, "—") }}</td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td class="strong">Total</td>
+            <td></td>
+            <td class="text-right mono strong">Bs {{ "%.2f"|format(ventas_totales) }}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if resumen_ingresos_caja %}
+  <div>
+    <h3 class="subsection-title">Ingresos a caja por método de pago</h3>
+    {% set cuentas_origen_ingreso = {'EFECTIVO': 'Caja Moneda Nacional', 'QR': 'Banco Bisa'} %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Método de pago</th><th class="text-right">Cantidad</th><th class="text-right">Monto</th><th>Va a la cuenta</th></tr></thead>
+        <tbody>
+          {% for tipo, datos in resumen_ingresos_caja.items() %}
+          <tr>
+            <td class="uppercase small">{{ tipo }}</td>
+            <td class="text-right mono">{{ datos.cantidad }}</td>
+            <td class="text-right mono">Bs {{ "%.2f"|format(datos.monto) }}</td>
+            <td class="small">
+              {% if tipo in cuentas_origen_ingreso %}
+              Caja Chica (1110102) — sale de {{ cuentas_origen_ingreso[tipo] }}
+              {% else %}
+              Sin asiento automático (lo registra el contador a mano)
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
 
   <details class="disclosure">
     <summary class="btn btn-outline btn-sm">Corregir apertura</summary>
@@ -121,7 +188,7 @@
     </details>
   </div>
 
-  <div>
+  <div id="ventas-turno">
     <h3 class="subsection-title">Ventas del turno ({{ ordenes|length }})</h3>
     {% if ordenes|length == 0 %}
     <p class="muted">Este turno no tiene ventas registradas.</p>
@@ -238,7 +305,7 @@
   </div>
   {% endif %}
 
-  <div>
+  <div id="movimientos-turno">
     <h3 class="subsection-title">Movimientos de caja ({{ movimientos|length }})</h3>
     {% if movimientos|length == 0 %}
     <p class="muted">Este turno no tiene movimientos de caja registrados.</p>
