@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
+from app.routers.contabilidad import _agrupar_asientos
 from app.routers.ventas import TIPOS_PAGO, _calcular_descuento, _efectivo_teorico_turno
 from app.templating import templates
 
@@ -90,6 +91,20 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
         turno_id,
     )
 
+    # Los asientos que el cierre de turno genera solo en Libro Diario dejan
+    # "turno #<id>)." al final de la glosa (ver _registrar_ventas_*_en_diario
+    # en ventas.py) — no hay una columna turno_id en libro_diario, así que se
+    # identifican por ese texto. Los egresos/ingresos de caja no quedan
+    # ligados a un turno en su glosa, así que no aparecen acá.
+    filas_diario = await pool().fetch(
+        "SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa "
+        "FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta "
+        "WHERE ld.glosa LIKE '%turno #' || $1 || ').' "
+        "ORDER BY ld.nro_asiento, ld.id",
+        str(turno_id),
+    )
+    asientos_turno = _agrupar_asientos(filas_diario)
+
     categorias_egreso = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
 
     # Comparación del arqueo: si el turno ya está cerrado, "completo" o
@@ -130,6 +145,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "ingresos_caja_totales": ingresos_caja_totales,
             "resumen_pagos": resumen_pagos,
             "resumen_ingresos_caja": resumen_ingresos_caja,
+            "asientos_turno": asientos_turno,
         },
     )
 
