@@ -318,12 +318,21 @@
               <button type="button" class="btn btn-outline btn-sm" id="pos-descuento-cancelar">Cancelar</button>
             </div>
           </div>
+          <div class="pos-descuento-popup oculto" id="pos-cantidad-popup">
+            <p class="field-label" id="pos-cantidad-label">Cantidad</p>
+            <input type="number" step="1" min="1" class="input" id="pos-cantidad-input" />
+            <div class="order-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="pos-cantidad-agregar">Agregar</button>
+              <button type="button" class="btn btn-outline btn-sm" id="pos-cantidad-cancelar">Cancelar</button>
+            </div>
+          </div>
           <div class="pos-paneles">
             {% for categoria, items in por_categoria.items() %}
             <div class="pos-panel{{ '' if loop.first else ' oculto' }}" id="panel-{{ loop.index }}">
               <div class="pos-grid-productos">
                 {% for p in items %}
-                <button type="button" class="pos-producto" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-precio="{{ p.precio_venta }}">
+                <button type="button" class="pos-producto" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}"
+                  data-precio="{{ p.precio_venta }}" data-categoria="{{ categoria }}">
                   <span class="pos-producto-nombre">{{ p.nombre }}</span>
                   <span class="pos-producto-precio">Bs {{ "%.2f"|format(p.precio_venta) }}</span>
                 </button>
@@ -910,29 +919,48 @@
   var descuentoJustificativoInput = document.getElementById("pos-descuento-justificativo");
   var descuentoProductoPendiente = null;
 
+  // El resto de AJUSTES (Extra, EXTRA BS, Tips, AMORTIZACION BS...) se carga
+  // escribiendo la cantidad total una sola vez, en vez de hacer clic varias
+  // veces para ir sumando de a uno.
+  var cantidadPopup = document.getElementById("pos-cantidad-popup");
+  var cantidadLabel = document.getElementById("pos-cantidad-label");
+  var cantidadInput = document.getElementById("pos-cantidad-input");
+  var cantidadProductoPendiente = null;
+
   document.querySelectorAll(".pos-producto").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var precio = parseFloat(btn.getAttribute("data-precio") || "0");
+      var categoria = btn.getAttribute("data-categoria") || "";
+      var id = btn.getAttribute("data-id");
+      var nombre = btn.getAttribute("data-nombre");
+
       if (precio < 0 && descuentoPopup) {
-        descuentoProductoPendiente = {
-          id: btn.getAttribute("data-id"),
-          nombre: btn.getAttribute("data-nombre"),
-          precio: precio,
-        };
+        descuentoProductoPendiente = { id: id, nombre: nombre, precio: precio };
         descuentoMontoInput.value = "";
         descuentoJustificativoInput.value = "";
         descuentoPopup.classList.remove("oculto");
         descuentoMontoInput.focus();
         return;
       }
-      var id = btn.getAttribute("data-id");
+
+      if (categoria === "AJUSTES" && cantidadPopup) {
+        cantidadProductoPendiente = { id: id, nombre: nombre, precio: precio };
+        var existente = carrito.find(function (it) { return it.id === id && !it.nota; });
+        cantidadLabel.textContent = "Cantidad de \"" + nombre + "\"";
+        cantidadInput.value = existente ? existente.cantidad : 1;
+        cantidadPopup.classList.remove("oculto");
+        cantidadInput.focus();
+        cantidadInput.select();
+        return;
+      }
+
       var existente = carrito.find(function (it) { return it.id === id && !it.nota; });
       if (existente) {
         existente.cantidad += 1;
       } else {
         carrito.push({
           id: id,
-          nombre: btn.getAttribute("data-nombre"),
+          nombre: nombre,
           precio: precio,
           cantidad: 1,
         });
@@ -972,6 +1000,46 @@
     descuentoCancelarBtn.addEventListener("click", function () {
       descuentoPopup.classList.add("oculto");
       descuentoProductoPendiente = null;
+    });
+  }
+
+  var cantidadAgregarBtn = document.getElementById("pos-cantidad-agregar");
+  var cantidadCancelarBtn = document.getElementById("pos-cantidad-cancelar");
+  if (cantidadAgregarBtn) {
+    cantidadAgregarBtn.addEventListener("click", function () {
+      var cantidad = parseFloat(cantidadInput.value || "0");
+      if (!cantidadProductoPendiente || cantidad <= 0) {
+        alert("Ingresa una cantidad válida.");
+        return;
+      }
+      var existente = carrito.find(function (it) { return it.id === cantidadProductoPendiente.id && !it.nota; });
+      if (existente) {
+        existente.cantidad = cantidad;
+      } else {
+        carrito.push({
+          id: cantidadProductoPendiente.id,
+          nombre: cantidadProductoPendiente.nombre,
+          precio: cantidadProductoPendiente.precio,
+          cantidad: cantidad,
+        });
+      }
+      cantidadPopup.classList.add("oculto");
+      cantidadProductoPendiente = null;
+      renderCarrito();
+    });
+  }
+  if (cantidadCancelarBtn) {
+    cantidadCancelarBtn.addEventListener("click", function () {
+      cantidadPopup.classList.add("oculto");
+      cantidadProductoPendiente = null;
+    });
+  }
+  if (cantidadInput) {
+    cantidadInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        cantidadAgregarBtn.click();
+      }
     });
   }
 
