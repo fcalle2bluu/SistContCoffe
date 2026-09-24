@@ -7,6 +7,14 @@
     <p class="section-subtitle">Reemplaza el cuaderno mensual del Excel: comandas, cobro y cierre de caja.</p>
   </div>
 
+  {% if cierre_estado == "completo" %}
+  <p class="success-box"><strong>Turno cerrado: Completo.</strong> El arqueo de caja cuadró exacto con lo esperado.</p>
+  {% elif cierre_estado == "sobra" %}
+  <p class="error-box"><strong>Turno cerrado: Incompleto.</strong> Sobran Bs {{ cierre_diferencia }} — hay más efectivo contado que el esperado.</p>
+  {% elif cierre_estado == "falta" %}
+  <p class="error-box"><strong>Turno cerrado: Incompleto.</strong> Faltan Bs {{ cierre_diferencia }} — hay menos efectivo contado que el esperado.</p>
+  {% endif %}
+
   {% if not turno %}
   <div class="card">
     <h3 class="card-title">No hay turno abierto</h3>

@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
-from app.routers.ventas import _calcular_descuento
+from app.routers.ventas import TIPOS_PAGO, _calcular_descuento, _efectivo_teorico_turno
 from app.templating import templates
 
 router = APIRouter(prefix="/dashboard/turnos")
@@ -60,7 +60,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
     descuentos_por_orden = {oid: _calcular_descuento(items) for oid, items in items_por_orden.items()}
 
     movimientos = await pool().fetch(
-        "SELECT id, tipo, monto, motivo, tipo_pago, responsable, creado_en FROM movimientos_caja "
+        "SELECT id, tipo, monto, motivo, tipo_pago, categoria, responsable, creado_en FROM movimientos_caja "
         "WHERE turno_id = $1 ORDER BY creado_en",
         turno_id,
     )
@@ -69,6 +69,24 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
         "SELECT corte, tipo, cantidad, subtotal FROM conteo_caja WHERE turno_id = $1 ORDER BY corte DESC",
         turno_id,
     )
+
+    categorias_egreso = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
+
+    # Comparación del arqueo: si el turno ya está cerrado, "completo" o
+    # "incompleto" (sobra/falta) contra lo que la caja debería tener según
+    # ventas y movimientos; si sigue abierto, se muestra el esperado en vivo
+    # (todavía no hay monto contado con el que compararlo).
+    teorico = await _efectivo_teorico_turno(turno_id, turno["monto_inicial"])
+    estado_arqueo = None
+    diferencia_arqueo = 0.0
+    if turno["estado"] == "cerrado" and turno["monto_final_declarado"] is not None:
+        diferencia_arqueo = round(float(turno["monto_final_declarado"]) - teorico, 2)
+        if abs(diferencia_arqueo) < 0.01:
+            estado_arqueo = "completo"
+        elif diferencia_arqueo > 0:
+            estado_arqueo = "sobra"
+        else:
+            estado_arqueo = "falta"
 
     return templates.TemplateResponse(
         request,
@@ -82,6 +100,11 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "descuentos_por_orden": descuentos_por_orden,
             "movimientos": movimientos,
             "arqueo": arqueo,
+            "categorias_egreso": categorias_egreso,
+            "tipos_pago": TIPOS_PAGO,
+            "efectivo_teorico": teorico,
+            "estado_arqueo": estado_arqueo,
+            "diferencia_arqueo": abs(diferencia_arqueo),
         },
     )
 

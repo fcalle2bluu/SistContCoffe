@@ -11,11 +11,47 @@
     </p>
   </div>
 
+  {% if estado_arqueo %}
+  <p class="{{ 'success-box' if estado_arqueo == 'completo' else 'error-box' }}">
+    <span class="arqueo-badge {{ 'arqueo-badge-completo' if estado_arqueo == 'completo' else 'arqueo-badge-incompleto' }}">
+      {{ 'Completo' if estado_arqueo == 'completo' else 'Incompleto' }}
+    </span>
+    {% if estado_arqueo == 'completo' %}
+    El arqueo de caja cuadró exacto con lo esperado (Bs {{ "%.2f"|format(efectivo_teorico) }}).
+    {% elif estado_arqueo == 'sobra' %}
+    Sobran Bs {{ "%.2f"|format(diferencia_arqueo) }} — se contaron Bs {{ "%.2f"|format(turno.monto_final_declarado) }}
+    contra Bs {{ "%.2f"|format(efectivo_teorico) }} esperados.
+    {% else %}
+    Faltan Bs {{ "%.2f"|format(diferencia_arqueo) }} — se contaron Bs {{ "%.2f"|format(turno.monto_final_declarado) }}
+    contra Bs {{ "%.2f"|format(efectivo_teorico) }} esperados.
+    {% endif %}
+  </p>
+  {% endif %}
+
   <dl class="stats-grid">
     <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
     <div class="stat-box"><dt>Cierre declarado</dt><dd>{{ ("Bs " + "%.2f"|format(turno.monto_final_declarado)) if turno.monto_final_declarado is not none else "—" }}</dd></div>
+    <div class="stat-box stat-box-highlight"><dt>Efectivo esperado</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
     <div class="stat-box"><dt>Estado</dt><dd class="uppercase">{{ turno.estado }}</dd></div>
   </dl>
+
+  <details class="disclosure">
+    <summary class="btn btn-outline btn-sm">Corregir apertura</summary>
+    <div class="disclosure-content">
+      <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/apertura" class="inline-form">
+        <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+        <div>
+          <label class="field-label">Monto inicial en caja (Bs)</label>
+          <input name="monto_inicial" type="number" step="0.01" value="{{ '%.2f'|format(turno.monto_inicial) }}" required class="input input-w44" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+      </form>
+      <p class="muted-sm" style="margin-top:8px;">
+        Cambia lo que se considera "esperado" en el arqueo de este turno. No toca el monto ya contado al cierre
+        ni ningún asiento del Libro Diario.
+      </p>
+    </div>
+  </details>
 
   <div>
     <h3 class="subsection-title">Ventas del turno ({{ ordenes|length }})</h3>
@@ -24,7 +60,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table data-table-wide">
-        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Descuento</th><th class="text-right">Total</th><th>Estado</th><th>Pago</th><th>Hora</th><th>Responsable</th></tr></thead>
+        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Descuento</th><th class="text-right">Total</th><th>Estado</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for o in ordenes %}
           <tr>
@@ -45,7 +81,48 @@
             </td>
             <td class="small">{{ (o.cobrado_en|hora) if o.cobrado_en else (o.creado_en|hora) }}</td>
             <td class="small muted-inline">{{ o.responsable }}</td>
+            <td class="text-right">
+              {% if o.estado in ('abierta', 'cobrada') %}
+              <div class="row-actions">
+                <a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a>
+                <a href="/dashboard/ventas/ordenes/{{ o.id }}/items" class="link-muted"
+                   hx-get="/dashboard/ventas/ordenes/{{ o.id }}/items" hx-target="#modal-root" hx-swap="innerHTML">Productos</a>
+              </div>
+              {% endif %}
+            </td>
           </tr>
+          {% if o.estado == 'cobrada' %}
+          <tr>
+            <td colspan="9" style="padding:0;">
+              <details class="disclosure" style="border-top:none; padding-top:0;">
+                <summary class="link-muted" style="padding:4px 0 8px;">Cambiar método de pago</summary>
+                <div class="disclosure-content">
+                  <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/metodo-pago" class="inline-form form-cambiar-pago">
+                    <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+                    <div>
+                      <label class="field-label">Método de pago</label>
+                      <select name="tipo_pago" required class="input input-w36 pos-tipo-pago-cambio">
+                        {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == o.tipo_pago }}>{{ t }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <span class="factura-fields-cambio{{ '' if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') else ' oculto' }}">
+                      <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
+                      <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
+                      <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
+                    </span>
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                  </form>
+                  {% if turno.estado != 'abierto' %}
+                  <p class="muted-sm" style="margin-top:8px;">
+                    Este turno ya está cerrado: si esta venta ya estaba contabilizada en el Libro Diario,
+                    el asiento original no se ajusta solo — revísalo a mano en Contabilidad.
+                  </p>
+                  {% endif %}
+                </div>
+              </details>
+            </td>
+          </tr>
+          {% endif %}
           {% endfor %}
         </tbody>
       </table>
@@ -81,16 +158,83 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Tipo</th><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th></tr></thead>
+        <thead><tr><th>Tipo</th><th>Categoría</th><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for m in movimientos %}
           <tr>
             <td class="small uppercase">{{ m.tipo }}</td>
+            <td class="small">{{ m.categoria or "—" }}</td>
             <td class="strong">{{ m.motivo }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(m.monto) }}</td>
             <td class="uppercase small">{{ m.tipo_pago }}</td>
             <td class="small">{{ m.creado_en|hora }}</td>
             <td class="small muted-inline">{{ m.responsable }}</td>
+            <td class="text-right">
+              <form method="post" action="/dashboard/ventas/movimientos/{{ m.id }}/eliminar"
+                onsubmit="return confirm('¿Eliminar este movimiento de caja? Esta acción no se puede deshacer.');"
+                style="display:inline;">
+                <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+                <button type="submit" class="link-danger">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="8" style="padding:0;">
+              <details class="disclosure" style="border-top:none; padding-top:0;">
+                <summary class="link-muted" style="padding:4px 0 8px;">Editar</summary>
+                <div class="disclosure-content">
+                  {% if m.tipo == 'ingreso' %}
+                  <form method="post" action="/dashboard/ventas/movimientos/{{ m.id }}/editar-ingreso" class="inline-form">
+                    <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+                    <div class="flex-1">
+                      <label class="field-label">Motivo</label>
+                      <input name="motivo" value="{{ m.motivo }}" required class="input" />
+                    </div>
+                    <div>
+                      <label class="field-label">Método de pago</label>
+                      <select name="tipo_pago" required class="input input-w36">
+                        {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == m.tipo_pago }}>{{ t }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div>
+                      <label class="field-label">Monto (Bs)</label>
+                      <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                  </form>
+                  {% else %}
+                  <form method="post" action="/dashboard/ventas/movimientos/{{ m.id }}/editar" class="inline-form">
+                    <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+                    <div>
+                      <label class="field-label">Categoría</label>
+                      {% set categoria_seleccionada = m.categoria %}
+                      {% set categoria_select_id = "categoria-egreso-select-" ~ m.id %}
+                      {% include "partials/_categoria_egreso_select.html" %}
+                    </div>
+                    <div class="flex-1">
+                      <label class="field-label">Motivo</label>
+                      <input name="motivo" value="{{ m.motivo }}" required class="input" />
+                    </div>
+                    <div>
+                      <label class="field-label">Método de pago</label>
+                      <select name="tipo_pago" required class="input input-w36">
+                        {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == m.tipo_pago }}>{{ t }}</option>{% endfor %}
+                      </select>
+                    </div>
+                    <div>
+                      <label class="field-label">Monto (Bs)</label>
+                      <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                  </form>
+                  {% endif %}
+                  <p class="muted-sm" style="margin-top:8px;">
+                    Si este movimiento ya estaba contabilizado en el Libro Diario, el asiento original no se
+                    ajusta solo — revísalo a mano en Contabilidad.
+                  </p>
+                </div>
+              </details>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -114,4 +258,21 @@
     </form>
   </div>
 </div>
+
+<script>
+  document.querySelectorAll(".form-cambiar-pago").forEach(function (form) {
+    var TIPOS_FACTURADOS_CAMBIO = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
+    var select = form.querySelector(".pos-tipo-pago-cambio");
+    var campos = form.querySelector(".factura-fields-cambio");
+    function actualizar() {
+      var requiere = TIPOS_FACTURADOS_CAMBIO.indexOf(select.value) !== -1;
+      campos.classList.toggle("oculto", !requiere);
+      campos.querySelectorAll("input").forEach(function (input) {
+        if (requiere) input.setAttribute("required", "required");
+        else input.removeAttribute("required");
+      });
+    }
+    select.addEventListener("change", actualizar);
+  });
+</script>
 {% endblock %}

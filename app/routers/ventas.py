@@ -47,6 +47,31 @@ def _cuenta_egreso_por_categoria(categoria: str | None) -> str:
             return cuenta
     return CUENTA_GASTOS_ADMINISTRATIVOS
 
+
+async def _efectivo_teorico_turno(turno_id: int, monto_inicial) -> float:
+    """Recalcula el efectivo teórico de un turno (abierto o ya cerrado) a
+    partir de sus ventas y movimientos de caja, con la misma fórmula que usa
+    _ventas_context para el turno abierto actual. Sirve para comparar contra
+    el arqueo contado tanto al momento de cerrar como después, desde Control
+    de Turnos."""
+    ingresos_efectivo = await pool().fetchval(
+        "SELECT COALESCE(SUM(op.monto), 0) FROM orden_pagos op "
+        "JOIN ordenes o ON o.id = op.orden_id "
+        "WHERE o.turno_id = $1 AND o.estado = 'cobrada' AND op.tipo_pago = ANY($2::text[])",
+        turno_id, list(PAGOS_EFECTIVO),
+    )
+    egresos_efectivo = await pool().fetchval(
+        "SELECT COALESCE(SUM(monto), 0) FROM movimientos_caja "
+        "WHERE turno_id = $1 AND tipo = 'egreso' AND tipo_pago = ANY($2::text[])",
+        turno_id, list(PAGOS_EFECTIVO),
+    )
+    ingresos_caja_efectivo = await pool().fetchval(
+        "SELECT COALESCE(SUM(monto), 0) FROM movimientos_caja "
+        "WHERE turno_id = $1 AND tipo = 'ingreso' AND tipo_pago = ANY($2::text[])",
+        turno_id, list(PAGOS_EFECTIVO),
+    )
+    return float(monto_inicial) + float(ingresos_efectivo) - float(ingresos_caja_efectivo) - float(egresos_efectivo)
+
 TASA_IVA = 0.13
 TASA_IT = 0.03
 TASA_COMISION_LINKSER = 0.018
@@ -364,6 +389,8 @@ async def _ventas_context(
     editar_ingreso_id: int | None = None,
     error: str | None = None,
     mesa_seleccionada: str | None = None,
+    cierre_estado: str | None = None,
+    cierre_diferencia: str | None = None,
 ) -> dict:
     turno = await pool().fetchrow(
         "SELECT id, responsable, monto_inicial, abierto_en FROM turnos WHERE estado = 'abierto'"
@@ -506,6 +533,8 @@ async def _ventas_context(
         "tipos_pago": TIPOS_PAGO,
         "denominaciones": DENOMINACIONES,
         "error": error,
+        "cierre_estado": cierre_estado,
+        "cierre_diferencia": cierre_diferencia,
     }
 
 
@@ -518,10 +547,13 @@ async def ventas_page(
     metodo_pago: int | None = None,
     editar_egreso: int | None = None,
     editar_ingreso: int | None = None,
+    cierre_estado: str | None = None,
+    cierre_diferencia: str | None = None,
 ):
     ctx = await _ventas_context(
         session, cobrar_id=cobrar, descuento_id=descuento, metodo_pago_id=metodo_pago,
         editar_egreso_id=editar_egreso, editar_ingreso_id=editar_ingreso,
+        cierre_estado=cierre_estado, cierre_diferencia=cierre_diferencia,
     )
     return templates.TemplateResponse(request, "dashboard/ventas.html", ctx)
 
@@ -776,6 +808,7 @@ async def cambiar_metodo_pago_orden(
     factura_nit: str = Form(""),
     factura_celular: str = Form(""),
     factura_nombre: str = Form(""),
+    next: str = Form("/dashboard/ventas"),
 ):
     tipo_pago = tipo_pago.strip()
     factura_nit = factura_nit.strip()
@@ -790,7 +823,10 @@ async def cambiar_metodo_pago_orden(
     error = None
     if not orden:
         error = "No se encontró esa venta."
-    elif orden["turno_estado"] != "abierto":
+    # Un cajero normal solo puede cambiar el método de pago mientras el turno
+    # sigue abierto; el admin puede corregirlo también desde Control de
+    # Turnos aunque el turno ya esté cerrado.
+    elif orden["turno_estado"] != "abierto" and session.get("role") != "admin":
         error = "Ya no se puede cambiar el método de pago: el turno de esta venta ya está cerrado."
     elif tipo_pago not in TIPOS_PAGO:
         error = "Elige un método de pago válido."
@@ -824,8 +860,10 @@ async def cambiar_metodo_pago_orden(
     detalle = f"Orden #{orden_id} (mesa {orden['mesa']}) → {tipo_pago}"
     if tipo_pago in TIPOS_FACTURADOS:
         detalle += f", factura a nombre de {factura_nombre} (NIT {factura_nit})"
+    if orden["turno_estado"] != "abierto":
+        detalle += " (turno ya cerrado: si ya estaba contabilizado en el Libro Diario, revísalo a mano)."
     await bitacora.registrar(session, "Cambió método de pago de venta", detalle)
-    return RedirectResponse("/dashboard/ventas", status_code=303)
+    return RedirectResponse(next, status_code=303)
 
 
 def _es_htmx(request: Request) -> bool:
@@ -1054,7 +1092,11 @@ async def abrir_turno(request: Request, session: dict = Depends(require_session)
 
 @router.post("/turno/{turno_id}/apertura", response_class=HTMLResponse)
 async def editar_apertura_turno(
-    request: Request, turno_id: int, session: dict = Depends(require_admin), monto_inicial: str = Form("")
+    request: Request,
+    turno_id: int,
+    session: dict = Depends(require_admin),
+    monto_inicial: str = Form(""),
+    next: str = Form("/dashboard/ventas"),
 ):
     try:
         monto = float(monto_inicial)
@@ -1065,18 +1107,20 @@ async def editar_apertura_turno(
         ctx = await _ventas_context(session, error="Ingresa un monto de apertura válido.")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
-    anterior = await pool().fetchval(
-        "SELECT monto_inicial FROM turnos WHERE id = $1 AND estado = 'abierto'", turno_id
-    )
-    if anterior is None:
-        ctx = await _ventas_context(session, error="Ese turno ya no está abierto.")
+    # Sin filtro de estado: desde Control de Turnos el admin puede corregir la
+    # apertura de un turno cerrado también (p. ej. un error de tipeo del
+    # cajero), no solo del turno abierto actual.
+    turno_row = await pool().fetchrow("SELECT monto_inicial, estado FROM turnos WHERE id = $1", turno_id)
+    if turno_row is None:
+        ctx = await _ventas_context(session, error="Ese turno no existe.")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     await pool().execute("UPDATE turnos SET monto_inicial = $1 WHERE id = $2", monto, turno_id)
-    await bitacora.registrar(
-        session, "Corrigió apertura de turno", f"Turno #{turno_id}: Bs {float(anterior):.2f} → Bs {monto:.2f}"
-    )
-    return RedirectResponse("/dashboard/ventas", status_code=303)
+    detalle = f"Turno #{turno_id}: Bs {float(turno_row['monto_inicial']):.2f} → Bs {monto:.2f}"
+    if turno_row["estado"] != "abierto":
+        detalle += " (turno ya cerrado: no cambia el monto contado ni el asiento de cierre, solo lo esperado)."
+    await bitacora.registrar(session, "Corrigió apertura de turno", detalle)
+    return RedirectResponse(next, status_code=303)
 
 
 @router.post("/turno/{turno_id}/cerrar", response_class=HTMLResponse)
@@ -1115,26 +1159,44 @@ async def cerrar_turno(
         )
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
-    resultado = await pool().execute(
+    turno_cerrado = await pool().fetchrow(
         "UPDATE turnos SET estado = 'cerrado', monto_final_declarado = $1, cerrado_en = now() "
-        "WHERE id = $2 AND estado = 'abierto'",
+        "WHERE id = $2 AND estado = 'abierto' RETURNING monto_inicial",
         total,
         turno_id,
     )
-    if resultado == "UPDATE 1":
-        async with pool().acquire() as conn:
-            async with conn.transaction():
-                for c, t, q in conteo:
-                    await conn.execute(
-                        "INSERT INTO conteo_caja (turno_id, corte, tipo, cantidad) VALUES ($1, $2, $3, $4)",
-                        turno_id, c, t, q,
-                    )
-        await _registrar_ventas_efectivo_en_diario(turno_id)
-        await _registrar_ventas_qr_en_diario(turno_id)
-        await _registrar_ventas_facturadas_en_diario(turno_id)
-        await bitacora.registrar(session, "Cerró turno", f"Turno #{turno_id}, monto final Bs {total:.2f} (arqueo de caja)")
+    if not turno_cerrado:
+        return RedirectResponse("/dashboard/ventas", status_code=303)
 
-    return RedirectResponse("/dashboard/ventas", status_code=303)
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            for c, t, q in conteo:
+                await conn.execute(
+                    "INSERT INTO conteo_caja (turno_id, corte, tipo, cantidad) VALUES ($1, $2, $3, $4)",
+                    turno_id, c, t, q,
+                )
+    await _registrar_ventas_efectivo_en_diario(turno_id)
+    await _registrar_ventas_qr_en_diario(turno_id)
+    await _registrar_ventas_facturadas_en_diario(turno_id)
+
+    teorico = await _efectivo_teorico_turno(turno_id, turno_cerrado["monto_inicial"])
+    diferencia = round(total - teorico, 2)
+    if abs(diferencia) < 0.01:
+        estado_arqueo, detalle_arqueo = "completo", "cuadra exacto"
+    elif diferencia > 0:
+        estado_arqueo, detalle_arqueo = "sobra", f"sobran Bs {diferencia:.2f}"
+    else:
+        estado_arqueo, detalle_arqueo = "falta", f"faltan Bs {abs(diferencia):.2f}"
+
+    await bitacora.registrar(
+        session, "Cerró turno",
+        f"Turno #{turno_id}, monto final Bs {total:.2f} (arqueo de caja). "
+        f"Esperado Bs {teorico:.2f} → {detalle_arqueo}.",
+    )
+    return RedirectResponse(
+        f"/dashboard/ventas?cierre_estado={estado_arqueo}&cierre_diferencia={abs(diferencia):.2f}",
+        status_code=303,
+    )
 
 
 @router.post("/movimientos", response_class=HTMLResponse)
@@ -1216,6 +1278,7 @@ async def editar_ingreso_caja(
     monto: str = Form(""),
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
+    next: str = Form("/dashboard/ventas#ingresos-turno"),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
@@ -1237,7 +1300,7 @@ async def editar_ingreso_caja(
         f"Movimiento #{movimiento_id}: Bs {monto_num:.2f} — {motivo} ({tipo_pago}) "
         f"(si ya estaba contabilizado en el Libro Diario, el asiento original no se ajusta solo — revísalo a mano).",
     )
-    return RedirectResponse("/dashboard/ventas#ingresos-turno", status_code=303)
+    return RedirectResponse(next, status_code=303)
 
 
 @router.post("/movimientos/categorias", response_class=HTMLResponse)
@@ -1266,6 +1329,7 @@ async def editar_movimiento_caja(
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
     categoria: str = Form(""),
+    next: str = Form("/dashboard/ventas"),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
@@ -1292,11 +1356,13 @@ async def editar_movimiento_caja(
         f"Movimiento #{movimiento_id}: {categoria} — Bs {monto_num:.2f} — {motivo} "
         f"(si ya estaba contabilizado en el Libro Diario, el asiento original no se ajusta solo — revísalo a mano).",
     )
-    return RedirectResponse("/dashboard/ventas", status_code=303)
+    return RedirectResponse(next, status_code=303)
 
 
 @router.post("/movimientos/{movimiento_id}/eliminar")
-async def eliminar_movimiento_caja(movimiento_id: int, session: dict = Depends(require_session)):
+async def eliminar_movimiento_caja(
+    movimiento_id: int, session: dict = Depends(require_session), next: str = Form("/dashboard/ventas")
+):
     movimiento = await pool().fetchrow("SELECT tipo, motivo, monto FROM movimientos_caja WHERE id = $1", movimiento_id)
     if movimiento:
         await pool().execute("DELETE FROM movimientos_caja WHERE id = $1", movimiento_id)
@@ -1304,4 +1370,4 @@ async def eliminar_movimiento_caja(movimiento_id: int, session: dict = Depends(r
         await bitacora.registrar(
             session, accion, f"Movimiento #{movimiento_id}, Bs {movimiento['monto']:.2f} — {movimiento['motivo']}"
         )
-    return RedirectResponse("/dashboard/ventas", status_code=303)
+    return RedirectResponse(next, status_code=303)
