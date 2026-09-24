@@ -202,6 +202,9 @@
             <td class="strong">{{ o.mesa }}</td>
             <td class="small">
               {% for it in items_por_orden.get(o.id, []) %}{{ "%g"|format(it.cantidad) }}× {{ it.producto_nombre }}{{ ", " if not loop.last }}{% else %}—{% endfor %}
+              {% if o.observacion %}
+              <div class="muted-sm" style="margin-top:4px;"><strong>Obs:</strong> {{ o.observacion }}</div>
+              {% endif %}
             </td>
             <td class="text-right mono small">{{ "-Bs %.2f"|format(descuentos_por_orden.get(o.id, 0)) if descuentos_por_orden.get(o.id, 0) > 0 else "—" }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
