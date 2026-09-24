@@ -40,6 +40,21 @@ CUENTAS_POR_CATEGORIA_EGRESO = {
 }
 
 
+def _parse_hora_local(valor: str) -> datetime | None:
+    """Convierte el valor de un <input type="datetime-local"> (hora de
+    Bolivia, sin zona) a un datetime consciente de zona horaria, para poder
+    corregir a mano el creado_en/cobrado_en de una venta o un movimiento de
+    caja. Devuelve None si viene vacío o mal formado, para no pisar la hora
+    existente por error."""
+    valor = (valor or "").strip()
+    if not valor:
+        return None
+    try:
+        return datetime.strptime(valor, "%Y-%m-%dT%H:%M").replace(tzinfo=BOLIVIA_TZ)
+    except ValueError:
+        return None
+
+
 def _cuenta_egreso_por_categoria(categoria: str | None) -> str:
     if categoria:
         cuenta = CUENTAS_POR_CATEGORIA_EGRESO.get(categoria.strip().lower())
@@ -385,6 +400,7 @@ async def _ventas_context(
     cobrar_id: int | None = None,
     descuento_id: int | None = None,
     metodo_pago_id: int | None = None,
+    hora_id: int | None = None,
     editar_egreso_id: int | None = None,
     editar_ingreso_id: int | None = None,
     error: str | None = None,
@@ -528,6 +544,7 @@ async def _ventas_context(
         "cobrar_id": cobrar_id,
         "descuento_id": descuento_id,
         "metodo_pago_id": metodo_pago_id,
+        "hora_id": hora_id,
         "editar_egreso_id": editar_egreso_id,
         "editar_ingreso_id": editar_ingreso_id,
         "tipos_pago": TIPOS_PAGO,
@@ -545,13 +562,14 @@ async def ventas_page(
     cobrar: int | None = None,
     descuento: int | None = None,
     metodo_pago: int | None = None,
+    hora: int | None = None,
     editar_egreso: int | None = None,
     editar_ingreso: int | None = None,
     cierre_estado: str | None = None,
     cierre_diferencia: str | None = None,
 ):
     ctx = await _ventas_context(
-        session, cobrar_id=cobrar, descuento_id=descuento, metodo_pago_id=metodo_pago,
+        session, cobrar_id=cobrar, descuento_id=descuento, metodo_pago_id=metodo_pago, hora_id=hora,
         editar_egreso_id=editar_egreso, editar_ingreso_id=editar_ingreso,
         cierre_estado=cierre_estado, cierre_diferencia=cierre_diferencia,
     )
@@ -863,6 +881,35 @@ async def cambiar_metodo_pago_orden(
     if orden["turno_estado"] != "abierto":
         detalle += " (turno ya cerrado: si ya estaba contabilizado en el Libro Diario, revísalo a mano)."
     await bitacora.registrar(session, "Cambió método de pago de venta", detalle)
+    return RedirectResponse(next, status_code=303)
+
+
+@router.post("/ordenes/{orden_id}/hora")
+async def editar_hora_orden(
+    orden_id: int,
+    session: dict = Depends(require_admin),
+    hora: str = Form(""),
+    next: str = Form("/dashboard/ventas"),
+):
+    """Corrige la hora de una venta desde Control de Turnos: la de cobro si
+    ya está cobrada, o la de creación si todavía está pendiente."""
+    orden = await pool().fetchrow("SELECT mesa, estado, creado_en, cobrado_en FROM ordenes WHERE id = $1", orden_id)
+    hora_dt = _parse_hora_local(hora)
+    if not orden or orden["estado"] not in ("abierta", "cobrada") or hora_dt is None:
+        return RedirectResponse(next, status_code=303)
+
+    if orden["estado"] == "cobrada":
+        anterior = orden["cobrado_en"]
+        await pool().execute("UPDATE ordenes SET cobrado_en = $1 WHERE id = $2", hora_dt, orden_id)
+    else:
+        anterior = orden["creado_en"]
+        await pool().execute("UPDATE ordenes SET creado_en = $1 WHERE id = $2", hora_dt, orden_id)
+
+    await bitacora.registrar(
+        session, "Corrigió hora de venta",
+        f"Orden #{orden_id} (mesa {orden['mesa']}): {anterior} → {hora_dt} "
+        f"(si ya estaba contabilizada en el Libro Diario, la fecha del asiento no se ajusta sola).",
+    )
     return RedirectResponse(next, status_code=303)
 
 
@@ -1208,6 +1255,8 @@ async def registrar_movimiento_caja(
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
     categoria: str = Form(""),
+    hora: str = Form(""),
+    next: str = Form("/dashboard/ventas"),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
@@ -1221,19 +1270,24 @@ async def registrar_movimiento_caja(
         ctx = await _ventas_context(session, error="Completa categoría, motivo, método de pago y monto (mayor a 0).")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
+    # Solo el admin puede poner una hora distinta a "ahora" (p. ej. al
+    # cargar a mano un egreso atrasado desde Control de Turnos); un cajero
+    # no puede adelantar/atrasar el registro.
+    hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
     await pool().execute(
-        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, categoria) "
-        "VALUES ($1, 'egreso', $2, $3, $4, $5, $6)",
+        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, categoria, creado_en) "
+        "VALUES ($1, 'egreso', $2, $3, $4, $5, $6, COALESCE($7, now()))",
         int(turno_id),
         monto_num,
         motivo,
         session["nombre"],
         tipo_pago,
         categoria,
+        hora_dt,
     )
     await _registrar_egreso_en_diario(monto_num, tipo_pago, categoria, motivo, session["nombre"])
     await bitacora.registrar(session, "Registró egreso de caja", f"{categoria} — Bs {monto_num:.2f} — {motivo}")
-    return RedirectResponse("/dashboard/ventas", status_code=303)
+    return RedirectResponse(next, status_code=303)
 
 
 @router.post("/movimientos/ingreso", response_class=HTMLResponse)
@@ -1244,6 +1298,8 @@ async def registrar_ingreso_caja(
     monto: str = Form(""),
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
+    hora: str = Form(""),
+    next: str = Form("/dashboard/ventas#ingresos-turno"),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
@@ -1256,18 +1312,20 @@ async def registrar_ingreso_caja(
         ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0) para el ingreso.")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
+    hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
     await pool().execute(
-        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago) "
-        "VALUES ($1, 'ingreso', $2, $3, $4, $5)",
+        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, creado_en) "
+        "VALUES ($1, 'ingreso', $2, $3, $4, $5, COALESCE($6, now()))",
         int(turno_id),
         monto_num,
         motivo,
         session["nombre"],
         tipo_pago,
+        hora_dt,
     )
     await _registrar_ingreso_caja_en_diario(monto_num, tipo_pago, motivo, session["nombre"])
     await bitacora.registrar(session, "Registró ingreso a caja", f"Bs {monto_num:.2f} — {motivo} ({tipo_pago})")
-    return RedirectResponse("/dashboard/ventas#ingresos-turno", status_code=303)
+    return RedirectResponse(next, status_code=303)
 
 
 @router.post("/movimientos/{movimiento_id}/editar-ingreso", response_class=HTMLResponse)
@@ -1278,6 +1336,7 @@ async def editar_ingreso_caja(
     monto: str = Form(""),
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
+    hora: str = Form(""),
     next: str = Form("/dashboard/ventas#ingresos-turno"),
 ):
     motivo = motivo.strip()
@@ -1291,9 +1350,11 @@ async def editar_ingreso_caja(
         ctx = await _ventas_context(session, error="Completa motivo, método de pago y monto (mayor a 0) para el ingreso.")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
+    hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
     await pool().execute(
-        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3 WHERE id = $4",
-        monto_num, motivo, tipo_pago, movimiento_id,
+        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3, "
+        "creado_en = COALESCE($4, creado_en) WHERE id = $5",
+        monto_num, motivo, tipo_pago, hora_dt, movimiento_id,
     )
     await bitacora.registrar(
         session, "Editó ingreso a caja",
@@ -1329,6 +1390,7 @@ async def editar_movimiento_caja(
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
     categoria: str = Form(""),
+    hora: str = Form(""),
     next: str = Form("/dashboard/ventas"),
 ):
     motivo = motivo.strip()
@@ -1343,12 +1405,15 @@ async def editar_movimiento_caja(
         ctx = await _ventas_context(session, error="Completa categoría, motivo, método de pago y monto (mayor a 0).")
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
+    hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
     await pool().execute(
-        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3, categoria = $4 WHERE id = $5",
+        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3, categoria = $4, "
+        "creado_en = COALESCE($5, creado_en) WHERE id = $6",
         monto_num,
         motivo,
         tipo_pago,
         categoria,
+        hora_dt,
         movimiento_id,
     )
     await bitacora.registrar(

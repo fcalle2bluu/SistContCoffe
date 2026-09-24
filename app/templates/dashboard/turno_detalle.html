@@ -53,6 +53,74 @@
     </div>
   </details>
 
+  <div class="disclosure-row">
+    <details class="disclosure">
+      <summary class="btn btn-outline btn-sm">Registrar egreso</summary>
+      <div class="disclosure-content">
+        <form method="post" action="/dashboard/ventas/movimientos" class="inline-form">
+          <input type="hidden" name="turno_id" value="{{ turno.id }}" />
+          <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+          <div>
+            <label class="field-label">Categoría</label>
+            {% include "partials/_categoria_egreso_select.html" %}
+          </div>
+          <div class="flex-1">
+            <label class="field-label">Motivo</label>
+            <input name="motivo" required placeholder="Ej: pago servicio de limpieza" class="input" />
+          </div>
+          <div>
+            <label class="field-label">Método de pago</label>
+            <select name="tipo_pago" required class="input input-w36">
+              <option value="">—</option>
+              {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Monto (Bs)</label>
+            <input name="monto" type="number" step="0.01" required class="input input-w32" />
+          </div>
+          <div>
+            <label class="field-label">Hora</label>
+            <input name="hora" type="datetime-local" class="input" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+        </form>
+        <p class="muted-sm" style="margin-top:8px;">Deja la hora vacía para usar la hora actual.</p>
+      </div>
+    </details>
+
+    <details class="disclosure">
+      <summary class="btn btn-outline btn-sm">Registrar ingreso a caja</summary>
+      <div class="disclosure-content">
+        <form method="post" action="/dashboard/ventas/movimientos/ingreso" class="inline-form">
+          <input type="hidden" name="turno_id" value="{{ turno.id }}" />
+          <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+          <div class="flex-1">
+            <label class="field-label">Motivo</label>
+            <input name="motivo" required placeholder="Ej: traslado de la caja de ventas a la caja moneda nacional" class="input" />
+          </div>
+          <div>
+            <label class="field-label">Método de pago</label>
+            <select name="tipo_pago" required class="input input-w36">
+              <option value="">—</option>
+              {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Monto (Bs)</label>
+            <input name="monto" type="number" step="0.01" required class="input input-w32" />
+          </div>
+          <div>
+            <label class="field-label">Hora</label>
+            <input name="hora" type="datetime-local" class="input" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+        </form>
+        <p class="muted-sm" style="margin-top:8px;">Deja la hora vacía para usar la hora actual.</p>
+      </div>
+    </details>
+  </div>
+
   <div>
     <h3 class="subsection-title">Ventas del turno ({{ ordenes|length }})</h3>
     {% if ordenes|length == 0 %}
@@ -91,35 +159,54 @@
               {% endif %}
             </td>
           </tr>
-          {% if o.estado == 'cobrada' %}
+          {% if o.estado in ('abierta', 'cobrada') %}
           <tr>
             <td colspan="9" style="padding:0;">
-              <details class="disclosure" style="border-top:none; padding-top:0;">
-                <summary class="link-muted" style="padding:4px 0 8px;">Cambiar método de pago</summary>
-                <div class="disclosure-content">
-                  <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/metodo-pago" class="inline-form form-cambiar-pago">
-                    <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
-                    <div>
-                      <label class="field-label">Método de pago</label>
-                      <select name="tipo_pago" required class="input input-w36 pos-tipo-pago-cambio">
-                        {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == o.tipo_pago }}>{{ t }}</option>{% endfor %}
-                      </select>
-                    </div>
-                    <span class="factura-fields-cambio{{ '' if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') else ' oculto' }}">
-                      <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
-                      <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
-                      <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
-                    </span>
-                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
-                  </form>
-                  {% if turno.estado != 'abierto' %}
-                  <p class="muted-sm" style="margin-top:8px;">
-                    Este turno ya está cerrado: si esta venta ya estaba contabilizada en el Libro Diario,
-                    el asiento original no se ajusta solo — revísalo a mano en Contabilidad.
-                  </p>
-                  {% endif %}
-                </div>
-              </details>
+              <div style="display:flex; flex-wrap:wrap; gap:16px;">
+                {% if o.estado == 'cobrada' %}
+                <details class="disclosure" style="border-top:none; padding-top:0;">
+                  <summary class="link-muted" style="padding:4px 0 8px;">Cambiar método de pago</summary>
+                  <div class="disclosure-content">
+                    <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/metodo-pago" class="inline-form form-cambiar-pago">
+                      <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+                      <div>
+                        <label class="field-label">Método de pago</label>
+                        <select name="tipo_pago" required class="input input-w36 pos-tipo-pago-cambio">
+                          {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == o.tipo_pago }}>{{ t }}</option>{% endfor %}
+                        </select>
+                      </div>
+                      <span class="factura-fields-cambio{{ '' if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') else ' oculto' }}">
+                        <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
+                        <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
+                        <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
+                      </span>
+                      <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                    </form>
+                    {% if turno.estado != 'abierto' %}
+                    <p class="muted-sm" style="margin-top:8px;">
+                      Este turno ya está cerrado: si esta venta ya estaba contabilizada en el Libro Diario,
+                      el asiento original no se ajusta solo — revísalo a mano en Contabilidad.
+                    </p>
+                    {% endif %}
+                  </div>
+                </details>
+                {% endif %}
+
+                <details class="disclosure" style="border-top:none; padding-top:0;">
+                  <summary class="link-muted" style="padding:4px 0 8px;">Cambiar hora</summary>
+                  <div class="disclosure-content">
+                    <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/hora" class="inline-form">
+                      <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+                      <div>
+                        <label class="field-label">{{ "Hora de cobro" if o.estado == 'cobrada' else "Hora de creación" }}</label>
+                        <input name="hora" type="datetime-local" required
+                          value="{{ (o.cobrado_en if o.cobrado_en else o.creado_en)|datetime_local }}" class="input" />
+                      </div>
+                      <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                    </form>
+                  </div>
+                </details>
+              </div>
             </td>
           </tr>
           {% endif %}
@@ -200,6 +287,10 @@
                       <label class="field-label">Monto (Bs)</label>
                       <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
                     </div>
+                    <div>
+                      <label class="field-label">Hora</label>
+                      <input name="hora" type="datetime-local" value="{{ m.creado_en|datetime_local }}" class="input" />
+                    </div>
                     <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                   </form>
                   {% else %}
@@ -224,6 +315,10 @@
                     <div>
                       <label class="field-label">Monto (Bs)</label>
                       <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
+                    </div>
+                    <div>
+                      <label class="field-label">Hora</label>
+                      <input name="hora" type="datetime-local" value="{{ m.creado_en|datetime_local }}" class="input" />
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                   </form>

@@ -40,6 +40,12 @@ MESES_ES = [
 ]
 
 
+def formato_datetime_local(iso: str) -> str:
+    """Formatea para el value de un <input type="datetime-local"> (sin zona,
+    en hora de Bolivia), usado en los formularios de corregir la hora."""
+    return _a_hora_bolivia(iso).strftime("%Y-%m-%dT%H:%M")
+
+
 def formato_ticket_fecha(iso: str) -> str:
     dt = _a_hora_bolivia(iso)
     fecha = dt.strftime("%d/%m/%y")
@@ -70,4 +76,5 @@ templates.env.filters["fechahora"] = formato_fecha_hora
 templates.env.filters["fecha"] = formato_fecha
 templates.env.filters["bs"] = formato_bs
 templates.env.filters["ticket_fecha"] = formato_ticket_fecha
+templates.env.filters["datetime_local"] = formato_datetime_local
 templates.env.filters["mes_anio"] = formato_mes_anio

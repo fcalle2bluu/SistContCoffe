@@ -113,6 +113,12 @@
             <label class="field-label">Monto (Bs)</label>
             <input name="monto" type="number" step="0.01" required class="input input-w32" />
           </div>
+          {% if session.role == 'admin' %}
+          <div>
+            <label class="field-label">Hora</label>
+            <input name="hora" type="datetime-local" class="input" />
+          </div>
+          {% endif %}
           <button type="submit" class="btn btn-primary">Guardar</button>
         </form>
         <div class="order-row" style="margin-top:8px;">
@@ -145,6 +151,12 @@
             <label class="field-label">Monto (Bs)</label>
             <input name="monto" type="number" step="0.01" required class="input input-w32" />
           </div>
+          {% if session.role == 'admin' %}
+          <div>
+            <label class="field-label">Hora</label>
+            <input name="hora" type="datetime-local" class="input" />
+          </div>
+          {% endif %}
           <button type="submit" class="btn btn-primary">Guardar</button>
         </form>
       </details>
@@ -554,6 +566,20 @@
               </form>
             </td>
           </tr>
+          {% elif hora_id == o.id and session.role == 'admin' %}
+          <tr class="editing-row">
+            <td colspan="8">
+              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/hora" class="inline-form">
+                <span class="strong">{{ o.mesa }}</span>
+                <div>
+                  <label class="field-label">Hora de cobro</label>
+                  <input name="hora" type="datetime-local" required value="{{ o.cobrado_en|datetime_local }}" class="input" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                <a href="/dashboard/ventas#ventas-cobradas" class="btn btn-outline btn-sm">Cancelar</a>
+              </form>
+            </td>
+          </tr>
           {% else %}
           <tr>
             <td class="strong">{{ o.mesa }}</td>
@@ -584,6 +610,9 @@
                 <a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a>
                 <a href="/dashboard/ventas?descuento={{ o.id }}#ventas-cobradas" class="link-muted">Descuento</a>
                 <a href="/dashboard/ventas?metodo_pago={{ o.id }}#ventas-cobradas" class="link-muted">Cambiar pago</a>
+                {% if session.role == 'admin' %}
+                <a href="/dashboard/ventas?hora={{ o.id }}#ventas-cobradas" class="link-muted">Hora</a>
+                {% endif %}
                 <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/eliminar"
                   onsubmit="return confirm('¿Eliminar esta venta? Esta acción no se puede deshacer.');">
                   <button type="submit" class="link-danger">Eliminar</button>
@@ -627,6 +656,12 @@
                   <label class="field-label">Monto (Bs)</label>
                   <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
                 </div>
+                {% if session.role == 'admin' %}
+                <div>
+                  <label class="field-label">Hora</label>
+                  <input name="hora" type="datetime-local" value="{{ m.creado_en|datetime_local }}" class="input" />
+                </div>
+                {% endif %}
                 <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                 <a href="/dashboard/ventas#ingresos-turno" class="btn btn-outline btn-sm">Cancelar</a>
               </form>
@@ -691,6 +726,12 @@
                   <label class="field-label">Monto (Bs)</label>
                   <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
                 </div>
+                {% if session.role == 'admin' %}
+                <div>
+                  <label class="field-label">Hora</label>
+                  <input name="hora" type="datetime-local" value="{{ m.creado_en|datetime_local }}" class="input" />
+                </div>
+                {% endif %}
                 <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                 <a href="/dashboard/ventas#egresos-turno" class="btn btn-outline btn-sm">Cancelar</a>
               </form>
