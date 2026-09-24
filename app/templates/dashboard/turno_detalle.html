@@ -302,6 +302,47 @@
         </tbody>
       </table>
     </div>
+
+    <details class="disclosure">
+      <summary class="btn btn-outline btn-sm">Corregir arqueo</summary>
+      <div class="disclosure-content">
+        <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/arqueo" id="form-arqueo-turno" class="stack-4">
+          <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
+          <div class="table-wrap">
+            <table class="capture-grid" id="tabla-arqueo-turno">
+              <thead><tr><th>Corte</th><th class="col-monto">Cantidad</th><th class="col-monto">Subtotal</th></tr></thead>
+              <tbody>
+                {% for valor, tipo in denominaciones %}
+                {% set cantidad_actual = arqueo_por_corte.get(valor, 0) %}
+                <tr>
+                  <td>
+                    Bs {{ "%g"|format(valor) }} <span class="muted-sm">({{ tipo }})</span>
+                    <input type="hidden" name="corte" value="{{ valor }}" />
+                  </td>
+                  <td class="col-monto">
+                    <input type="number" name="cantidad" min="0" value="{{ cantidad_actual }}"
+                      class="arqueo-turno-cantidad" data-corte="{{ valor }}" />
+                  </td>
+                  <td class="col-monto mono arqueo-turno-subtotal" data-corte="{{ valor }}">
+                    Bs {{ "%.2f"|format(valor * cantidad_actual) }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="cart-total-row">
+            <p class="cart-total-label">Nuevo total contado</p>
+            <p class="cart-total-value" id="arqueo-turno-total">Bs {{ "%.2f"|format(turno.monto_final_declarado) }}</p>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Guardar arqueo</button>
+        </form>
+        <p class="muted-sm" style="margin-top:8px;">
+          Solo para el admin: cambia el monto contado al cierre (y, con eso, si el turno queda "Completo" o
+          "Incompleto" arriba). No genera ni corrige ningún asiento del Libro Diario.
+        </p>
+      </div>
+    </details>
   </div>
   {% endif %}
 
@@ -485,5 +526,23 @@
     }
     select.addEventListener("change", actualizar);
   });
+
+  var formArqueoTurno = document.getElementById("form-arqueo-turno");
+  if (formArqueoTurno) {
+    var totalOutArqueoTurno = document.getElementById("arqueo-turno-total");
+    function recalcularArqueoTurno() {
+      var total = 0;
+      formArqueoTurno.querySelectorAll(".arqueo-turno-cantidad").forEach(function (input) {
+        var corte = parseFloat(input.getAttribute("data-corte") || "0");
+        var cantidad = parseInt(input.value || "0", 10);
+        var subtotal = corte * (cantidad > 0 ? cantidad : 0);
+        total += subtotal;
+        var celda = formArqueoTurno.querySelector('.arqueo-turno-subtotal[data-corte="' + input.getAttribute("data-corte") + '"]');
+        if (celda) celda.textContent = "Bs " + subtotal.toFixed(2);
+      });
+      totalOutArqueoTurno.textContent = "Bs " + total.toFixed(2);
+    }
+    formArqueoTurno.addEventListener("input", recalcularArqueoTurno);
+  }
 </script>
 {% endblock %}

@@ -1170,6 +1170,56 @@ async def editar_apertura_turno(
     return RedirectResponse(next, status_code=303)
 
 
+@router.post("/turno/{turno_id}/arqueo", response_class=HTMLResponse)
+async def editar_arqueo_turno(
+    request: Request,
+    turno_id: int,
+    session: dict = Depends(require_admin),
+    corte: list[str] = Form([]),
+    cantidad: list[str] = Form([]),
+    next: str = Form("/dashboard/ventas"),
+):
+    """Corrige el arqueo (conteo de billetes/monedas) que ya quedó guardado
+    al cerrar un turno. A propósito es solo para el admin: el cajero que
+    contó la caja no debería poder ajustar después su propio conteo."""
+    cortes_validos = {c: t for c, t in DENOMINACIONES}
+    conteo: list[tuple[float, str, int]] = []
+    total = 0.0
+    for c_txt, q_txt in zip(corte, cantidad):
+        try:
+            c = float(c_txt)
+            q = int(q_txt)
+        except ValueError:
+            continue
+        if c not in cortes_validos or q <= 0:
+            continue
+        conteo.append((c, cortes_validos[c], q))
+        total += c * q
+
+    turno_row = await pool().fetchrow("SELECT monto_final_declarado FROM turnos WHERE id = $1", turno_id)
+    if turno_row is None or not conteo:
+        return RedirectResponse(next, status_code=303)
+
+    anterior = turno_row["monto_final_declarado"]
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("DELETE FROM conteo_caja WHERE turno_id = $1", turno_id)
+            for c, t, q in conteo:
+                await conn.execute(
+                    "INSERT INTO conteo_caja (turno_id, corte, tipo, cantidad) VALUES ($1, $2, $3, $4)",
+                    turno_id, c, t, q,
+                )
+            await conn.execute("UPDATE turnos SET monto_final_declarado = $1 WHERE id = $2", total, turno_id)
+
+    anterior_txt = f"Bs {float(anterior):.2f}" if anterior is not None else "—"
+    await bitacora.registrar(
+        session, "Corrigió arqueo de caja de turno",
+        f"Turno #{turno_id}: {anterior_txt} → Bs {total:.2f} "
+        f"(no ajusta ningún asiento del Libro Diario si el turno ya se cerró contablemente).",
+    )
+    return RedirectResponse(next, status_code=303)
+
+
 @router.post("/turno/{turno_id}/cerrar", response_class=HTMLResponse)
 async def cerrar_turno(
     request: Request,

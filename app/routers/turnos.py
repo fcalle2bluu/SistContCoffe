@@ -5,7 +5,7 @@ from app import bitacora
 from app.db import pool
 from app.deps import require_admin
 from app.routers.contabilidad import _agrupar_asientos
-from app.routers.ventas import TIPOS_PAGO, _calcular_descuento, _efectivo_teorico_turno
+from app.routers.ventas import DENOMINACIONES, TIPOS_PAGO, _calcular_descuento, _efectivo_teorico_turno
 from app.templating import templates
 
 router = APIRouter(prefix="/dashboard/turnos")
@@ -90,6 +90,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
         "SELECT corte, tipo, cantidad, subtotal FROM conteo_caja WHERE turno_id = $1 ORDER BY corte DESC",
         turno_id,
     )
+    arqueo_por_corte = {float(a["corte"]): a["cantidad"] for a in arqueo}
 
     # Los asientos que el cierre de turno genera solo en Libro Diario dejan
     # "turno #<id>)." al final de la glosa (ver _registrar_ventas_*_en_diario
@@ -146,6 +147,8 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "resumen_pagos": resumen_pagos,
             "resumen_ingresos_caja": resumen_ingresos_caja,
             "asientos_turno": asientos_turno,
+            "arqueo_por_corte": arqueo_por_corte,
+            "denominaciones": DENOMINACIONES,
         },
     )
 
