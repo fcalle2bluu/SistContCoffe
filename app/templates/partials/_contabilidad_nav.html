@@ -1,5 +1,6 @@
 <div class="subnav">
   <a href="/dashboard/contabilidad/diario" class="subnav-link {{ 'active' if active == 'contabilidad' and request.url.path.endswith('/diario') else '' }}">Libro Diario</a>
+  <a href="/dashboard/contabilidad/facturas" class="subnav-link {{ 'active' if request.url.path.endswith('/facturas') else '' }}">Facturas pendientes</a>
   <a href="/dashboard/contabilidad/mayor" class="subnav-link {{ 'active' if request.url.path.endswith('/mayor') else '' }}">Libro Mayor</a>
   <a href="/dashboard/contabilidad/resultados" class="subnav-link {{ 'active' if request.url.path.endswith('/resultados') else '' }}">Estado de Resultados</a>
   <a href="/dashboard/contabilidad/plan-cuentas" class="subnav-link {{ 'active' if request.url.path.endswith('/plan-cuentas') else '' }}">Plan de Cuentas</a>

@@ -1,0 +1,108 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Facturas pendientes — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8 report-shell">
+  <div>
+    <h2 class="section-title">Facturas pendientes</h2>
+    <p class="section-subtitle">Ventas facturadas (EFEC/FAC, QR/FAC, POS/FAC) por registrar en el SIAT.</p>
+  </div>
+
+  {% include "partials/_contabilidad_nav.html" %}
+
+  {% if pendientes_atrasadas > 0 %}
+  <p class="error-box">
+    <strong>Hay {{ pendientes_atrasadas }} factura(s) de días anteriores sin registrar en el SIAT.</strong>
+    Revísalas abajo antes de las de hoy.
+  </p>
+  {% endif %}
+  {% if pendientes_hoy > 0 %}
+  <p class="error-box">
+    <strong>Faltan {{ pendientes_hoy }} factura(s) de hoy por registrar en el SIAT.</strong>
+  </p>
+  {% elif facturas_hoy|length > 0 %}
+  <p class="success-box"><strong>Todas las facturas de hoy ya están registradas en el SIAT.</strong></p>
+  {% endif %}
+
+  {% if facturas_atrasadas|length > 0 %}
+  <div>
+    <h3 class="subsection-title">Pendientes de días anteriores</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Hora</th><th>Mesa</th><th>Pago</th><th class="num">Total</th>
+            <th>NIT</th><th>Nombre / razón social</th><th>Celular</th><th>Responsable</th><th>SIAT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in facturas_atrasadas %}
+          <tr>
+            <td class="mono nowrap">{{ f.cobrado_en|fecha }}</td>
+            <td class="mono nowrap">{{ f.cobrado_en|hora }}</td>
+            <td>{{ f.mesa }}</td>
+            <td>{{ f.tipo_pago }}</td>
+            <td class="num">{{ f.total|bs }}</td>
+            <td>{{ f.factura_nit or "—" }}</td>
+            <td>{{ f.factura_nombre or "—" }}</td>
+            <td>{{ f.factura_celular or "—" }}</td>
+            <td>{{ f.responsable }}</td>
+            <td>
+              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear">
+                <input type="hidden" name="registrado" value="1" />
+                <button type="submit" class="btn btn-primary btn-sm">Marcar tickeada</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div>
+    <h3 class="subsection-title">Facturas de hoy</h3>
+    {% if facturas_hoy|length == 0 %}
+    <p class="muted">Todavía no hay ventas facturadas hoy.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Hora</th><th>Mesa</th><th>Pago</th><th class="num">Total</th>
+            <th>NIT</th><th>Nombre / razón social</th><th>Celular</th><th>Responsable</th><th>SIAT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in facturas_hoy %}
+          <tr>
+            <td class="mono nowrap">{{ f.cobrado_en|hora }}</td>
+            <td>{{ f.mesa }}</td>
+            <td>{{ f.tipo_pago }}</td>
+            <td class="num">{{ f.total|bs }}</td>
+            <td>{{ f.factura_nit or "—" }}</td>
+            <td>{{ f.factura_nombre or "—" }}</td>
+            <td>{{ f.factura_celular or "—" }}</td>
+            <td>{{ f.responsable }}</td>
+            <td>
+              {% if f.siat_registrado %}
+              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear">
+                <input type="hidden" name="registrado" value="0" />
+                <button type="submit" class="btn btn-outline btn-sm">✓ Tickeada — desmarcar</button>
+              </form>
+              {% else %}
+              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear">
+                <input type="hidden" name="registrado" value="1" />
+                <button type="submit" class="btn btn-primary btn-sm">Marcar tickeada</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

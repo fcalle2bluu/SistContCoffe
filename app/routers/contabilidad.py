@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -6,8 +6,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
+from app.routers.ventas import TIPOS_FACTURADOS
 from app.templating import templates
-from app.tz import hoy_bolivia
+from app.tz import BOLIVIA_TZ, hoy_bolivia
 
 router = APIRouter(prefix="/dashboard/contabilidad")
 
@@ -696,3 +697,62 @@ async def crear_periodo_resultados(
                     i,
                 )
     return RedirectResponse(f"/dashboard/contabilidad/resultados?periodo={periodo_id}", status_code=303)
+
+
+@router.get("/facturas", response_class=HTMLResponse)
+async def facturas_page(request: Request, session: dict = Depends(require_admin)):
+    hoy = hoy_bolivia()
+    inicio_dia = datetime.combine(hoy, time.min, BOLIVIA_TZ)
+    fin_dia = inicio_dia + timedelta(days=1)
+
+    columnas = (
+        "id, mesa, total, tipo_pago, responsable, cobrado_en, "
+        "factura_nit, factura_celular, factura_nombre, siat_registrado"
+    )
+    facturas_hoy = await pool().fetch(
+        f"""
+        SELECT {columnas} FROM ordenes
+        WHERE estado = 'cobrada' AND tipo_pago = ANY($1::text[])
+          AND cobrado_en >= $2 AND cobrado_en < $3
+        ORDER BY cobrado_en
+        """,
+        list(TIPOS_FACTURADOS), inicio_dia, fin_dia,
+    )
+    facturas_atrasadas = await pool().fetch(
+        f"""
+        SELECT {columnas} FROM ordenes
+        WHERE estado = 'cobrada' AND tipo_pago = ANY($1::text[])
+          AND cobrado_en < $2 AND siat_registrado = false
+        ORDER BY cobrado_en
+        """,
+        list(TIPOS_FACTURADOS), inicio_dia,
+    )
+    pendientes_hoy = sum(1 for f in facturas_hoy if not f["siat_registrado"])
+
+    return templates.TemplateResponse(
+        request,
+        "dashboard/contabilidad_facturas.html",
+        {
+            "session": session,
+            "active": "contabilidad",
+            "facturas_hoy": facturas_hoy,
+            "facturas_atrasadas": facturas_atrasadas,
+            "pendientes_hoy": pendientes_hoy,
+            "pendientes_atrasadas": len(facturas_atrasadas),
+        },
+    )
+
+
+@router.post("/facturas/{orden_id}/tickear")
+async def tickear_factura(
+    orden_id: int,
+    session: dict = Depends(require_admin),
+    registrado: str = Form("0"),
+):
+    marcar = registrado == "1"
+    orden = await pool().fetchrow("SELECT mesa, tipo_pago FROM ordenes WHERE id = $1", orden_id)
+    if orden:
+        await pool().execute("UPDATE ordenes SET siat_registrado = $1 WHERE id = $2", marcar, orden_id)
+        accion = "Marcó venta como registrada en SIAT" if marcar else "Desmarcó registro SIAT de una venta"
+        await bitacora.registrar(session, accion, f"Venta #{orden_id} — {orden['mesa']} ({orden['tipo_pago']})")
+    return RedirectResponse("/dashboard/contabilidad/facturas", status_code=303)
