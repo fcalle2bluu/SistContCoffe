@@ -96,13 +96,23 @@
       </div>
     </div>
 
-    <dl class="stats-grid">
+    <dl class="stats-grid stats-grid-ventas">
       <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
-      <div class="stat-box"><dt><a href="#ventas-cobradas">Ventas totales</a></dt><dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd></div>
       <div class="stat-box"><dt><a href="#reposiciones-turno">Repuesto a caja</a></dt><dd>Bs {{ "%.2f"|format(reposiciones_totales) }}</dd></div>
       <div class="stat-box"><dt><a href="#ingresos-turno">Ingresos a caja</a></dt><dd>Bs {{ "%.2f"|format(ingresos_caja_totales) }}</dd></div>
       <div class="stat-box"><dt><a href="#egresos-turno">Egresos</a></dt><dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd></div>
       <div class="stat-box stat-box-highlight"><dt>Efectivo teórico</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
+      <div class="stat-box stat-box-wide">
+        <dt><a href="#ventas-cobradas">Ventas totales</a></dt>
+        <dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd>
+        {% if resumen_pagos %}
+        <div class="pago-breakdown">
+          {% for tipo, datos in resumen_pagos.items() %}
+          <span class="pago-chip pago-chip-{{ tipo|lower|replace('/', '-') }}">{{ tipo }} · Bs {{ "%.2f"|format(datos.monto) }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
     </dl>
 
     <div class="disclosure-row">

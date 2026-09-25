@@ -456,6 +456,17 @@ a { color: inherit; }
 .stat-box dt a:hover { text-decoration: underline; color: var(--accent-strong); }
 .stat-box dd { margin: 4px 0 0; font-family: "SFMono-Regular", Consolas, monospace; font-weight: 700; }
 .stat-box-highlight { border: 1px solid var(--accent); background: var(--accent-soft); }
+.stats-grid-ventas { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 640px) { .stats-grid-ventas { grid-template-columns: repeat(5, 1fr); } }
+.stat-box-wide { grid-column: 1 / -1; }
+.pago-breakdown { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pago-chip { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; color: #ffffff; white-space: nowrap; }
+.pago-chip-efectivo { background: #16a34a; }
+.pago-chip-qr { background: #2563eb; }
+.pago-chip-pos { background: #7c3aed; }
+.pago-chip-efec-fac { background: #0d9488; }
+.pago-chip-qr-fac { background: #0891b2; }
+.pago-chip-pos-fac { background: #a855f7; }
 
 /* Dashboard: KPIs y graficos */
 .kpi-grid { grid-template-columns: repeat(2, 1fr); }
