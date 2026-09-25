@@ -238,9 +238,7 @@ a { color: inherit; }
   }
 }
 .sidebar-brand { padding: 20px 20px 0; text-align: center; }
-.sidebar-brand .eyebrow { color: #a3a3a3; }
-.sidebar-brand .brand-title { color: #ffffff; }
-.sidebar-logo { width: 100%; max-width: 150px; margin: 14px auto 0; display: block; }
+.sidebar-logo { width: 100%; max-width: 150px; margin: 0 auto; display: block; }
 .sidebar-nav { display: flex; overflow-x: auto; padding: 0 10px; gap: 2px; }
 @media (min-width: 768px) {
   .sidebar-nav { display: block; overflow: visible; margin-top: 16px; }
