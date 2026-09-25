@@ -67,23 +67,25 @@
   {% else %}
   <div class="table-wrap">
     <table class="ledger">
-      <thead><tr><th>Fecha</th><th>Glosa</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
+      <thead><tr><th>N°</th><th>Fecha</th><th>Glosa</th><th>Cuenta contrapartida</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
       <tbody>
         {% for cta in cuentas_mayor %}
         <tr class="group-row">
-          <td colspan="5">{{ cta.nombre }} ({{ cta.codigo }})</td>
+          <td colspan="7">{{ cta.nombre }} ({{ cta.codigo }})</td>
         </tr>
         {% for m in cta.movimientos %}
         <tr class="line-row">
-          <td class="mono nowrap">{{ m.fecha }}</td>
+          <td class="mono nowrap"><a href="/dashboard/contabilidad/diario/{{ m.nro_asiento }}/editar" class="link-muted">{{ m.nro_asiento }}</a></td>
+          <td class="mono nowrap">{{ m.fecha|fecha }}</td>
           <td class="small indent">{{ m.glosa }}</td>
+          <td class="small">{{ m.contrapartida }}</td>
           <td class="num">{{ (m.debe|bs) if m.debe and m.debe > 0 else "" }}</td>
           <td class="num">{{ (m.haber|bs) if m.haber and m.haber > 0 else "" }}</td>
           <td class="num">{{ m.saldo|bs }}</td>
         </tr>
         {% endfor %}
         <tr class="subtotal-row">
-          <td colspan="4">Saldo final — {{ cta.nombre }}</td>
+          <td colspan="6">Saldo final — {{ cta.nombre }}</td>
           <td class="num">{{ cta.saldo_final|bs }}</td>
         </tr>
         {% endfor %}

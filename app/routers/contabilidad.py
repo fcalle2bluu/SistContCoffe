@@ -428,7 +428,7 @@ async def _cuentas_mayor(cuenta: str | None):
     args = [cuenta] if cuenta else []
     filas = await pool().fetch(
         f"""
-        SELECT ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.fecha, ld.glosa, ld.debe, ld.haber
+        SELECT ld.id, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.fecha, ld.glosa, ld.debe, ld.haber
         FROM libro_diario ld
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         {condicion}
@@ -436,6 +436,33 @@ async def _cuentas_mayor(cuenta: str | None):
         """,
         *args,
     )
+
+    # Para cada línea, "contrapartida" es el resto de cuentas de ese mismo
+    # asiento (puede ser más de una en asientos compuestos, p. ej. ventas
+    # facturadas con IT/IVA) — así desde el Mayor se ve el asiento completo
+    # sin tener que ir a buscarlo al Libro Diario.
+    nros_asiento = {f["nro_asiento"] for f in filas}
+    lineas_por_asiento: dict[int, list[dict]] = {}
+    if nros_asiento:
+        todas_lineas = await pool().fetch(
+            """
+            SELECT ld.id, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber
+            FROM libro_diario ld
+            LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+            WHERE ld.nro_asiento = ANY($1::int[])
+            """,
+            list(nros_asiento),
+        )
+        for l in todas_lineas:
+            lineas_por_asiento.setdefault(l["nro_asiento"], []).append(l)
+
+    def _contrapartida(fila) -> str:
+        otras = [
+            l["cuenta_nombre"] or l["codigo_cuenta"]
+            for l in lineas_por_asiento.get(fila["nro_asiento"], [])
+            if l["id"] != fila["id"]
+        ]
+        return " + ".join(otras) if otras else "—"
 
     cuentas_mayor = []
     actual = None
@@ -453,7 +480,15 @@ async def _cuentas_mayor(cuenta: str | None):
             saldo = 0.0
         saldo += float(f["debe"]) - float(f["haber"])
         actual["movimientos"].append(
-            {"fecha": f["fecha"], "glosa": f["glosa"], "debe": f["debe"], "haber": f["haber"], "saldo": saldo}
+            {
+                "nro_asiento": f["nro_asiento"],
+                "fecha": f["fecha"],
+                "glosa": f["glosa"],
+                "contrapartida": _contrapartida(f),
+                "debe": f["debe"],
+                "haber": f["haber"],
+                "saldo": saldo,
+            }
         )
         actual["saldo_final"] = saldo
     if actual is not None:
