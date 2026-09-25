@@ -228,16 +228,19 @@ a { color: inherit; }
 }
 .sidebar {
   display: flex; flex-direction: column;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-soft);
+  border-bottom: 1px solid #000000;
+  background: #000000;
 }
 @media (min-width: 768px) {
   .sidebar {
-    width: 240px; flex-shrink: 0; border-bottom: none; border-right: 1px solid var(--border);
+    width: 240px; flex-shrink: 0; border-bottom: none; border-right: 1px solid #000000;
     position: sticky; top: 0; height: 100vh; overflow-y: auto;
   }
 }
-.sidebar-brand { padding: 20px 20px 0; }
+.sidebar-brand { padding: 20px 20px 0; text-align: center; }
+.sidebar-brand .eyebrow { color: #a3a3a3; }
+.sidebar-brand .brand-title { color: #ffffff; }
+.sidebar-logo { width: 100%; max-width: 150px; margin: 14px auto 0; display: block; }
 .sidebar-nav { display: flex; overflow-x: auto; padding: 0 10px; gap: 2px; }
 @media (min-width: 768px) {
   .sidebar-nav { display: block; overflow: visible; margin-top: 16px; }
@@ -248,20 +251,20 @@ a { color: inherit; }
   margin: 2px 0;
   padding: 9px 12px;
   font-size: 13px; font-weight: 500;
-  color: var(--muted);
+  color: #d4d4d4;
   text-decoration: none;
   border-left: 3px solid transparent;
 }
-.nav-link:hover { background: var(--bg); color: var(--ink); }
-.nav-link.active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+.nav-link:hover { background: #1a1a1a; color: #ffffff; }
+.nav-link.active { background: var(--accent); color: #ffffff; font-weight: 600; }
 @media (min-width: 768px) {
-  .nav-link.active { border-left-color: var(--accent); }
+  .nav-link.active { border-left-color: #ffffff; }
 }
 .sidebar-footer {
   margin-top: auto; display: flex; flex-direction: column; gap: 8px;
-  border-top: 1px solid var(--border); padding: 16px 20px; font-size: 12px;
+  border-top: 1px solid #262626; padding: 16px 20px; font-size: 12px;
 }
-.sidebar-user { color: var(--muted); font-weight: 500; }
+.sidebar-user { color: #a3a3a3; font-weight: 500; }
 .dashboard-main { min-width: 0; flex: 1; padding: 32px 16px; }
 @media (min-width: 640px) { .dashboard-main { padding: 32px; } }
 
