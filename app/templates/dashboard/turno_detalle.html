@@ -42,8 +42,8 @@
   <div>
     <h3 class="subsection-title">Ventas por método de pago</h3>
     {% set cuentas_destino = {
-      'EFECTIVO': 'Caja Moneda Nacional (1110101)',
-      'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA',
+      'EFECTIVO': 'Caja Moneda Nacional (1110101) → se traslada entero a Caja Chica al cerrar',
+      'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA → se traslada entero a Caja Chica al cerrar',
       'QR': 'Banco Bisa (1110103)',
       'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
       'POS': 'Sin asiento automático (lo registra el contador a mano)',

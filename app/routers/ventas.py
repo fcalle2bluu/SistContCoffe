@@ -228,6 +228,30 @@ async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo
             )
 
 
+async def _registrar_traslado_arqueo_a_caja_chica_en_diario(turno_id: int, responsable: str, monto: float) -> None:
+    """Al cerrar un turno se traslada a Caja Chica todo el efectivo que quedó
+    contado en el arqueo — el mismo movimiento que ya hace a mano 'Registrar
+    ingreso a caja' durante el turno, pero automático para lo que sobra al
+    cierre, así Caja Moneda Nacional siempre vuelve a cero después de cerrar."""
+    if monto <= 0:
+        return
+    glosa = f"Traslado a Caja Chica del arqueo de cierre del turno de {responsable} (turno #{turno_id})."
+    fecha = hoy_bolivia()
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, $4, 0, $5)",
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
+            )
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, 0, $4, $5)",
+                fecha, siguiente, CUENTA_CAJA_EFECTIVO, monto, glosa,
+            )
+
+
 async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
     """Al cerrar un turno, asienta las ventas con factura (EFEC/FAC, QR/FAC y
     POS/FAC) desglosando IT (3%) e IVA (13%) sobre el total, igual que se
@@ -1271,7 +1295,7 @@ async def cerrar_turno(
 
     turno_cerrado = await pool().fetchrow(
         "UPDATE turnos SET estado = 'cerrado', monto_final_declarado = $1, cerrado_en = now() "
-        "WHERE id = $2 AND estado = 'abierto' RETURNING monto_inicial",
+        "WHERE id = $2 AND estado = 'abierto' RETURNING monto_inicial, responsable",
         total,
         turno_id,
     )
@@ -1288,6 +1312,7 @@ async def cerrar_turno(
     await _registrar_ventas_efectivo_en_diario(turno_id)
     await _registrar_ventas_qr_en_diario(turno_id)
     await _registrar_ventas_facturadas_en_diario(turno_id)
+    await _registrar_traslado_arqueo_a_caja_chica_en_diario(turno_id, turno_cerrado["responsable"], total)
 
     teorico = await _efectivo_teorico_turno(turno_id, turno_cerrado["monto_inicial"])
     diferencia = round(total - teorico, 2)

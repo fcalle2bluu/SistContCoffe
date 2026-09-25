@@ -108,6 +108,10 @@
       {% if session.role == 'admin' %}
       <details class="disclosure">
         <summary class="btn btn-outline">Corregir apertura</summary>
+        <p class="muted-sm" style="margin-top:8px;">
+          Corrige el monto con el que se abrió esta caja (efectivo en Caja Moneda Nacional). No genera ningún
+          asiento en el Libro Diario, solo cambia el dato de apertura del turno.
+        </p>
         <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/apertura" class="inline-form">
           <div>
             <label class="field-label">Nuevo monto de apertura (Bs)</label>
@@ -120,6 +124,10 @@
 
       <details class="disclosure">
         <summary class="btn btn-outline">Registrar egreso</summary>
+        <p class="muted-sm" style="margin-top:8px;">
+          Sale de la cuenta del método de pago que elijas: Efectivo → Caja Moneda Nacional (1110101),
+          QR → Banco Bisa (1110103), POS → sin asiento automático (lo registra el contador a mano).
+        </p>
         <form method="post" action="/dashboard/ventas/movimientos" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div>
@@ -162,11 +170,15 @@
 
       <details class="disclosure">
         <summary class="btn btn-outline">Registrar ingreso a caja</summary>
+        <p class="muted-sm" style="margin-top:8px;">
+          Traslado interno hacia Caja Chica (1110102): sale de Caja Moneda Nacional si el método es Efectivo,
+          o de Banco Bisa si es QR. No es una venta — se descuenta del efectivo teórico del turno.
+        </p>
         <form method="post" action="/dashboard/ventas/movimientos/ingreso" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div class="flex-1">
             <label class="field-label">Motivo</label>
-            <input name="motivo" required placeholder="Ej: traslado de la caja de ventas a la caja moneda nacional" class="input" />
+            <input name="motivo" required placeholder="Ej: traslado de plata de la caja de ventas a Caja Chica" class="input" />
           </div>
           <div>
             <label class="field-label">Método de pago</label>
@@ -194,8 +206,8 @@
         <div class="disclosure-content stack-4">
           {% if resumen_pagos %}
           {% set cuentas_destino = {
-            'EFECTIVO': 'Caja Moneda Nacional (1110101)',
-            'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA',
+            'EFECTIVO': 'Caja Moneda Nacional (1110101) → se traslada entero a Caja Chica al cerrar',
+            'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA → se traslada entero a Caja Chica al cerrar',
             'QR': 'Banco Bisa (1110103)',
             'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
             'POS': 'Sin asiento automático (lo registra el contador a mano)',
@@ -225,7 +237,8 @@
           </div>
           <p class="muted-sm">
             Los <a href="#egresos-turno">egresos</a> se descuentan cada uno de la cuenta de su categoría
-            (o Gastos Administrativos si la categoría todavía no tiene una cuenta propia asignada).
+            (o Gastos Administrativos si la categoría todavía no tiene una cuenta propia asignada). Al cerrar,
+            todo el efectivo que quede contado en el arqueo se traslada automáticamente a Caja Chica (1110102).
           </p>
           {% endif %}
 
