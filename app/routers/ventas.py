@@ -85,7 +85,14 @@ async def _efectivo_teorico_turno(turno_id: int, monto_inicial) -> float:
         "WHERE turno_id = $1 AND tipo = 'ingreso' AND tipo_pago = ANY($2::text[])",
         turno_id, list(PAGOS_EFECTIVO),
     )
-    return float(monto_inicial) + float(ingresos_efectivo) - float(ingresos_caja_efectivo) - float(egresos_efectivo)
+    reposiciones = await pool().fetchval(
+        "SELECT COALESCE(SUM(monto), 0) FROM movimientos_caja WHERE turno_id = $1 AND tipo = 'reposicion'",
+        turno_id,
+    )
+    return (
+        float(monto_inicial) + float(ingresos_efectivo) + float(reposiciones)
+        - float(ingresos_caja_efectivo) - float(egresos_efectivo)
+    )
 
 TASA_IVA = 0.13
 TASA_IT = 0.03
@@ -225,6 +232,29 @@ async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
                 fecha, siguiente, cuenta_origen, monto, glosa,
+            )
+
+
+async def _registrar_reposicion_caja_en_diario(monto: float, motivo: str, responsable: str) -> None:
+    """Asienta una reposición de efectivo en la Libro Diario: entra plata a
+    Caja Moneda Nacional (la caja del turno actual) desde Caja Chica — el
+    camino inverso de 'Registrar ingreso a caja', para darle cambio/fondo al
+    cajero durante el turno. Al cerrar, esta plata también se traslada de
+    vuelta a Caja Chica junto con el resto del arqueo, como siempre."""
+    glosa = f"Reposición de caja desde Caja Chica — {motivo} (responsable: {responsable})."
+    fecha = hoy_bolivia()
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, $4, 0, $5)",
+                fecha, siguiente, CUENTA_CAJA_EFECTIVO, monto, glosa,
+            )
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, 0, $4, $5)",
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
             )
 
 
@@ -477,8 +507,10 @@ async def _ventas_context(
     ingresos_efectivo = 0.0
     egresos_lista: list = []
     ingresos_lista: list = []
+    reposiciones_lista: list = []
     ingresos_caja_totales = 0.0
     ingresos_caja_efectivo = 0.0
+    reposiciones_totales = 0.0
     # Sin filtrar por turno_id: una cuenta pendiente sigue viéndose aunque el
     # turno en que se creó ya haya cerrado, hasta que se cobre o se cancele
     # (puede quedar pendiente de un turno anterior y pasar al siguiente).
@@ -518,10 +550,12 @@ async def _ventas_context(
         )
         egresos_lista = [m for m in movimientos if m["tipo"] == "egreso"]
         ingresos_lista = [m for m in movimientos if m["tipo"] == "ingreso"]
+        reposiciones_lista = [m for m in movimientos if m["tipo"] == "reposicion"]
         egresos_totales = sum(float(m["monto"]) for m in egresos_lista)
         egresos_efectivo = sum(float(m["monto"]) for m in egresos_lista if m["tipo_pago"] in PAGOS_EFECTIVO)
         ingresos_caja_totales = sum(float(m["monto"]) for m in ingresos_lista)
         ingresos_caja_efectivo = sum(float(m["monto"]) for m in ingresos_lista if m["tipo_pago"] in PAGOS_EFECTIVO)
+        reposiciones_totales = sum(float(m["monto"]) for m in reposiciones_lista)
 
     ventas_totales = sum(float(o["total"]) for o in ordenes_cobradas)
 
@@ -568,15 +602,18 @@ async def _ventas_context(
         "descuentos_por_orden": descuentos_por_orden,
         "egresos_lista": egresos_lista,
         "ingresos_lista": ingresos_lista,
+        "reposiciones_lista": reposiciones_lista,
         "ingresos_efectivo": ingresos_efectivo,
         "egresos_efectivo": egresos_efectivo,
         "egresos_totales": egresos_totales,
         "ingresos_caja_totales": ingresos_caja_totales,
+        "reposiciones_totales": reposiciones_totales,
         "ventas_totales": ventas_totales,
         "resumen_pagos": resumen_pagos,
         "resumen_ingresos_caja": resumen_ingresos_caja,
         "efectivo_teorico": (
-            float(turno["monto_inicial"]) + ingresos_efectivo - ingresos_caja_efectivo - egresos_efectivo
+            float(turno["monto_inicial"]) + ingresos_efectivo + reposiciones_totales
+            - ingresos_caja_efectivo - egresos_efectivo
         ) if turno else 0,
         "cobrar_id": cobrar_id,
         "descuento_id": descuento_id,
@@ -1416,6 +1453,41 @@ async def registrar_ingreso_caja(
     return RedirectResponse(next, status_code=303)
 
 
+@router.post("/movimientos/reposicion", response_class=HTMLResponse)
+async def registrar_reposicion_caja(
+    request: Request,
+    session: dict = Depends(require_session),
+    turno_id: str = Form(""),
+    monto: str = Form(""),
+    motivo: str = Form(""),
+    hora: str = Form(""),
+    next: str = Form("/dashboard/ventas#reposiciones-turno"),
+):
+    motivo = motivo.strip()
+    try:
+        monto_num = float(monto)
+    except ValueError:
+        monto_num = 0
+
+    if not turno_id or monto_num <= 0 or not motivo:
+        ctx = await _ventas_context(session, error="Completa el motivo y el monto (mayor a 0) de la reposición.")
+        return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
+
+    hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
+    await pool().execute(
+        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, creado_en) "
+        "VALUES ($1, 'reposicion', $2, $3, $4, 'EFECTIVO', COALESCE($5, now()))",
+        int(turno_id),
+        monto_num,
+        motivo,
+        session["nombre"],
+        hora_dt,
+    )
+    await _registrar_reposicion_caja_en_diario(monto_num, motivo, session["nombre"])
+    await bitacora.registrar(session, "Registró reposición de caja", f"Bs {monto_num:.2f} — {motivo}")
+    return RedirectResponse(next, status_code=303)
+
+
 @router.post("/movimientos/{movimiento_id}/editar-ingreso", response_class=HTMLResponse)
 async def editar_ingreso_caja(
     request: Request,
@@ -1519,7 +1591,10 @@ async def eliminar_movimiento_caja(
     movimiento = await pool().fetchrow("SELECT tipo, motivo, monto FROM movimientos_caja WHERE id = $1", movimiento_id)
     if movimiento:
         await pool().execute("DELETE FROM movimientos_caja WHERE id = $1", movimiento_id)
-        accion = "Eliminó ingreso a caja" if movimiento["tipo"] == "ingreso" else "Eliminó egreso de caja"
+        accion = {
+            "ingreso": "Eliminó ingreso a caja",
+            "reposicion": "Eliminó reposición de caja",
+        }.get(movimiento["tipo"], "Eliminó egreso de caja")
         await bitacora.registrar(
             session, accion, f"Movimiento #{movimiento_id}, Bs {movimiento['monto']:.2f} — {movimiento['motivo']}"
         )

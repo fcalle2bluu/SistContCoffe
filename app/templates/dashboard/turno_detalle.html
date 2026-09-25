@@ -32,6 +32,7 @@
     <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
     <div class="stat-box"><dt><a href="#ventas-turno">Ventas totales</a></dt><dd>Bs {{ "%.2f"|format(ventas_totales) }}</dd></div>
     <div class="stat-box"><dt><a href="#movimientos-turno">Ingresos a caja</a></dt><dd>Bs {{ "%.2f"|format(ingresos_caja_totales) }}</dd></div>
+    <div class="stat-box"><dt><a href="#movimientos-turno">Repuesto a caja</a></dt><dd>Bs {{ "%.2f"|format(reposiciones_totales) }}</dd></div>
     <div class="stat-box"><dt><a href="#movimientos-turno">Egresos</a></dt><dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd></div>
     <div class="stat-box stat-box-highlight"><dt>Efectivo esperado</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
     <div class="stat-box"><dt>Cierre declarado</dt><dd>{{ ("Bs " + "%.2f"|format(turno.monto_final_declarado)) if turno.monto_final_declarado is not none else "—" }}</dd></div>
@@ -453,7 +454,7 @@
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                   </form>
-                  {% else %}
+                  {% elif m.tipo == 'egreso' %}
                   <form method="post" action="/dashboard/ventas/movimientos/{{ m.id }}/editar" class="inline-form">
                     <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
                     <div>
@@ -482,6 +483,8 @@
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                   </form>
+                  {% else %}
+                  <p class="muted-sm">Elimínala y créala de nuevo si necesitas corregirla.</p>
                   {% endif %}
                   <p class="muted-sm" style="margin-top:8px;">
                     Si este movimiento ya estaba contabilizado en el Libro Diario, el asiento original no se

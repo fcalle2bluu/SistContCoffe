@@ -67,9 +67,11 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
     )
     egresos_lista = [m for m in movimientos if m["tipo"] == "egreso"]
     ingresos_lista = [m for m in movimientos if m["tipo"] == "ingreso"]
+    reposiciones_lista = [m for m in movimientos if m["tipo"] == "reposicion"]
     ventas_totales = sum(float(o["total"]) for o in ordenes if o["estado"] == "cobrada")
     egresos_totales = sum(float(m["monto"]) for m in egresos_lista)
     ingresos_caja_totales = sum(float(m["monto"]) for m in ingresos_lista)
+    reposiciones_totales = sum(float(m["monto"]) for m in reposiciones_lista)
 
     pago_rows = await pool().fetch(
         "SELECT op.tipo_pago, COUNT(*) AS cantidad, SUM(op.monto) AS monto FROM orden_pagos op "
@@ -144,6 +146,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "ventas_totales": ventas_totales,
             "egresos_totales": egresos_totales,
             "ingresos_caja_totales": ingresos_caja_totales,
+            "reposiciones_totales": reposiciones_totales,
             "resumen_pagos": resumen_pagos,
             "resumen_ingresos_caja": resumen_ingresos_caja,
             "asientos_turno": asientos_turno,
