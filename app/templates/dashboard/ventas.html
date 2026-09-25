@@ -23,7 +23,7 @@
     <p class="muted-sm strong" style="margin-top:8px;">Turnos de hoy ({{ turnos_hoy|length }})</p>
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Responsable</th><th>Apertura</th><th>Cierre</th><th class="text-right">Ventas</th><th class="text-right">Total ventas</th></tr></thead>
+        <thead><tr><th>Responsable</th><th>Apertura</th><th>Cierre</th><th class="text-right">Ventas</th><th class="text-right">Total ventas</th><th class="text-right">Cierre declarado</th><th></th></tr></thead>
         <tbody>
           {% for t in turnos_hoy %}
           <tr>
@@ -32,7 +32,35 @@
             <td class="small">{{ (t.cerrado_en|hora) if t.cerrado_en else "abierto" }}</td>
             <td class="text-right mono">{{ t.cantidad_ventas }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(t.total_ventas) }}</td>
+            <td class="text-right mono">{{ ("Bs " + "%.2f"|format(t.monto_final_declarado)) if t.monto_final_declarado is not none else "—" }}</td>
+            <td class="text-right">
+              {% if arqueo_por_turno.get(t.id) %}
+              <a href="#arqueo-{{ t.id }}" class="link-muted" onclick="document.getElementById('arqueo-{{ t.id }}').classList.toggle('oculto'); return false;">Ver arqueo</a>
+              {% endif %}
+            </td>
           </tr>
+          {% if arqueo_por_turno.get(t.id) %}
+          <tr class="oculto" id="arqueo-{{ t.id }}">
+            <td colspan="7" style="padding:0 0 12px;">
+              <p class="muted-sm" style="margin:6px 0;">Arqueo con el que se cerró este turno — lo que debería seguir en el cajón:</p>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Corte</th><th>Tipo</th><th class="text-right">Cantidad</th><th class="text-right">Subtotal</th></tr></thead>
+                  <tbody>
+                    {% for a in arqueo_por_turno.get(t.id) %}
+                    <tr>
+                      <td class="strong mono">Bs {{ "%g"|format(a.corte) }}</td>
+                      <td class="small uppercase">{{ a.tipo }}</td>
+                      <td class="text-right mono">{{ a.cantidad }}</td>
+                      <td class="text-right mono">Bs {{ "%.2f"|format(a.subtotal) }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
           {% endfor %}
         </tbody>
       </table>

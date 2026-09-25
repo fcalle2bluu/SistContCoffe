@@ -416,7 +416,7 @@ async def _ventas_context(
     fin_dia = inicio_dia + timedelta(days=1)
     turnos_hoy = await pool().fetch(
         """
-        SELECT t.id, t.responsable, t.estado, t.abierto_en, t.cerrado_en,
+        SELECT t.id, t.responsable, t.estado, t.abierto_en, t.cerrado_en, t.monto_final_declarado,
                COALESCE(v.cantidad_ventas, 0) AS cantidad_ventas,
                COALESCE(v.total_ventas, 0) AS total_ventas
         FROM turnos t
@@ -429,6 +429,18 @@ async def _ventas_context(
         """,
         inicio_dia, fin_dia,
     )
+    # Al abrir caja se muestra qué quedó contado en el arqueo del/los
+    # turno(s) anterior(es) de hoy, para poder chequear a simple vista lo
+    # que debería haber en el cajón antes de empezar el turno nuevo.
+    arqueo_por_turno: dict[int, list] = {}
+    if turno is None and turnos_hoy:
+        filas_arqueo = await pool().fetch(
+            "SELECT turno_id, corte, tipo, cantidad, subtotal FROM conteo_caja "
+            "WHERE turno_id = ANY($1::int[]) ORDER BY turno_id, corte DESC",
+            [t["id"] for t in turnos_hoy],
+        )
+        for f in filas_arqueo:
+            arqueo_por_turno.setdefault(f["turno_id"], []).append(f)
     categorias_egreso = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
     mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
     productos = await pool().fetch(
@@ -518,6 +530,7 @@ async def _ventas_context(
         "active": "ventas",
         "turno": turno,
         "turnos_hoy": turnos_hoy,
+        "arqueo_por_turno": arqueo_por_turno,
         "categorias_egreso": categorias_egreso,
         "mesas": mesas,
         "mesa_seleccionada": mesa_seleccionada,
