@@ -255,7 +255,7 @@ a { color: inherit; }
   text-decoration: none;
   border-left: 3px solid transparent;
 }
-.nav-link:hover { background: #1a1a1a; color: #ffffff; }
+.nav-link:hover { background: var(--accent); color: #ffffff; }
 .nav-link.active { background: var(--accent); color: #ffffff; font-weight: 600; }
 @media (min-width: 768px) {
   .nav-link.active { border-left-color: #ffffff; }
