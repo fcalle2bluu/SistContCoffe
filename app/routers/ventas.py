@@ -1,7 +1,7 @@
 from datetime import datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app import bitacora
 from app.db import pool
@@ -61,57 +61,6 @@ def _cuenta_egreso_por_categoria(categoria: str | None) -> str:
         if cuenta:
             return cuenta
     return CUENTA_GASTOS_ADMINISTRATIVOS
-
-
-MESA_GRID_COLUMNAS = 4
-
-# Nombres del plano que son zonas/referencias del local, no mesas donde se
-# pueda tomar un pedido (p. ej. "BARRA" o "PASILLO" son solo etiquetas de
-# ubicación). Se muestran como texto estático en vez de un botón seleccionable.
-MESAS_ETIQUETA = {"EXTERIOR", "BARRA", "PASILLO"}
-
-
-def _mesas_con_layout(mesas) -> list[dict]:
-    """Las mesas con posición fija (fila/columna ya cargados en
-    mesas_referencia) se ubican tal cual, replicando el plano físico del
-    local. Las que todavía no tienen posición (p. ej. una agregada a mano con
-    "+ Agregar") se acomodan solas en filas nuevas debajo de esas, para no
-    invadir huecos del plano ya armado."""
-    posicionadas = [dict(m) for m in mesas if m["fila"] is not None]
-    sin_posicion = [dict(m) for m in mesas if m["fila"] is None]
-    fila_libre = max((m["fila"] + m["alto"] for m in posicionadas), default=1)
-    for i, m in enumerate(sin_posicion):
-        m["fila"] = fila_libre + i // MESA_GRID_COLUMNAS
-        m["columna"] = (i % MESA_GRID_COLUMNAS) + 1
-        m["ancho"] = 1
-        m["alto"] = 1
-    resultado = posicionadas + sin_posicion
-    for m in resultado:
-        m["es_mesa"] = m["nombre"] not in MESAS_ETIQUETA
-    return resultado
-
-
-def _mesas_ocupadas_info(ordenes_abiertas) -> tuple[dict[str, str], dict[str, int]]:
-    """Para cada mesa con una cuenta abierta: desde cuándo está así (la más
-    antigua de sus órdenes pendientes, para que el contador del plano arranque
-    desde que empezó a esperar el cobro) y el id de esa orden, para poder
-    abrirla directamente al hacer clic en la mesa desde el plano."""
-    desde: dict[str, datetime] = {}
-    orden_id: dict[str, int] = {}
-    for o in ordenes_abiertas:
-        actual = desde.get(o["mesa"])
-        if actual is None or o["creado_en"] < actual:
-            desde[o["mesa"]] = o["creado_en"]
-            orden_id[o["mesa"]] = o["id"]
-    return {mesa: dt.isoformat() for mesa, dt in desde.items()}, orden_id
-
-
-def _grid_dimensiones(mesas: list[dict]) -> tuple[int, int]:
-    """Tamaño de la grilla (filas x columnas) que hay que reservar para que,
-    en modo edición, sobren casilleros vacíos donde soltar mesas nuevas."""
-    max_fila = max((m["fila"] + m["alto"] - 1 for m in mesas), default=1)
-    max_columna = max((m["columna"] + m["ancho"] - 1 for m in mesas), default=MESA_GRID_COLUMNAS)
-    return max_fila + 2, max(max_columna, MESA_GRID_COLUMNAS)
 
 
 async def _efectivo_teorico_turno(turno_id: int, monto_inicial) -> float:
@@ -547,9 +496,7 @@ async def _ventas_context(
         for f in filas_arqueo:
             arqueo_por_turno.setdefault(f["turno_id"], []).append(f)
     categorias_egreso = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
-    mesas = _mesas_con_layout(
-        await pool().fetch("SELECT id, nombre, fila, columna, ancho, alto FROM mesas_referencia ORDER BY fila NULLS LAST, columna, nombre")
-    )
+    mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
     productos = await pool().fetch(
         "SELECT id, nombre, categoria, precio_venta FROM productos ORDER BY categoria, nombre"
     )
@@ -635,7 +582,6 @@ async def _ventas_context(
         fila["monto"] += float(m["monto"])
 
     pendientes_totales = sum(float(o["total"]) for o in ordenes_abiertas)
-    mesas_ocupadas_desde, mesas_ocupadas_id = _mesas_ocupadas_info(ordenes_abiertas)
 
     return {
         "session": session,
@@ -645,11 +591,7 @@ async def _ventas_context(
         "arqueo_por_turno": arqueo_por_turno,
         "categorias_egreso": categorias_egreso,
         "mesas": mesas,
-        "mesas_ocupadas": list(mesas_ocupadas_desde.keys()),
-        "mesas_ocupadas_desde": mesas_ocupadas_desde,
-        "mesas_ocupadas_id": mesas_ocupadas_id,
         "mesa_seleccionada": mesa_seleccionada,
-        "modo_edicion": False,
         "productos": productos,
         "por_categoria": por_categoria,
         "ordenes_abiertas": ordenes_abiertas,
@@ -730,31 +672,6 @@ async def _guardar_cliente_desde_factura(nombre: str, ci_nit: str, telefono: str
     )
 
 
-async def _contexto_grid_mesas(mesa_seleccionada: str | None, modo_edicion: bool) -> dict:
-    mesas = _mesas_con_layout(
-        await pool().fetch("SELECT id, nombre, fila, columna, ancho, alto FROM mesas_referencia ORDER BY fila NULLS LAST, columna, nombre")
-    )
-    ordenes_abiertas = await pool().fetch("SELECT id, mesa, creado_en FROM ordenes WHERE estado = 'abierta'")
-    grid_filas, grid_columnas = _grid_dimensiones(mesas)
-    mesas_ocupadas_desde, mesas_ocupadas_id = _mesas_ocupadas_info(ordenes_abiertas)
-    return {
-        "mesas": mesas,
-        "mesas_ocupadas": list(mesas_ocupadas_desde.keys()),
-        "mesas_ocupadas_desde": mesas_ocupadas_desde,
-        "mesas_ocupadas_id": mesas_ocupadas_id,
-        "mesa_seleccionada": mesa_seleccionada,
-        "modo_edicion": modo_edicion,
-        "grid_filas": grid_filas,
-        "grid_columnas": grid_columnas,
-    }
-
-
-@router.get("/mesas/grid", response_class=HTMLResponse)
-async def grid_mesas(request: Request, session: dict = Depends(require_session), editar: bool = False, mesa: str = ""):
-    contexto = await _contexto_grid_mesas(mesa or None, editar)
-    return templates.TemplateResponse(request, "partials/_mesa_grid.html", contexto)
-
-
 @router.post("/mesas", response_class=HTMLResponse)
 async def agregar_mesa(request: Request, session: dict = Depends(require_session), nombre_nueva: str = Form("")):
     nombre_nueva = nombre_nueva.strip().upper()
@@ -763,100 +680,10 @@ async def agregar_mesa(request: Request, session: dict = Depends(require_session
             "INSERT INTO mesas_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING", nombre_nueva
         )
         await bitacora.registrar(session, "Agregó mesa/referencia", nombre_nueva)
-    contexto = await _contexto_grid_mesas(nombre_nueva, True)
-    return templates.TemplateResponse(request, "partials/_mesa_grid.html", contexto)
-
-
-@router.post("/mesas/mover", response_class=HTMLResponse)
-async def mover_mesa(
-    request: Request,
-    session: dict = Depends(require_session),
-    nombre: str = Form(...),
-    fila: int = Form(...),
-    columna: int = Form(...),
-):
-    await pool().execute(
-        "UPDATE mesas_referencia SET fila = $2, columna = $3 WHERE nombre = $1", nombre, fila, columna
+    mesas = await pool().fetch("SELECT id, nombre FROM mesas_referencia ORDER BY nombre")
+    return templates.TemplateResponse(
+        request, "partials/_mesa_select.html", {"mesas": mesas, "mesa_seleccionada": nombre_nueva}
     )
-    contexto = await _contexto_grid_mesas(nombre, True)
-    return templates.TemplateResponse(request, "partials/_mesa_grid.html", contexto)
-
-
-@router.post("/mesas/eliminar", response_class=HTMLResponse)
-async def eliminar_mesa(
-    request: Request,
-    session: dict = Depends(require_session),
-    nombre: str = Form(...),
-):
-    ocupada = await pool().fetchval(
-        "SELECT count(*) FROM ordenes WHERE mesa = $1 AND estado = 'abierta'", nombre
-    )
-    if not ocupada:
-        await pool().execute("DELETE FROM mesas_referencia WHERE nombre = $1", nombre)
-        await bitacora.registrar(session, "Eliminó mesa/referencia", nombre)
-    contexto = await _contexto_grid_mesas(None, True)
-    return templates.TemplateResponse(request, "partials/_mesa_grid.html", contexto)
-
-
-@router.post("/mesas/intercambiar", response_class=HTMLResponse)
-async def intercambiar_mesa(
-    request: Request,
-    session: dict = Depends(require_session),
-    origen: str = Form(...),
-    destino: str = Form(...),
-):
-    if origen != destino:
-        async with pool().acquire() as conn:
-            async with conn.transaction():
-                a = await conn.fetchrow(
-                    "SELECT fila, columna, ancho, alto FROM mesas_referencia WHERE nombre = $1", origen
-                )
-                b = await conn.fetchrow(
-                    "SELECT fila, columna, ancho, alto FROM mesas_referencia WHERE nombre = $1", destino
-                )
-                if a and b:
-                    await conn.execute(
-                        "UPDATE mesas_referencia SET fila=$2, columna=$3, ancho=$4, alto=$5 WHERE nombre=$1",
-                        origen, b["fila"], b["columna"], b["ancho"], b["alto"],
-                    )
-                    await conn.execute(
-                        "UPDATE mesas_referencia SET fila=$2, columna=$3, ancho=$4, alto=$5 WHERE nombre=$1",
-                        destino, a["fila"], a["columna"], a["ancho"], a["alto"],
-                    )
-    contexto = await _contexto_grid_mesas(origen, True)
-    return templates.TemplateResponse(request, "partials/_mesa_grid.html", contexto)
-
-
-@router.get("/ordenes/{orden_id}/carrito.json")
-async def obtener_carrito_orden(orden_id: int, session: dict = Depends(require_session)):
-    """Para recargar una cuenta pendiente en el panel de pedido (al hacer clic
-    en su mesa desde el plano): devuelve sus ítems en la misma forma que usa
-    el carrito del cliente, para poder seguir agregando o cobrar desde ahí."""
-    orden = await pool().fetchrow("SELECT id, mesa FROM ordenes WHERE id = $1 AND estado = 'abierta'", orden_id)
-    if not orden:
-        return JSONResponse({"error": "No se encontró una cuenta pendiente con ese id."}, status_code=404)
-    filas = await pool().fetch(
-        "SELECT producto_id, producto_nombre, cantidad, precio_unitario FROM orden_items WHERE orden_id = $1 ORDER BY id",
-        orden_id,
-    )
-    items = []
-    for f in filas:
-        nombre = f["producto_nombre"]
-        precio = float(f["precio_unitario"])
-        nota = ""
-        # Los descuentos guardan su justificativo como "Nombre: justificativo"
-        # (ver _resolver_items_pedido); hay que separarlos de nuevo para que,
-        # si se vuelve a guardar el carrito, el justificativo no se pierda.
-        if precio < 0 and ": " in nombre:
-            nombre, _, nota = nombre.partition(": ")
-        items.append({
-            "id": f["producto_id"],
-            "nombre": nombre,
-            "precio": precio,
-            "cantidad": float(f["cantidad"]),
-            "nota": nota,
-        })
-    return {"orden_id": orden["id"], "mesa": orden["mesa"], "items": items}
 
 
 @router.post("/ordenes", response_class=HTMLResponse)
@@ -866,7 +693,6 @@ async def crear_orden(
     turno_id: str = Form(""),
     mesa: str = Form(""),
     accion: str = Form("pendiente"),
-    orden_id_existente: str = Form(""),
     tipo_pago: str = Form(""),
     monto_pagado: str = Form(""),
     tipo_pago2: str = Form(""),
@@ -883,12 +709,6 @@ async def crear_orden(
     cart, cart_error = await _resolver_items_pedido(cart_producto_id, cart_cantidad, cart_nota)
     cobrando = accion == "cobrar"
     total = sum(it["cantidad"] * it["precio_unitario"] for it in cart)
-
-    orden_existente = None
-    if orden_id_existente.strip():
-        orden_existente = await pool().fetchrow(
-            "SELECT id, mesa FROM ordenes WHERE id = $1 AND estado = 'abierta'", int(orden_id_existente)
-        )
 
     error = None
     pagos: list[tuple[str, float]] = []
@@ -918,49 +738,25 @@ async def crear_orden(
 
     async with pool().acquire() as conn:
         async with conn.transaction():
-            if orden_existente:
-                orden_id = orden_existente["id"]
-                await conn.execute(
-                    """
-                    UPDATE ordenes SET mesa = $2, estado = $3, tipo_pago = $4, monto_pagado = $5,
-                        observacion = $6, total = $7, cobrado_en = $8,
-                        factura_nit = $9, factura_celular = $10, factura_nombre = $11
-                    WHERE id = $1
-                    """,
-                    orden_id,
-                    mesa,
-                    "cobrada" if cobrando else "abierta",
-                    tipo_pago_final,
-                    monto_pagado_final,
-                    observacion.strip() or None,
-                    total,
-                    ahora,
-                    factura_nit.strip() or None,
-                    factura_celular.strip() or None,
-                    factura_nombre.strip() or None,
-                )
-                await conn.execute("DELETE FROM orden_items WHERE orden_id = $1", orden_id)
-                await conn.execute("DELETE FROM orden_pagos WHERE orden_id = $1", orden_id)
-            else:
-                orden_id = await conn.fetchval(
-                    """
-                    INSERT INTO ordenes (turno_id, mesa, estado, tipo_pago, monto_pagado, responsable, observacion,
-                                          total, cobrado_en, factura_nit, factura_celular, factura_nombre)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id
-                    """,
-                    int(turno_id),
-                    mesa,
-                    "cobrada" if cobrando else "abierta",
-                    tipo_pago_final,
-                    monto_pagado_final,
-                    session["nombre"],
-                    observacion.strip() or None,
-                    total,
-                    ahora,
-                    factura_nit.strip() or None,
-                    factura_celular.strip() or None,
-                    factura_nombre.strip() or None,
-                )
+            orden_id = await conn.fetchval(
+                """
+                INSERT INTO ordenes (turno_id, mesa, estado, tipo_pago, monto_pagado, responsable, observacion,
+                                      total, cobrado_en, factura_nit, factura_celular, factura_nombre)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id
+                """,
+                int(turno_id),
+                mesa,
+                "cobrada" if cobrando else "abierta",
+                tipo_pago_final,
+                monto_pagado_final,
+                session["nombre"],
+                observacion.strip() or None,
+                total,
+                ahora,
+                factura_nit.strip() or None,
+                factura_celular.strip() or None,
+                factura_nombre.strip() or None,
+            )
             for it in cart:
                 await conn.execute(
                     """
@@ -982,10 +778,7 @@ async def crear_orden(
     if cobrando and any(t in TIPOS_FACTURADOS for t, _ in pagos):
         await _guardar_cliente_desde_factura(factura_nombre, factura_nit, factura_celular)
 
-    if orden_existente:
-        accion_texto = "Cobró venta" if cobrando else "Actualizó cuenta pendiente"
-    else:
-        accion_texto = "Cobró venta" if cobrando else "Creó pedido"
+    accion_texto = "Cobró venta" if cobrando else "Creó pedido"
     detalle_pago = " + ".join(f"{t} Bs {m:.2f}" for t, m in pagos) if cobrando else ""
     detalle = f"Mesa {mesa}, total Bs {total:.2f}" + (f", {detalle_pago}" if cobrando else "")
     await bitacora.registrar(session, accion_texto, detalle)

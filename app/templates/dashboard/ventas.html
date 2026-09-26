@@ -10,11 +10,9 @@
   {% if cierre_estado == "completo" %}
   <p class="success-box"><strong>Turno cerrado: Completo.</strong> El arqueo de caja cuadró exacto con lo esperado.</p>
   {% elif cierre_estado == "sobra" %}
-  <p class="error-box"><strong>Turno cerrado: Incompleto.</strong> Sobran Bs {{ cierre_diferencia }} — hay más efectivo
-    contado que el esperado.</p>
+  <p class="error-box"><strong>Turno cerrado: Incompleto.</strong> Sobran Bs {{ cierre_diferencia }} — hay más efectivo contado que el esperado.</p>
   {% elif cierre_estado == "falta" %}
-  <p class="error-box"><strong>Turno cerrado: Incompleto.</strong> Faltan Bs {{ cierre_diferencia }} — hay menos
-    efectivo contado que el esperado.</p>
+  <p class="error-box"><strong>Turno cerrado: Incompleto.</strong> Faltan Bs {{ cierre_diferencia }} — hay menos efectivo contado que el esperado.</p>
   {% endif %}
 
   {% if not turno %}
@@ -25,17 +23,7 @@
     <p class="muted-sm strong" style="margin-top:8px;">Turnos de hoy ({{ turnos_hoy|length }})</p>
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Responsable</th>
-            <th>Apertura</th>
-            <th>Cierre</th>
-            <th class="text-right">Ventas</th>
-            <th class="text-right">Total ventas</th>
-            <th class="text-right">Cierre declarado</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Responsable</th><th>Apertura</th><th>Cierre</th><th class="text-right">Ventas</th><th class="text-right">Total ventas</th><th class="text-right">Cierre declarado</th><th></th></tr></thead>
         <tbody>
           {% for t in turnos_hoy %}
           <tr>
@@ -44,31 +32,20 @@
             <td class="small">{{ (t.cerrado_en|hora) if t.cerrado_en else "abierto" }}</td>
             <td class="text-right mono">{{ t.cantidad_ventas }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(t.total_ventas) }}</td>
-            <td class="text-right mono">{{ ("Bs " + "%.2f"|format(t.monto_final_declarado)) if t.monto_final_declarado
-              is not none else "—" }}</td>
+            <td class="text-right mono">{{ ("Bs " + "%.2f"|format(t.monto_final_declarado)) if t.monto_final_declarado is not none else "—" }}</td>
             <td class="text-right">
               {% if arqueo_por_turno.get(t.id) %}
-              <a href="#arqueo-{{ t.id }}" class="link-muted"
-                onclick="document.getElementById('arqueo-{{ t.id }}').classList.toggle('oculto'); return false;">Ver
-                arqueo</a>
+              <a href="#arqueo-{{ t.id }}" class="link-muted" onclick="document.getElementById('arqueo-{{ t.id }}').classList.toggle('oculto'); return false;">Ver arqueo</a>
               {% endif %}
             </td>
           </tr>
           {% if arqueo_por_turno.get(t.id) %}
           <tr class="oculto" id="arqueo-{{ t.id }}">
             <td colspan="7" style="padding:0 0 12px;">
-              <p class="muted-sm" style="margin:6px 0;">Arqueo con el que se cerró este turno — lo que debería seguir en
-                el cajón:</p>
+              <p class="muted-sm" style="margin:6px 0;">Arqueo con el que se cerró este turno — lo que debería seguir en el cajón:</p>
               <div class="table-wrap">
                 <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Corte</th>
-                      <th>Tipo</th>
-                      <th class="text-right">Cantidad</th>
-                      <th class="text-right">Subtotal</th>
-                    </tr>
-                  </thead>
+                  <thead><tr><th>Corte</th><th>Tipo</th><th class="text-right">Cantidad</th><th class="text-right">Subtotal</th></tr></thead>
                   <tbody>
                     {% for a in arqueo_por_turno.get(t.id) %}
                     <tr>
@@ -94,8 +71,7 @@
 
     {% if ordenes_abiertas|length > 0 %}
     <p class="muted-sm" style="margin-top:8px;">
-      Hay {{ ordenes_abiertas|length }} cuenta(s) pendiente(s) de un turno anterior por Bs {{
-      "%.2f"|format(pendientes_totales) }} —
+      Hay {{ ordenes_abiertas|length }} cuenta(s) pendiente(s) de un turno anterior por Bs {{ "%.2f"|format(pendientes_totales) }} —
       van a seguir apareciendo en "Cuentas pendientes" cuando abras el turno.
     </p>
     {% endif %}
@@ -121,26 +97,11 @@
     </div>
 
     <dl class="stats-grid stats-grid-ventas">
-      <div class="stat-box">
-        <dt>Apertura</dt>
-        <dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd>
-      </div>
-      <div class="stat-box">
-        <dt><a href="#reposiciones-turno">Repuesto a caja</a></dt>
-        <dd>Bs {{ "%.2f"|format(reposiciones_totales) }}</dd>
-      </div>
-      <div class="stat-box">
-        <dt><a href="#ingresos-turno">Ingresos a caja</a></dt>
-        <dd>Bs {{ "%.2f"|format(ingresos_caja_totales) }}</dd>
-      </div>
-      <div class="stat-box">
-        <dt><a href="#egresos-turno">Egresos</a></dt>
-        <dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd>
-      </div>
-      <div class="stat-box stat-box-highlight">
-        <dt>Efectivo teórico</dt>
-        <dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd>
-      </div>
+      <div class="stat-box"><dt>Apertura</dt><dd>Bs {{ "%.2f"|format(turno.monto_inicial) }}</dd></div>
+      <div class="stat-box"><dt><a href="#reposiciones-turno">Repuesto a caja</a></dt><dd>Bs {{ "%.2f"|format(reposiciones_totales) }}</dd></div>
+      <div class="stat-box"><dt><a href="#ingresos-turno">Ingresos a caja</a></dt><dd>Bs {{ "%.2f"|format(ingresos_caja_totales) }}</dd></div>
+      <div class="stat-box"><dt><a href="#egresos-turno">Egresos</a></dt><dd>Bs {{ "%.2f"|format(egresos_totales) }}</dd></div>
+      <div class="stat-box stat-box-highlight"><dt>Efectivo teórico</dt><dd>Bs {{ "%.2f"|format(efectivo_teorico) }}</dd></div>
       <div class="stat-box stat-box-wide stat-box-row">
         <div>
           <dt><a href="#ventas-cobradas">Ventas totales</a></dt>
@@ -149,8 +110,7 @@
         {% if resumen_pagos %}
         <div class="pago-breakdown">
           {% for tipo, datos in resumen_pagos.items() %}
-          <span class="pago-chip pago-chip-{{ tipo|lower|replace('/', '-') }}">{{ tipo }} · Bs {{
-            "%.2f"|format(datos.monto) }}</span>
+          <span class="pago-chip pago-chip-{{ tipo|lower|replace('/', '-') }}">{{ tipo }} · Bs {{ "%.2f"|format(datos.monto) }}</span>
           {% endfor %}
         </div>
         {% endif %}
@@ -160,13 +120,11 @@
     <div class="disclosure-row">
       {% if session.role == 'admin' %}
       <details class="disclosure">
-        <summary class="btn btn-outline btn-stack">Corregir apertura<span class="btn-caption">No mueve caja</span>
-        </summary>
+        <summary class="btn btn-outline btn-stack">Corregir apertura<span class="btn-caption">No mueve caja</span></summary>
         <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/apertura" class="inline-form">
           <div>
             <label class="field-label">Nuevo monto de apertura (Bs)</label>
-            <input name="monto_inicial" type="number" step="0.01" required
-              value="{{ '%.2f'|format(turno.monto_inicial) }}" class="input input-w44" />
+            <input name="monto_inicial" type="number" step="0.01" required value="{{ '%.2f'|format(turno.monto_inicial) }}" class="input input-w44" />
           </div>
           <button type="submit" class="btn btn-primary">Guardar</button>
         </form>
@@ -174,8 +132,7 @@
       {% endif %}
 
       <details class="disclosure">
-        <summary class="btn btn-outline btn-stack">Registrar egreso<span class="btn-caption">Sale de Efectivo (1110101)
-            / QR (1110103)</span></summary>
+        <summary class="btn btn-outline btn-stack">Registrar egreso<span class="btn-caption">Sale de Efectivo (1110101) / QR (1110103)</span></summary>
         <form method="post" action="/dashboard/ventas/movimientos" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div>
@@ -208,24 +165,21 @@
         <div class="order-row" style="margin-top:8px;">
           <div>
             <label class="field-label">Nueva categoría</label>
-            <input type="text" id="nueva-categoria-input" name="nombre_nueva" placeholder="Ej: Mantenimiento"
-              class="input input-w32" />
+            <input type="text" id="nueva-categoria-input" name="nombre_nueva" placeholder="Ej: Mantenimiento" class="input input-w32" />
           </div>
-          <button type="button" class="btn btn-outline btn-sm" hx-post="/dashboard/ventas/movimientos/categorias"
-            hx-include="#nueva-categoria-input" hx-target="#categoria-egreso-select" hx-swap="outerHTML">+ Agregar
-            categoría</button>
+          <button type="button" class="btn btn-outline btn-sm"
+            hx-post="/dashboard/ventas/movimientos/categorias" hx-include="#nueva-categoria-input"
+            hx-target="#categoria-egreso-select" hx-swap="outerHTML">+ Agregar categoría</button>
         </div>
       </details>
 
       <details class="disclosure">
-        <summary class="btn btn-outline btn-stack">Registrar ingreso a caja<span class="btn-caption">Efectivo/QR → Caja
-            Chica (1110102)</span></summary>
+        <summary class="btn btn-outline btn-stack">Registrar ingreso a caja<span class="btn-caption">Efectivo/QR → Caja Chica (1110102)</span></summary>
         <form method="post" action="/dashboard/ventas/movimientos/ingreso" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div class="flex-1">
             <label class="field-label">Motivo</label>
-            <input name="motivo" required placeholder="Ej: traslado de plata de la caja de ventas a Caja Chica"
-              class="input" />
+            <input name="motivo" required placeholder="Ej: traslado de plata de la caja de ventas a Caja Chica" class="input" />
           </div>
           <div>
             <label class="field-label">Método de pago</label>
@@ -249,8 +203,7 @@
       </details>
 
       <details class="disclosure">
-        <summary class="btn btn-outline btn-stack">Reponer caja<span class="btn-caption">Caja Chica (1110102) → Efectivo
-            (1110101)</span></summary>
+        <summary class="btn btn-outline btn-stack">Reponer caja<span class="btn-caption">Caja Chica (1110102) → Efectivo (1110101)</span></summary>
         <form method="post" action="/dashboard/ventas/movimientos/reposicion" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div class="flex-1">
@@ -272,29 +225,21 @@
       </details>
 
       <details class="disclosure" id="disclosure-cerrar-turno">
-        <summary class="btn btn-primary btn-stack">Cerrar turno<span class="btn-caption">Efectivo → Caja Chica</span>
-        </summary>
+        <summary class="btn btn-primary btn-stack">Cerrar turno<span class="btn-caption">Efectivo → Caja Chica</span></summary>
         <div class="disclosure-content stack-4">
           {% if resumen_pagos %}
           {% set cuentas_destino = {
-          'EFECTIVO': 'Caja Moneda Nacional (1110101) → se traslada entero a Caja Chica al cerrar',
-          'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA → se traslada entero a Caja Chica al cerrar',
-          'QR': 'Banco Bisa (1110103)',
-          'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
-          'POS': 'Sin asiento automático (lo registra el contador a mano)',
-          'POS/FAC': 'Banco Bisa (1110103) + IT/IVA',
-          'MIXTO': 'Según cada método (ver desglose)',
+            'EFECTIVO': 'Caja Moneda Nacional (1110101) → se traslada entero a Caja Chica al cerrar',
+            'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA → se traslada entero a Caja Chica al cerrar',
+            'QR': 'Banco Bisa (1110103)',
+            'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
+            'POS': 'Sin asiento automático (lo registra el contador a mano)',
+            'POS/FAC': 'Banco Bisa (1110103) + IT/IVA',
+            'MIXTO': 'Según cada método (ver desglose)',
           } %}
           <div class="table-wrap">
             <table class="data-table" id="tabla-resumen-pagos">
-              <thead>
-                <tr>
-                  <th>Método de pago</th>
-                  <th class="text-right">Cantidad de ventas</th>
-                  <th class="text-right">Monto ingresado</th>
-                  <th>Va a la cuenta</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Método de pago</th><th class="text-right">Cantidad de ventas</th><th class="text-right">Monto ingresado</th><th>Va a la cuenta</th></tr></thead>
               <tbody>
                 {% for tipo, datos in resumen_pagos.items() %}
                 <tr>
@@ -320,14 +265,7 @@
           {% set cuentas_origen_ingreso = {'EFECTIVO': 'Caja Moneda Nacional', 'QR': 'Banco Bisa'} %}
           <div class="table-wrap">
             <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Ingreso a caja</th>
-                  <th class="text-right">Cantidad</th>
-                  <th class="text-right">Monto</th>
-                  <th>Va a la cuenta</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Ingreso a caja</th><th class="text-right">Cantidad</th><th class="text-right">Monto</th><th>Va a la cuenta</th></tr></thead>
               <tbody>
                 {% for tipo, datos in resumen_ingresos_caja.items() %}
                 <tr>
@@ -351,8 +289,7 @@
 
           {% if ordenes_abiertas|length > 0 %}
           <div class="error-box">
-            <p><strong>Hay {{ ordenes_abiertas|length }} cuenta(s) pendiente(s) por Bs {{
-                "%.2f"|format(pendientes_totales) }}.</strong></p>
+            <p><strong>Hay {{ ordenes_abiertas|length }} cuenta(s) pendiente(s) por Bs {{ "%.2f"|format(pendientes_totales) }}.</strong></p>
             <p class="muted-sm">
               Puedes <a href="#cuentas-pendientes">cobrarlas ahora</a> antes de cerrar. Si prefieres dejarlas para
               el siguiente turno, marca la casilla de abajo — van a seguir apareciendo en "Cuentas pendientes"
@@ -362,17 +299,10 @@
           {% endif %}
 
           <p class="muted-sm">Arqueo de caja: cuenta los billetes y monedas físicos y el sistema calcula el total.</p>
-          <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" id="form-cerrar-turno"
-            class="stack-4" data-esperado="{{ efectivo_teorico }}">
+          <form method="post" action="/dashboard/ventas/turno/{{ turno.id }}/cerrar" id="form-cerrar-turno" class="stack-4" data-esperado="{{ efectivo_teorico }}">
             <div class="table-wrap">
               <table class="capture-grid" id="tabla-arqueo">
-                <thead>
-                  <tr>
-                    <th>Corte</th>
-                    <th class="col-monto">Cantidad</th>
-                    <th class="col-monto">Subtotal</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Corte</th><th class="col-monto">Cantidad</th><th class="col-monto">Subtotal</th></tr></thead>
                 <tbody>
                   {% for valor, tipo in denominaciones %}
                   <tr>
@@ -381,8 +311,7 @@
                       <input type="hidden" name="corte" value="{{ valor }}" />
                     </td>
                     <td class="col-monto">
-                      <input type="number" name="cantidad" min="0" value="0" class="arqueo-cantidad"
-                        data-corte="{{ valor }}" />
+                      <input type="number" name="cantidad" min="0" value="0" class="arqueo-cantidad" data-corte="{{ valor }}" />
                     </td>
                     <td class="col-monto mono arqueo-subtotal" data-corte="{{ valor }}">Bs 0.00</td>
                   </tr>
@@ -427,20 +356,13 @@
     <h3 class="subsection-title">Nuevo pedido</h3>
     <form method="post" action="/dashboard/ventas/ordenes" class="card pos-form" id="form-nuevo-pedido">
       <input type="hidden" name="turno_id" value="{{ turno.id }}" />
-      <input type="hidden" name="orden_id_existente" id="orden-existente-input" value="" />
 
       <div class="pos-layout">
-        <div class="pos-mesas">
-          {% include "partials/_mesa_grid.html" %}
-        </div>
-
         <div class="pos-catalogo">
-          <input type="text" id="pos-buscar-producto" class="input" placeholder="Buscar producto…" autocomplete="off"
-            style="margin-bottom:10px;" />
+          <input type="text" id="pos-buscar-producto" class="input" placeholder="Buscar producto…" autocomplete="off" style="margin-bottom:10px;" />
           <div class="pos-tabs" id="pos-tabs">
             {% for categoria in por_categoria.keys() %}
-            <button type="button" class="pos-tab{{ ' activa' if loop.first else '' }}"
-              data-panel="panel-{{ loop.index }}">{{ categoria }}</button>
+            <button type="button" class="pos-tab{{ ' activa' if loop.first else '' }}" data-panel="panel-{{ loop.index }}">{{ categoria }}</button>
             {% endfor %}
           </div>
           <div class="pos-descuento-popup oculto" id="pos-descuento-popup">
@@ -479,8 +401,21 @@
         </div>
 
         <div class="pos-carrito">
+          <div class="order-row">
+            <div class="flex-1">
+              <label class="field-label">Mesa / referencia</label>
+              {% include "partials/_mesa_select.html" %}
+            </div>
+          </div>
+          <div class="order-row">
+            <input type="text" name="nombre_nueva" placeholder="Nueva mesa: Ej 9, Delivery" class="input flex-1" />
+            <button type="button" class="btn btn-outline btn-sm"
+              hx-post="/dashboard/ventas/mesas" hx-include="closest form"
+              hx-target="#mesa-select" hx-swap="outerHTML">+ Agregar</button>
+          </div>
+
           <div class="pos-items" id="pos-items">
-            <p class="muted-sm" id="pos-items-vacio">Toca un producto para agregarlo al pedido.</p>
+            <p class="muted-sm" id="pos-items-vacio">Toca un producto de la izquierda para agregarlo al pedido.</p>
           </div>
 
           <div class="cart-total-row cart-total-row-sm oculto" id="fila-subtotal">
@@ -551,8 +486,7 @@
 
           <div class="order-actions">
             <button type="submit" name="accion" value="cobrar" class="btn btn-primary">Cobrar</button>
-            <button type="submit" name="accion" value="pendiente" class="btn btn-outline">Guardar cuenta
-              pendiente</button>
+            <button type="submit" name="accion" value="pendiente" class="btn btn-outline">Guardar cuenta pendiente</button>
           </div>
 
           {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
@@ -568,40 +502,28 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Mesa</th>
-            <th class="text-right">Total</th>
-            <th>Responsable</th>
-            <th>Hora</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Mesa</th><th class="text-right">Total</th><th>Responsable</th><th>Hora</th><th></th></tr></thead>
         <tbody>
           {% for o in ordenes_abiertas %}
           {% if cobrar_id == o.id %}
           <tr class="editing-row">
             <td colspan="5">
-              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cobrar"
-                class="inline-form form-cobrar-pendiente">
+              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cobrar" class="inline-form form-cobrar-pendiente">
                 <span class="strong">{{ o.mesa }}</span>
                 <span class="mono">Bs {{ "%.2f"|format(o.total) }}</span>
                 <select name="tipo_pago" required class="input input-w36 pos-tipo-pago-pendiente">
                   <option value="">Método de pago…</option>
                   {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
                 </select>
-                <input name="monto_pagado" type="number" step="0.01" placeholder="{{ '%.2f'|format(o.total) }}"
-                  class="input input-w24 monto-pagado-pendiente" data-total="{{ o.total }}" />
-                <span class="small muted-inline cambio-pendiente-wrap">Cambio: <span class="strong cambio-pendiente">Bs
-                    0.00</span></span>
+                <input name="monto_pagado" type="number" step="0.01" placeholder="{{ '%.2f'|format(o.total) }}" class="input input-w24 monto-pagado-pendiente" data-total="{{ o.total }}" />
+                <span class="small muted-inline cambio-pendiente-wrap">Cambio: <span class="strong cambio-pendiente">Bs 0.00</span></span>
                 <button type="button" class="link-muted btn-dividir-pago-pendiente">+ Dividir pago</button>
                 <span class="pago-dividido-pendiente oculto">
                   <select name="tipo_pago2" class="input input-w36 pos-tipo-pago-pendiente">
                     <option value="">Método 2…</option>
                     {% for t in tipos_pago %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
                   </select>
-                  <input name="monto_pagado2" type="number" step="0.01" placeholder="Monto método 2"
-                    class="input input-w24" />
+                  <input name="monto_pagado2" type="number" step="0.01" placeholder="Monto método 2" class="input input-w24" />
                 </span>
                 <span class="factura-fields-pendiente oculto">
                   <input name="factura_nit" placeholder="NIT" class="input input-w24" />
@@ -621,8 +543,7 @@
                 <span class="mono">Total actual: Bs {{ "%.2f"|format(o.total) }}</span>
                 <div>
                   <label class="field-label">Cantidad a descontar (Bs)</label>
-                  <input name="monto_descuento" type="number" step="0.01" min="0.01" max="{{ '%.2f'|format(o.total) }}"
-                    required class="input input-w24" />
+                  <input name="monto_descuento" type="number" step="0.01" min="0.01" max="{{ '%.2f'|format(o.total) }}" required class="input input-w24" />
                 </div>
                 <div class="flex-1">
                   <label class="field-label">Justificativo</label>
@@ -643,12 +564,10 @@
               <div class="row-actions">
                 <a href="/dashboard/ventas/ordenes/{{ o.id }}/ticket" target="_blank" class="link-muted">Ticket</a>
                 <a href="/dashboard/ventas/ordenes/{{ o.id }}/items" class="link-muted"
-                  hx-get="/dashboard/ventas/ordenes/{{ o.id }}/items" hx-target="#modal-root" hx-swap="innerHTML">+
-                  Productos</a>
+                   hx-get="/dashboard/ventas/ordenes/{{ o.id }}/items" hx-target="#modal-root" hx-swap="innerHTML">+ Productos</a>
                 <a href="/dashboard/ventas?cobrar={{ o.id }}" class="link-muted">Cobrar</a>
                 <a href="/dashboard/ventas?descuento={{ o.id }}" class="link-muted">Descuento</a>
-                <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cancelar"
-                  hx-confirm="¿Cancelar el pedido de &quot;{{ o.mesa }}&quot;?">
+                <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/cancelar" hx-confirm="¿Cancelar el pedido de &quot;{{ o.mesa }}&quot;?">
                   <button type="submit" class="link-danger">Cancelar</button>
                 </form>
               </div>
@@ -669,42 +588,25 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table data-table-wide">
-        <thead>
-          <tr>
-            <th>Mesa</th>
-            <th>Detalle</th>
-            <th class="text-right">Descuento</th>
-            <th class="text-right">Total</th>
-            <th>Pago</th>
-            <th>Hora</th>
-            <th>Responsable</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Mesa</th><th>Detalle</th><th class="text-right">Descuento</th><th class="text-right">Total</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for o in ordenes_cobradas %}
           {% if metodo_pago_id == o.id %}
           <tr class="editing-row">
             <td colspan="8">
-              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/metodo-pago"
-                class="inline-form form-cambiar-pago">
+              <form method="post" action="/dashboard/ventas/ordenes/{{ o.id }}/metodo-pago" class="inline-form form-cambiar-pago">
                 <span class="strong">{{ o.mesa }}</span>
                 <span class="mono">Bs {{ "%.2f"|format(o.total) }}</span>
                 <div>
                   <label class="field-label">Método de pago</label>
                   <select name="tipo_pago" required class="input input-w36 pos-tipo-pago-cambio">
-                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t==o.tipo_pago }}>{{ t }}</option>
-                    {% endfor %}
+                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == o.tipo_pago }}>{{ t }}</option>{% endfor %}
                   </select>
                 </div>
-                <span
-                  class="factura-fields-cambio{{ '' if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') else ' oculto' }}">
-                  <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}"
-                    class="input input-w24" />
-                  <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}"
-                    class="input input-w24" />
-                  <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}"
-                    class="input input-w36" />
+                <span class="factura-fields-cambio{{ '' if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') else ' oculto' }}">
+                  <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
+                  <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
+                  <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
                 </span>
                 <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                 <a href="/dashboard/ventas#ventas-cobradas" class="btn btn-outline btn-sm">Cancelar</a>
@@ -719,8 +621,7 @@
                 <span class="mono">Total actual: Bs {{ "%.2f"|format(o.total) }}</span>
                 <div>
                   <label class="field-label">Cantidad a descontar (Bs)</label>
-                  <input name="monto_descuento" type="number" step="0.01" min="0.01" max="{{ '%.2f'|format(o.total) }}"
-                    required class="input input-w24" />
+                  <input name="monto_descuento" type="number" step="0.01" min="0.01" max="{{ '%.2f'|format(o.total) }}" required class="input input-w24" />
                 </div>
                 <div class="flex-1">
                   <label class="field-label">Justificativo</label>
@@ -738,8 +639,7 @@
                 <span class="strong">{{ o.mesa }}</span>
                 <div>
                   <label class="field-label">Hora de cobro</label>
-                  <input name="hora" type="datetime-local" required value="{{ o.cobrado_en|datetime_local }}"
-                    class="input" />
+                  <input name="hora" type="datetime-local" required value="{{ o.cobrado_en|datetime_local }}" class="input" />
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                 <a href="/dashboard/ventas#ventas-cobradas" class="btn btn-outline btn-sm">Cancelar</a>
@@ -750,18 +650,15 @@
           <tr>
             <td class="strong">{{ o.mesa }}</td>
             <td class="small">
-              {% for it in items_por_orden.get(o.id, []) %}{{ "%g"|format(it.cantidad) }}× {{ it.producto_nombre }}{{ ",
-              " if not loop.last }}{% else %}—{% endfor %}
+              {% for it in items_por_orden.get(o.id, []) %}{{ "%g"|format(it.cantidad) }}× {{ it.producto_nombre }}{{ ", " if not loop.last }}{% else %}—{% endfor %}
             </td>
-            <td class="text-right mono small">{{ "-Bs %.2f"|format(descuentos_por_orden.get(o.id, 0)) if
-              descuentos_por_orden.get(o.id, 0) > 0 else "—" }}</td>
+            <td class="text-right mono small">{{ "-Bs %.2f"|format(descuentos_por_orden.get(o.id, 0)) if descuentos_por_orden.get(o.id, 0) > 0 else "—" }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(o.total) }}</td>
             <td class="uppercase small">
               {% if o.tipo_pago == "MIXTO" %}
               MIXTO
               <span class="muted-sm">
-                {% for p in pagos_por_orden.get(o.id, []) %}{{ p.tipo_pago }} Bs {{ "%.2f"|format(p.monto) }}{{ " + " if
-                not loop.last }}{% endfor %}
+                {% for p in pagos_por_orden.get(o.id, []) %}{{ p.tipo_pago }} Bs {{ "%.2f"|format(p.monto) }}{{ " + " if not loop.last }}{% endfor %}
               </span>
               {% else %}
               {{ o.tipo_pago }}
@@ -804,16 +701,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Motivo</th>
-            <th class="text-right">Monto</th>
-            <th>Pago</th>
-            <th>Hora</th>
-            <th>Responsable</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for m in ingresos_lista %}
           {% if editar_ingreso_id == m.id %}
@@ -827,14 +715,12 @@
                 <div>
                   <label class="field-label">Método de pago</label>
                   <select name="tipo_pago" required class="input input-w36">
-                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t==m.tipo_pago }}>{{ t }}</option>
-                    {% endfor %}
+                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == m.tipo_pago }}>{{ t }}</option>{% endfor %}
                   </select>
                 </div>
                 <div>
                   <label class="field-label">Monto (Bs)</label>
-                  <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required
-                    class="input input-w24" />
+                  <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
                 </div>
                 {% if session.role == 'admin' %}
                 <div>
@@ -879,15 +765,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Motivo</th>
-            <th class="text-right">Monto</th>
-            <th>Hora</th>
-            <th>Responsable</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Motivo</th><th class="text-right">Monto</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for m in reposiciones_lista %}
           <tr>
@@ -917,17 +795,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Categoría</th>
-            <th>Motivo</th>
-            <th class="text-right">Monto</th>
-            <th>Pago</th>
-            <th>Hora</th>
-            <th>Responsable</th>
-            <th></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Categoría</th><th>Motivo</th><th class="text-right">Monto</th><th>Pago</th><th>Hora</th><th>Responsable</th><th></th></tr></thead>
         <tbody>
           {% for m in egresos_lista %}
           {% if editar_egreso_id == m.id %}
@@ -947,14 +815,12 @@
                 <div>
                   <label class="field-label">Método de pago</label>
                   <select name="tipo_pago" required class="input input-w36">
-                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t==m.tipo_pago }}>{{ t }}</option>
-                    {% endfor %}
+                    {% for t in tipos_pago %}<option value="{{ t }}" {{ "selected" if t == m.tipo_pago }}>{{ t }}</option>{% endfor %}
                   </select>
                 </div>
                 <div>
                   <label class="field-label">Monto (Bs)</label>
-                  <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required
-                    class="input input-w24" />
+                  <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
                 </div>
                 {% if session.role == 'admin' %}
                 <div>
@@ -997,575 +863,429 @@
 </div>
 
 <script>
-  (function () {
-    var form = document.getElementById("form-nuevo-pedido");
-    if (!form) return;
+(function () {
+  var form = document.getElementById("form-nuevo-pedido");
+  if (!form) return;
 
-    // Contador de "hace cuánto está pendiente" en las mesas con cuenta abierta.
-    // Se recalcula solo, sin pedir nada al servidor; sobrevive a los swaps de
-    // htmx porque busca los tiles en el DOM en cada tick en vez de guardarlos.
-    function actualizarTemporizadoresMesas() {
-      document.querySelectorAll(".mesa-tile[data-desde]").forEach(function (tile) {
-        var span = tile.querySelector("[data-mesa-timer]");
-        if (!span) return;
-        var desde = new Date(tile.getAttribute("data-desde")).getTime();
-        var ms = Math.max(0, Date.now() - desde);
-        var totalSeg = Math.floor(ms / 1000);
-        var horas = Math.floor(totalSeg / 3600);
-        var minutos = Math.floor((totalSeg % 3600) / 60);
-        var segundos = totalSeg % 60;
-        if (horas > 0) span.textContent = horas + "h " + minutos + "m " + segundos + "s";
-        else if (minutos > 0) span.textContent = minutos + "m " + segundos + "s";
-        else span.textContent = segundos + "s";
+  // Pestañas de categorías: puramente estático, un panel visible a la vez.
+  var tabs = document.getElementById("pos-tabs");
+  if (tabs) {
+    tabs.addEventListener("click", function (e) {
+      var btn = e.target.closest(".pos-tab");
+      if (!btn) return;
+      tabs.querySelectorAll(".pos-tab").forEach(function (t) { t.classList.remove("activa"); });
+      btn.classList.add("activa");
+      var panelId = btn.getAttribute("data-panel");
+      document.querySelectorAll(".pos-panel").forEach(function (p) {
+        p.classList.toggle("oculto", p.id !== panelId);
       });
+    });
+  }
+
+  // Buscador de productos: filtra por nombre en todas las categorías a la
+  // vez (ignora tildes/mayúsculas), sin pisar el estado de las pestañas —
+  // al borrar la búsqueda, vuelve a mostrar solo la pestaña activa.
+  var buscarProducto = document.getElementById("pos-buscar-producto");
+  if (buscarProducto) {
+    function normalizar(texto) {
+      return (texto || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     }
-    actualizarTemporizadoresMesas();
-    setInterval(actualizarTemporizadoresMesas, 1000);
-
-    // Pestañas de categorías: puramente estático, un panel visible a la vez.
-    var tabs = document.getElementById("pos-tabs");
-    if (tabs) {
-      tabs.addEventListener("click", function (e) {
-        var btn = e.target.closest(".pos-tab");
-        if (!btn) return;
-        tabs.querySelectorAll(".pos-tab").forEach(function (t) { t.classList.remove("activa"); });
-        btn.classList.add("activa");
-        var panelId = btn.getAttribute("data-panel");
-        document.querySelectorAll(".pos-panel").forEach(function (p) {
-          p.classList.toggle("oculto", p.id !== panelId);
-        });
-      });
-    }
-
-    // Grilla visual de mesas: delegado en el form (sobrevive al swap de htmx
-    // cuando se agrega/mueve/intercambia una mesa).
-    form.addEventListener("click", function (e) {
-      var delBtn = e.target.closest(".mesa-tile-eliminar");
-      if (delBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        var nombreEliminar = delBtn.getAttribute("data-mesa-eliminar");
-        if (confirm('¿Eliminar la mesa "' + nombreEliminar + '"?')) {
-          htmx.ajax("POST", "/dashboard/ventas/mesas/eliminar", {
-            target: "#mesa-grid-box", swap: "outerHTML",
-            values: { nombre: nombreEliminar },
-          });
-        }
-        return;
-      }
-      if (document.querySelector(".mesa-grid-box.modo-edicion")) return;
-      var tile = e.target.closest(".mesa-tile");
-      if (!tile || tile.classList.contains("mesa-etiqueta")) return;
-      // Si la mesa ya tiene una cuenta pendiente, en vez de elegirla para un
-      // pedido nuevo se recarga esa cuenta aquí mismo (mismos ítems, mismo
-      // panel) para poder seguir agregando o cobrarla.
-      var ordenId = tile.getAttribute("data-orden-id");
-      if (tile.classList.contains("mesa-ocupada") && ordenId) {
-        cargarCuentaPendiente(ordenId);
-        return;
-      }
-      var input = document.getElementById("mesa-input");
-      if (!input) return;
-      var mesaNueva = tile.getAttribute("data-mesa");
-      // Cambiar a otra mesa distinta de la que tenías elegida limpia el
-      // carrito: si no, quedan ahí productos de la mesa anterior y se
-      // presta a confusión (parecería que son de la mesa nueva).
-      if (input.value && input.value !== mesaNueva && carrito.length) {
-        carrito = [];
-        renderCarrito();
-      }
-      input.value = mesaNueva;
-      // Si venías editando otra cuenta pendiente, elegir una mesa distinta
-      // (disponible) larga la referencia: lo que sigas armando en el carrito
-      // es un pedido nuevo para esta mesa, no una actualización de esa cuenta.
-      if (ordenExistenteInput) ordenExistenteInput.value = "";
-      document.querySelectorAll(".mesa-tile").forEach(function (t) { t.classList.remove("selected"); });
-      tile.classList.add("selected");
-    });
-
-    // Modo edición del plano: arrastrar una mesa a un casillero vacío la mueve;
-    // soltarla sobre otra mesa intercambia las posiciones de ambas.
-    form.addEventListener("dragstart", function (e) {
-      var tile = e.target.closest(".mesa-tile");
-      if (!tile || !document.querySelector(".mesa-grid-box.modo-edicion")) return;
-      e.dataTransfer.setData("text/plain", tile.getAttribute("data-mesa"));
-      e.dataTransfer.effectAllowed = "move";
-    });
-
-    form.addEventListener("dragover", function (e) {
-      if (e.target.closest(".mesa-slot") || e.target.closest(".mesa-tile")) {
-        e.preventDefault();
-      }
-    });
-
-    form.addEventListener("drop", function (e) {
-      var slot = e.target.closest(".mesa-slot");
-      var tile = e.target.closest(".mesa-tile");
-      if (!slot && !tile) return;
-      e.preventDefault();
-      var origen = e.dataTransfer.getData("text/plain");
-      if (!origen) return;
-      if (tile) {
-        var destino = tile.getAttribute("data-mesa");
-        if (destino === origen) return;
-        htmx.ajax("POST", "/dashboard/ventas/mesas/intercambiar", {
-          target: "#mesa-grid-box", swap: "outerHTML",
-          values: { origen: origen, destino: destino },
-        });
-      } else {
-        htmx.ajax("POST", "/dashboard/ventas/mesas/mover", {
-          target: "#mesa-grid-box", swap: "outerHTML",
-          values: { nombre: origen, fila: slot.getAttribute("data-fila"), columna: slot.getAttribute("data-columna") },
-        });
-      }
-    });
-
-    // Buscador de productos: filtra por nombre en todas las categorías a la
-    // vez (ignora tildes/mayúsculas), sin pisar el estado de las pestañas —
-    // al borrar la búsqueda, vuelve a mostrar solo la pestaña activa.
-    var buscarProducto = document.getElementById("pos-buscar-producto");
-    if (buscarProducto) {
-      function normalizar(texto) {
-        return (texto || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-      }
-      buscarProducto.addEventListener("input", function () {
-        var q = normalizar(buscarProducto.value.trim());
-        var panels = document.querySelectorAll(".pos-panel");
-        if (!q) {
-          if (tabs) tabs.classList.remove("oculto");
-          var activa = tabs ? tabs.querySelector(".pos-tab.activa") : null;
-          var panelIdActivo = activa ? activa.getAttribute("data-panel") : null;
-          panels.forEach(function (p) {
-            p.classList.toggle("oculto", p.id !== panelIdActivo);
-            p.querySelectorAll(".pos-producto").forEach(function (btn) { btn.classList.remove("oculto"); });
-          });
-          return;
-        }
-        if (tabs) tabs.classList.add("oculto");
+    buscarProducto.addEventListener("input", function () {
+      var q = normalizar(buscarProducto.value.trim());
+      var panels = document.querySelectorAll(".pos-panel");
+      if (!q) {
+        if (tabs) tabs.classList.remove("oculto");
+        var activa = tabs ? tabs.querySelector(".pos-tab.activa") : null;
+        var panelIdActivo = activa ? activa.getAttribute("data-panel") : null;
         panels.forEach(function (p) {
-          var hayVisible = false;
-          p.querySelectorAll(".pos-producto").forEach(function (btn) {
-            var coincide = normalizar(btn.getAttribute("data-nombre")).indexOf(q) !== -1;
-            btn.classList.toggle("oculto", !coincide);
-            if (coincide) hayVisible = true;
-          });
-          p.classList.toggle("oculto", !hayVisible);
+          p.classList.toggle("oculto", p.id !== panelIdActivo);
+          p.querySelectorAll(".pos-producto").forEach(function (btn) { btn.classList.remove("oculto"); });
         });
-      });
-    }
-
-    // Carrito en memoria: se agregan productos con un clic.
-    var carrito = [];
-    var itemsBox = document.getElementById("pos-items");
-    var totalOut = document.getElementById("total-estimado");
-    var subtotalOut = document.getElementById("subtotal-estimado");
-    var descuentoOut = document.getElementById("descuento-estimado");
-    var filaSubtotal = document.getElementById("fila-subtotal");
-    var filaDescuento = document.getElementById("fila-descuento");
-    var cambioOut = document.getElementById("cambio-calculado");
-    var montoPagadoInput = document.getElementById("monto-pagado-input");
-    var totalActual = 0;
-
-    function recalcularCambio() {
-      if (!cambioOut || !montoPagadoInput) return;
-      var pagado = parseFloat(montoPagadoInput.value || "0");
-      var cambio = pagado - totalActual;
-      cambioOut.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
-    }
-
-    function escapeHtml(texto) {
-      var div = document.createElement("div");
-      div.textContent = texto;
-      return div.innerHTML;
-    }
-
-    function renderCarrito() {
-      var subtotal = 0;
-      var descuento = 0;
-      carrito.forEach(function (it) {
-        var monto = it.precio * it.cantidad;
-        if (monto < 0) descuento += -monto;
-        else subtotal += monto;
-      });
-      totalActual = subtotal - descuento;
-      totalOut.textContent = "Bs " + totalActual.toFixed(2);
-
-      var hayDescuento = descuento > 0;
-      filaSubtotal.classList.toggle("oculto", !hayDescuento);
-      filaDescuento.classList.toggle("oculto", !hayDescuento);
-      if (hayDescuento) {
-        subtotalOut.textContent = "Bs " + subtotal.toFixed(2);
-        descuentoOut.textContent = "-Bs " + descuento.toFixed(2);
-      }
-
-      recalcularCambio();
-
-      if (!carrito.length) {
-        itemsBox.innerHTML = '<p class="muted-sm" id="pos-items-vacio">Toca un producto para agregarlo al pedido.</p>';
         return;
       }
+      if (tabs) tabs.classList.add("oculto");
+      panels.forEach(function (p) {
+        var hayVisible = false;
+        p.querySelectorAll(".pos-producto").forEach(function (btn) {
+          var coincide = normalizar(btn.getAttribute("data-nombre")).indexOf(q) !== -1;
+          btn.classList.toggle("oculto", !coincide);
+          if (coincide) hayVisible = true;
+        });
+        p.classList.toggle("oculto", !hayVisible);
+      });
+    });
+  }
 
-      itemsBox.innerHTML = carrito.map(function (it, i) {
-        if (it.nota) {
-          var notaEscapada = escapeHtml(it.nota);
-          return (
-            '<div class="pos-item-row pos-item-nota" data-idx="' + i + '">' +
+  // Carrito en memoria: se agregan productos con un clic.
+  var carrito = [];
+  var itemsBox = document.getElementById("pos-items");
+  var totalOut = document.getElementById("total-estimado");
+  var subtotalOut = document.getElementById("subtotal-estimado");
+  var descuentoOut = document.getElementById("descuento-estimado");
+  var filaSubtotal = document.getElementById("fila-subtotal");
+  var filaDescuento = document.getElementById("fila-descuento");
+  var cambioOut = document.getElementById("cambio-calculado");
+  var montoPagadoInput = document.getElementById("monto-pagado-input");
+  var totalActual = 0;
+
+  function recalcularCambio() {
+    if (!cambioOut || !montoPagadoInput) return;
+    var pagado = parseFloat(montoPagadoInput.value || "0");
+    var cambio = pagado - totalActual;
+    cambioOut.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
+  }
+
+  function escapeHtml(texto) {
+    var div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
+  }
+
+  function renderCarrito() {
+    var subtotal = 0;
+    var descuento = 0;
+    carrito.forEach(function (it) {
+      var monto = it.precio * it.cantidad;
+      if (monto < 0) descuento += -monto;
+      else subtotal += monto;
+    });
+    totalActual = subtotal - descuento;
+    totalOut.textContent = "Bs " + totalActual.toFixed(2);
+
+    var hayDescuento = descuento > 0;
+    filaSubtotal.classList.toggle("oculto", !hayDescuento);
+    filaDescuento.classList.toggle("oculto", !hayDescuento);
+    if (hayDescuento) {
+      subtotalOut.textContent = "Bs " + subtotal.toFixed(2);
+      descuentoOut.textContent = "-Bs " + descuento.toFixed(2);
+    }
+
+    recalcularCambio();
+
+    if (!carrito.length) {
+      itemsBox.innerHTML = '<p class="muted-sm" id="pos-items-vacio">Toca un producto de la izquierda para agregarlo al pedido.</p>';
+      return;
+    }
+
+    itemsBox.innerHTML = carrito.map(function (it, i) {
+      if (it.nota) {
+        var notaEscapada = escapeHtml(it.nota);
+        return (
+          '<div class="pos-item-row pos-item-nota" data-idx="' + i + '">' +
             '<div class="pos-item-nombre">' + it.nombre + '<span class="muted-sm">' + notaEscapada + '</span></div>' +
             '<div class="pos-item-subtotal">Bs ' + (it.precio * it.cantidad).toFixed(2) + '</div>' +
             '<button type="button" class="pos-item-quitar" data-accion="quitar">×</button>' +
             '<input type="hidden" name="cart_producto_id" value="' + it.id + '" />' +
             '<input type="hidden" name="cart_cantidad" value="' + it.cantidad + '" />' +
             '<input type="hidden" name="cart_nota" value="' + notaEscapada + '" />' +
-            '</div>'
-          );
-        }
-        return (
-          '<div class="pos-item-row" data-idx="' + i + '">' +
+          '</div>'
+        );
+      }
+      return (
+        '<div class="pos-item-row" data-idx="' + i + '">' +
           '<div class="pos-item-nombre">' + it.nombre + '<span class="muted-sm">Bs ' + it.precio.toFixed(2) + ' c/u</span></div>' +
           '<div class="pos-item-qty">' +
-          '<button type="button" class="pos-qty-btn" data-accion="restar">−</button>' +
-          '<span class="pos-qty-valor">' + it.cantidad + '</span>' +
-          '<button type="button" class="pos-qty-btn" data-accion="sumar">+</button>' +
+            '<button type="button" class="pos-qty-btn" data-accion="restar">−</button>' +
+            '<span class="pos-qty-valor">' + it.cantidad + '</span>' +
+            '<button type="button" class="pos-qty-btn" data-accion="sumar">+</button>' +
           '</div>' +
           '<div class="pos-item-subtotal">Bs ' + (it.precio * it.cantidad).toFixed(2) + '</div>' +
           '<button type="button" class="pos-item-quitar" data-accion="quitar">×</button>' +
           '<input type="hidden" name="cart_producto_id" value="' + it.id + '" />' +
           '<input type="hidden" name="cart_cantidad" value="' + it.cantidad + '" />' +
           '<input type="hidden" name="cart_nota" value="" />' +
-          '</div>'
-        );
-      }).join("");
-    }
+        '</div>'
+      );
+    }).join("");
+  }
 
-    // Recargar una cuenta pendiente en el panel de pedido (clic en su mesa
-    // desde el plano): trae sus ítems y los deja como si se los hubiera
-    // agregado recién, para poder seguir sumando cosas o cobrarla de una vez.
-    var ordenExistenteInput = document.getElementById("orden-existente-input");
+  // Descuentos (precio negativo, p. ej. "DESCUENTO BS"): se escribe el monto y
+  // el justificativo en vez de sumar de a uno con los botones +/-.
+  var descuentoPopup = document.getElementById("pos-descuento-popup");
+  var descuentoMontoInput = document.getElementById("pos-descuento-monto");
+  var descuentoJustificativoInput = document.getElementById("pos-descuento-justificativo");
+  var descuentoProductoPendiente = null;
 
-    function cargarCuentaPendiente(ordenId) {
-      fetch("/dashboard/ventas/ordenes/" + ordenId + "/carrito.json")
-        .then(function (r) { return r.json(); })
-        .then(function (datos) {
-          if (datos.error) {
-            alert(datos.error);
-            return;
-          }
-          carrito = datos.items.map(function (it) {
-            var item = { id: it.id === null ? "" : String(it.id), nombre: it.nombre, precio: it.precio, cantidad: it.cantidad };
-            if (it.nota) item.nota = it.nota;
-            return item;
-          });
-          renderCarrito();
-          if (ordenExistenteInput) ordenExistenteInput.value = ordenId;
-          var mesaInput = document.getElementById("mesa-input");
-          if (mesaInput) mesaInput.value = datos.mesa;
-          document.querySelectorAll(".mesa-tile").forEach(function (t) { t.classList.remove("selected"); });
-          var tileMesa = document.querySelector('.mesa-tile[data-mesa="' + datos.mesa + '"]');
-          if (tileMesa) tileMesa.classList.add("selected");
-        })
-        .catch(function () { alert("No se pudo cargar la cuenta pendiente."); });
-    }
+  // El resto de AJUSTES (Extra, EXTRA BS, Tips, AMORTIZACION BS...) se carga
+  // escribiendo la cantidad total una sola vez, en vez de hacer clic varias
+  // veces para ir sumando de a uno.
+  var cantidadPopup = document.getElementById("pos-cantidad-popup");
+  var cantidadLabel = document.getElementById("pos-cantidad-label");
+  var cantidadInput = document.getElementById("pos-cantidad-input");
+  var cantidadProductoPendiente = null;
 
-    // Si la cuenta que se estaba cargando ya se cobró/canceló en otro lado
-    // (otra pestaña, otro cajero) mientras tanto, hay que soltar la referencia:
-    // si no, "Guardar cuenta pendiente" terminaría reescribiendo una cuenta que
-    // ya no existe. El plano se entera solo cada 5s por su propio auto-refresh,
-    // así que se aprovecha esa misma señal para soltarla.
-    document.body.addEventListener("htmx:afterSwap", function (e) {
-      if (!e.target || e.target.id !== "mesa-grid-box") return;
-      var ordenIdActual = ordenExistenteInput ? ordenExistenteInput.value : "";
-      if (!ordenIdActual) return;
-      var sigueAbierta = document.querySelector('.mesa-tile[data-orden-id="' + ordenIdActual + '"]');
-      if (!sigueAbierta) ordenExistenteInput.value = "";
-    });
+  document.querySelectorAll(".pos-producto").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var precio = parseFloat(btn.getAttribute("data-precio") || "0");
+      var categoria = btn.getAttribute("data-categoria") || "";
+      var id = btn.getAttribute("data-id");
+      var nombre = btn.getAttribute("data-nombre");
 
-    // Descuentos (precio negativo, p. ej. "DESCUENTO BS"): se escribe el monto y
-    // el justificativo en vez de sumar de a uno con los botones +/-.
-    var descuentoPopup = document.getElementById("pos-descuento-popup");
-    var descuentoMontoInput = document.getElementById("pos-descuento-monto");
-    var descuentoJustificativoInput = document.getElementById("pos-descuento-justificativo");
-    var descuentoProductoPendiente = null;
+      if (precio < 0 && descuentoPopup) {
+        descuentoProductoPendiente = { id: id, nombre: nombre, precio: precio };
+        descuentoMontoInput.value = "";
+        descuentoJustificativoInput.value = "";
+        descuentoPopup.classList.remove("oculto");
+        descuentoMontoInput.focus();
+        return;
+      }
 
-    // El resto de AJUSTES (Extra, EXTRA BS, Tips, AMORTIZACION BS...) se carga
-    // escribiendo la cantidad total una sola vez, en vez de hacer clic varias
-    // veces para ir sumando de a uno.
-    var cantidadPopup = document.getElementById("pos-cantidad-popup");
-    var cantidadLabel = document.getElementById("pos-cantidad-label");
-    var cantidadInput = document.getElementById("pos-cantidad-input");
-    var cantidadProductoPendiente = null;
-
-    document.querySelectorAll(".pos-producto").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var precio = parseFloat(btn.getAttribute("data-precio") || "0");
-        var categoria = btn.getAttribute("data-categoria") || "";
-        var id = btn.getAttribute("data-id");
-        var nombre = btn.getAttribute("data-nombre");
-
-        if (precio < 0 && descuentoPopup) {
-          descuentoProductoPendiente = { id: id, nombre: nombre, precio: precio };
-          descuentoMontoInput.value = "";
-          descuentoJustificativoInput.value = "";
-          descuentoPopup.classList.remove("oculto");
-          descuentoMontoInput.focus();
-          return;
-        }
-
-        if (categoria === "AJUSTES" && cantidadPopup) {
-          cantidadProductoPendiente = { id: id, nombre: nombre, precio: precio };
-          var existente = carrito.find(function (it) { return it.id === id && !it.nota; });
-          cantidadLabel.textContent = "Cantidad de \"" + nombre + "\"";
-          cantidadInput.value = existente ? existente.cantidad : 1;
-          cantidadPopup.classList.remove("oculto");
-          cantidadInput.focus();
-          cantidadInput.select();
-          return;
-        }
-
+      if (categoria === "AJUSTES" && cantidadPopup) {
+        cantidadProductoPendiente = { id: id, nombre: nombre, precio: precio };
         var existente = carrito.find(function (it) { return it.id === id && !it.nota; });
-        if (existente) {
-          existente.cantidad += 1;
-        } else {
-          carrito.push({
-            id: id,
-            nombre: nombre,
-            precio: precio,
-            cantidad: 1,
-          });
-        }
-        renderCarrito();
-      });
-    });
+        cantidadLabel.textContent = "Cantidad de \"" + nombre + "\"";
+        cantidadInput.value = existente ? existente.cantidad : 1;
+        cantidadPopup.classList.remove("oculto");
+        cantidadInput.focus();
+        cantidadInput.select();
+        return;
+      }
 
-    var descuentoAgregarBtn = document.getElementById("pos-descuento-agregar");
-    var descuentoCancelarBtn = document.getElementById("pos-descuento-cancelar");
-    if (descuentoAgregarBtn) {
-      descuentoAgregarBtn.addEventListener("click", function () {
-        var monto = parseFloat(descuentoMontoInput.value || "0");
-        var justificativo = descuentoJustificativoInput.value.trim();
-        if (!descuentoProductoPendiente || monto <= 0) {
-          alert("Ingresa un monto de descuento válido.");
-          return;
-        }
-        if (!justificativo) {
-          alert("Indica el justificativo del descuento.");
-          return;
-        }
-        var cantidad = monto / Math.abs(descuentoProductoPendiente.precio);
+      var existente = carrito.find(function (it) { return it.id === id && !it.nota; });
+      if (existente) {
+        existente.cantidad += 1;
+      } else {
         carrito.push({
-          id: descuentoProductoPendiente.id,
-          nombre: descuentoProductoPendiente.nombre,
-          precio: descuentoProductoPendiente.precio,
-          cantidad: cantidad,
-          nota: justificativo,
+          id: id,
+          nombre: nombre,
+          precio: precio,
+          cantidad: 1,
         });
-        descuentoPopup.classList.add("oculto");
-        descuentoProductoPendiente = null;
-        renderCarrito();
-      });
-    }
-    if (descuentoCancelarBtn) {
-      descuentoCancelarBtn.addEventListener("click", function () {
-        descuentoPopup.classList.add("oculto");
-        descuentoProductoPendiente = null;
-      });
-    }
-
-    var cantidadAgregarBtn = document.getElementById("pos-cantidad-agregar");
-    var cantidadCancelarBtn = document.getElementById("pos-cantidad-cancelar");
-    if (cantidadAgregarBtn) {
-      cantidadAgregarBtn.addEventListener("click", function () {
-        var cantidad = parseFloat(cantidadInput.value || "0");
-        if (!cantidadProductoPendiente || cantidad <= 0) {
-          alert("Ingresa una cantidad válida.");
-          return;
-        }
-        var existente = carrito.find(function (it) { return it.id === cantidadProductoPendiente.id && !it.nota; });
-        if (existente) {
-          existente.cantidad = cantidad;
-        } else {
-          carrito.push({
-            id: cantidadProductoPendiente.id,
-            nombre: cantidadProductoPendiente.nombre,
-            precio: cantidadProductoPendiente.precio,
-            cantidad: cantidad,
-          });
-        }
-        cantidadPopup.classList.add("oculto");
-        cantidadProductoPendiente = null;
-        renderCarrito();
-      });
-    }
-    if (cantidadCancelarBtn) {
-      cantidadCancelarBtn.addEventListener("click", function () {
-        cantidadPopup.classList.add("oculto");
-        cantidadProductoPendiente = null;
-      });
-    }
-    if (cantidadInput) {
-      cantidadInput.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          cantidadAgregarBtn.click();
-        }
-      });
-    }
-
-    itemsBox.addEventListener("click", function (e) {
-      var accionBtn = e.target.closest("[data-accion]");
-      if (!accionBtn) return;
-      var fila = accionBtn.closest(".pos-item-row");
-      var idx = parseInt(fila.getAttribute("data-idx"), 10);
-      var accion = accionBtn.getAttribute("data-accion");
-      if (accion === "sumar") carrito[idx].cantidad += 1;
-      else if (accion === "restar") {
-        carrito[idx].cantidad -= 1;
-        if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
-      } else if (accion === "quitar") carrito.splice(idx, 1);
+      }
       renderCarrito();
     });
+  });
 
-    if (montoPagadoInput) montoPagadoInput.addEventListener("input", recalcularCambio);
-
-    // Dividir el cobro en dos métodos de pago.
-    var btnDividirPago = document.getElementById("btn-dividir-pago");
-    var camposPagoDividido = document.getElementById("pago-dividido-fields");
-    if (btnDividirPago && camposPagoDividido) {
-      btnDividirPago.addEventListener("click", function () {
-        var activar = camposPagoDividido.classList.contains("oculto");
-        camposPagoDividido.classList.toggle("oculto", !activar);
-        btnDividirPago.textContent = activar ? "− Quitar división de pago" : "+ Dividir pago en 2 métodos";
-        if (!activar) {
-          camposPagoDividido.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
-          if (typeof actualizarCamposFactura === "function") actualizarCamposFactura();
-        }
+  var descuentoAgregarBtn = document.getElementById("pos-descuento-agregar");
+  var descuentoCancelarBtn = document.getElementById("pos-descuento-cancelar");
+  if (descuentoAgregarBtn) {
+    descuentoAgregarBtn.addEventListener("click", function () {
+      var monto = parseFloat(descuentoMontoInput.value || "0");
+      var justificativo = descuentoJustificativoInput.value.trim();
+      if (!descuentoProductoPendiente || monto <= 0) {
+        alert("Ingresa un monto de descuento válido.");
+        return;
+      }
+      if (!justificativo) {
+        alert("Indica el justificativo del descuento.");
+        return;
+      }
+      var cantidad = monto / Math.abs(descuentoProductoPendiente.precio);
+      carrito.push({
+        id: descuentoProductoPendiente.id,
+        nombre: descuentoProductoPendiente.nombre,
+        precio: descuentoProductoPendiente.precio,
+        cantidad: cantidad,
+        nota: justificativo,
       });
-    }
+      descuentoPopup.classList.add("oculto");
+      descuentoProductoPendiente = null;
+      renderCarrito();
+    });
+  }
+  if (descuentoCancelarBtn) {
+    descuentoCancelarBtn.addEventListener("click", function () {
+      descuentoPopup.classList.add("oculto");
+      descuentoProductoPendiente = null;
+    });
+  }
 
-    // Datos de facturación: se habilitan cuando algún método de pago elegido es "/FAC".
-    var TIPOS_FACTURADOS = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
-    var camposFactura = document.getElementById("pos-factura-fields");
-    if (camposFactura) {
-      function actualizarCamposFactura() {
-        var selects = form.querySelectorAll(".pos-tipo-pago");
-        var requiereFactura = Array.prototype.some.call(selects, function (s) {
-          return TIPOS_FACTURADOS.indexOf(s.value) !== -1;
-        });
-        camposFactura.classList.toggle("oculto", !requiereFactura);
-        camposFactura.querySelectorAll("input").forEach(function (input) {
-          if (requiereFactura) input.setAttribute("required", "required");
-          else input.removeAttribute("required");
+  var cantidadAgregarBtn = document.getElementById("pos-cantidad-agregar");
+  var cantidadCancelarBtn = document.getElementById("pos-cantidad-cancelar");
+  if (cantidadAgregarBtn) {
+    cantidadAgregarBtn.addEventListener("click", function () {
+      var cantidad = parseFloat(cantidadInput.value || "0");
+      if (!cantidadProductoPendiente || cantidad <= 0) {
+        alert("Ingresa una cantidad válida.");
+        return;
+      }
+      var existente = carrito.find(function (it) { return it.id === cantidadProductoPendiente.id && !it.nota; });
+      if (existente) {
+        existente.cantidad = cantidad;
+      } else {
+        carrito.push({
+          id: cantidadProductoPendiente.id,
+          nombre: cantidadProductoPendiente.nombre,
+          precio: cantidadProductoPendiente.precio,
+          cantidad: cantidad,
         });
       }
-      form.querySelectorAll(".pos-tipo-pago").forEach(function (select) {
-        select.addEventListener("change", actualizarCamposFactura);
-      });
-    }
-
-    form.addEventListener("submit", function (e) {
-      if (!carrito.length) {
+      cantidadPopup.classList.add("oculto");
+      cantidadProductoPendiente = null;
+      renderCarrito();
+    });
+  }
+  if (cantidadCancelarBtn) {
+    cantidadCancelarBtn.addEventListener("click", function () {
+      cantidadPopup.classList.add("oculto");
+      cantidadProductoPendiente = null;
+    });
+  }
+  if (cantidadInput) {
+    cantidadInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
         e.preventDefault();
-        alert("Agrega al menos un producto al pedido.");
+        cantidadAgregarBtn.click();
       }
     });
+  }
 
-    // Cambio en la fila "Cobrar" de cuentas pendientes
-    document.querySelectorAll(".monto-pagado-pendiente").forEach(function (input) {
-      var total = parseFloat(input.getAttribute("data-total") || "0");
-      var salida = input.closest("form").querySelector(".cambio-pendiente");
-      input.addEventListener("input", function () {
-        var pagado = parseFloat(input.value || "0");
-        var cambio = pagado - total;
-        salida.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
+  itemsBox.addEventListener("click", function (e) {
+    var accionBtn = e.target.closest("[data-accion]");
+    if (!accionBtn) return;
+    var fila = accionBtn.closest(".pos-item-row");
+    var idx = parseInt(fila.getAttribute("data-idx"), 10);
+    var accion = accionBtn.getAttribute("data-accion");
+    if (accion === "sumar") carrito[idx].cantidad += 1;
+    else if (accion === "restar") {
+      carrito[idx].cantidad -= 1;
+      if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+    } else if (accion === "quitar") carrito.splice(idx, 1);
+    renderCarrito();
+  });
+
+  if (montoPagadoInput) montoPagadoInput.addEventListener("input", recalcularCambio);
+
+  // Dividir el cobro en dos métodos de pago.
+  var btnDividirPago = document.getElementById("btn-dividir-pago");
+  var camposPagoDividido = document.getElementById("pago-dividido-fields");
+  if (btnDividirPago && camposPagoDividido) {
+    btnDividirPago.addEventListener("click", function () {
+      var activar = camposPagoDividido.classList.contains("oculto");
+      camposPagoDividido.classList.toggle("oculto", !activar);
+      btnDividirPago.textContent = activar ? "− Quitar división de pago" : "+ Dividir pago en 2 métodos";
+      if (!activar) {
+        camposPagoDividido.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
+        if (typeof actualizarCamposFactura === "function") actualizarCamposFactura();
+      }
+    });
+  }
+
+  // Datos de facturación: se habilitan cuando algún método de pago elegido es "/FAC".
+  var TIPOS_FACTURADOS = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
+  var camposFactura = document.getElementById("pos-factura-fields");
+  if (camposFactura) {
+    function actualizarCamposFactura() {
+      var selects = form.querySelectorAll(".pos-tipo-pago");
+      var requiereFactura = Array.prototype.some.call(selects, function (s) {
+        return TIPOS_FACTURADOS.indexOf(s.value) !== -1;
       });
+      camposFactura.classList.toggle("oculto", !requiereFactura);
+      camposFactura.querySelectorAll("input").forEach(function (input) {
+        if (requiereFactura) input.setAttribute("required", "required");
+        else input.removeAttribute("required");
+      });
+    }
+    form.querySelectorAll(".pos-tipo-pago").forEach(function (select) {
+      select.addEventListener("change", actualizarCamposFactura);
+    });
+  }
+
+  form.addEventListener("submit", function (e) {
+    if (!carrito.length) {
+      e.preventDefault();
+      alert("Agrega al menos un producto al pedido.");
+    }
+  });
+
+  // Cambio en la fila "Cobrar" de cuentas pendientes
+  document.querySelectorAll(".monto-pagado-pendiente").forEach(function (input) {
+    var total = parseFloat(input.getAttribute("data-total") || "0");
+    var salida = input.closest("form").querySelector(".cambio-pendiente");
+    input.addEventListener("input", function () {
+      var pagado = parseFloat(input.value || "0");
+      var cambio = pagado - total;
+      salida.textContent = "Bs " + (cambio > 0 ? cambio.toFixed(2) : "0.00");
+    });
+  });
+
+  // Dividir el pago en la fila "Cobrar" de cuentas pendientes.
+  var TIPOS_FACTURADOS_PENDIENTE = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
+  document.querySelectorAll(".form-cobrar-pendiente").forEach(function (formPendiente) {
+    var camposFacturaPendiente = formPendiente.querySelector(".factura-fields-pendiente");
+    function actualizarFacturaPendiente() {
+      if (!camposFacturaPendiente) return;
+      var selects = formPendiente.querySelectorAll(".pos-tipo-pago-pendiente");
+      var requiere = Array.prototype.some.call(selects, function (s) {
+        return TIPOS_FACTURADOS_PENDIENTE.indexOf(s.value) !== -1;
+      });
+      camposFacturaPendiente.classList.toggle("oculto", !requiere);
+      camposFacturaPendiente.querySelectorAll("input").forEach(function (input) {
+        if (requiere) input.setAttribute("required", "required");
+        else input.removeAttribute("required");
+      });
+    }
+    formPendiente.querySelectorAll(".pos-tipo-pago-pendiente").forEach(function (select) {
+      select.addEventListener("change", actualizarFacturaPendiente);
     });
 
-    // Dividir el pago en la fila "Cobrar" de cuentas pendientes.
-    var TIPOS_FACTURADOS_PENDIENTE = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
-    document.querySelectorAll(".form-cobrar-pendiente").forEach(function (formPendiente) {
-      var camposFacturaPendiente = formPendiente.querySelector(".factura-fields-pendiente");
-      function actualizarFacturaPendiente() {
-        if (!camposFacturaPendiente) return;
-        var selects = formPendiente.querySelectorAll(".pos-tipo-pago-pendiente");
-        var requiere = Array.prototype.some.call(selects, function (s) {
-          return TIPOS_FACTURADOS_PENDIENTE.indexOf(s.value) !== -1;
-        });
-        camposFacturaPendiente.classList.toggle("oculto", !requiere);
-        camposFacturaPendiente.querySelectorAll("input").forEach(function (input) {
-          if (requiere) input.setAttribute("required", "required");
-          else input.removeAttribute("required");
-        });
+    var btn = formPendiente.querySelector(".btn-dividir-pago-pendiente");
+    var campos = formPendiente.querySelector(".pago-dividido-pendiente");
+    if (!btn || !campos) return;
+    btn.addEventListener("click", function () {
+      var activar = campos.classList.contains("oculto");
+      campos.classList.toggle("oculto", !activar);
+      btn.textContent = activar ? "− Quitar división" : "+ Dividir pago";
+      if (!activar) {
+        campos.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
+        actualizarFacturaPendiente();
       }
-      formPendiente.querySelectorAll(".pos-tipo-pago-pendiente").forEach(function (select) {
-        select.addEventListener("change", actualizarFacturaPendiente);
-      });
-
-      var btn = formPendiente.querySelector(".btn-dividir-pago-pendiente");
-      var campos = formPendiente.querySelector(".pago-dividido-pendiente");
-      if (!btn || !campos) return;
-      btn.addEventListener("click", function () {
-        var activar = campos.classList.contains("oculto");
-        campos.classList.toggle("oculto", !activar);
-        btn.textContent = activar ? "− Quitar división" : "+ Dividir pago";
-        if (!activar) {
-          campos.querySelectorAll("select, input").forEach(function (el) { el.value = ""; });
-          actualizarFacturaPendiente();
-        }
-      });
     });
+  });
 
-    // Cambiar método de pago de una venta ya cobrada (por si el cliente pide factura después).
-    var formCambiarPago = document.querySelector(".form-cambiar-pago");
-    if (formCambiarPago) {
-      var TIPOS_FACTURADOS_CAMBIO = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
-      var selectCambio = formCambiarPago.querySelector(".pos-tipo-pago-cambio");
-      var camposCambio = formCambiarPago.querySelector(".factura-fields-cambio");
-      function actualizarFacturaCambio() {
-        var requiere = TIPOS_FACTURADOS_CAMBIO.indexOf(selectCambio.value) !== -1;
-        camposCambio.classList.toggle("oculto", !requiere);
-        camposCambio.querySelectorAll("input").forEach(function (input) {
-          if (requiere) input.setAttribute("required", "required");
-          else input.removeAttribute("required");
-        });
-      }
-      selectCambio.addEventListener("change", actualizarFacturaCambio);
+  // Cambiar método de pago de una venta ya cobrada (por si el cliente pide factura después).
+  var formCambiarPago = document.querySelector(".form-cambiar-pago");
+  if (formCambiarPago) {
+    var TIPOS_FACTURADOS_CAMBIO = ["EFEC/FAC", "QR/FAC", "POS/FAC"];
+    var selectCambio = formCambiarPago.querySelector(".pos-tipo-pago-cambio");
+    var camposCambio = formCambiarPago.querySelector(".factura-fields-cambio");
+    function actualizarFacturaCambio() {
+      var requiere = TIPOS_FACTURADOS_CAMBIO.indexOf(selectCambio.value) !== -1;
+      camposCambio.classList.toggle("oculto", !requiere);
+      camposCambio.querySelectorAll("input").forEach(function (input) {
+        if (requiere) input.setAttribute("required", "required");
+        else input.removeAttribute("required");
+      });
+    }
+    selectCambio.addEventListener("change", actualizarFacturaCambio);
+  }
+
+  // Arqueo de caja al cerrar turno: suma billetes/monedas contados y muestra la diferencia.
+  var formArqueo = document.getElementById("form-cerrar-turno");
+  if (formArqueo) {
+    var esperado = parseFloat(formArqueo.getAttribute("data-esperado") || "0");
+    var totalOutArqueo = document.getElementById("arqueo-total");
+    var diferenciaOut = document.getElementById("arqueo-diferencia");
+
+    function recalcularArqueo() {
+      var total = 0;
+      formArqueo.querySelectorAll(".arqueo-cantidad").forEach(function (input) {
+        var corte = parseFloat(input.getAttribute("data-corte") || "0");
+        var cantidad = parseInt(input.value || "0", 10);
+        var subtotal = corte * (cantidad > 0 ? cantidad : 0);
+        total += subtotal;
+        var celda = formArqueo.querySelector('.arqueo-subtotal[data-corte="' + input.getAttribute("data-corte") + '"]');
+        if (celda) celda.textContent = "Bs " + subtotal.toFixed(2);
+      });
+      totalOutArqueo.textContent = "Bs " + total.toFixed(2);
+      var diferencia = total - esperado;
+      diferenciaOut.textContent = (diferencia >= 0 ? "+Bs " : "-Bs ") + Math.abs(diferencia).toFixed(2);
+      diferenciaOut.style.color = diferencia < 0 ? "#dc2626" : (diferencia > 0 ? "#059669" : "");
     }
 
-    // Arqueo de caja al cerrar turno: suma billetes/monedas contados y muestra la diferencia.
-    var formArqueo = document.getElementById("form-cerrar-turno");
-    if (formArqueo) {
-      var esperado = parseFloat(formArqueo.getAttribute("data-esperado") || "0");
-      var totalOutArqueo = document.getElementById("arqueo-total");
-      var diferenciaOut = document.getElementById("arqueo-diferencia");
+    formArqueo.addEventListener("input", recalcularArqueo);
+    recalcularArqueo();
 
-      function recalcularArqueo() {
-        var total = 0;
-        formArqueo.querySelectorAll(".arqueo-cantidad").forEach(function (input) {
-          var corte = parseFloat(input.getAttribute("data-corte") || "0");
-          var cantidad = parseInt(input.value || "0", 10);
-          var subtotal = corte * (cantidad > 0 ? cantidad : 0);
-          total += subtotal;
-          var celda = formArqueo.querySelector('.arqueo-subtotal[data-corte="' + input.getAttribute("data-corte") + '"]');
-          if (celda) celda.textContent = "Bs " + subtotal.toFixed(2);
-        });
-        totalOutArqueo.textContent = "Bs " + total.toFixed(2);
-        var diferencia = total - esperado;
-        diferenciaOut.textContent = (diferencia >= 0 ? "+Bs " : "-Bs ") + Math.abs(diferencia).toFixed(2);
-        diferenciaOut.style.color = diferencia < 0 ? "#dc2626" : (diferencia > 0 ? "#059669" : "");
-      }
-
-      formArqueo.addEventListener("input", recalcularArqueo);
-      recalcularArqueo();
-
-      var btnCancelar = document.getElementById("btn-cancelar-cierre");
-      var disclosureCierre = document.getElementById("disclosure-cerrar-turno");
-      if (btnCancelar && disclosureCierre) {
-        btnCancelar.addEventListener("click", function () {
-          formArqueo.reset();
-          recalcularArqueo();
-          disclosureCierre.open = false;
-        });
-      }
+    var btnCancelar = document.getElementById("btn-cancelar-cierre");
+    var disclosureCierre = document.getElementById("disclosure-cerrar-turno");
+    if (btnCancelar && disclosureCierre) {
+      btnCancelar.addEventListener("click", function () {
+        formArqueo.reset();
+        recalcularArqueo();
+        disclosureCierre.open = false;
+      });
     }
-  })();
+  }
+})();
 </script>
 {% endblock %}

@@ -342,20 +342,10 @@ a { color: inherit; }
 
 .pos-form { padding: 16px; }
 .pos-layout { display: flex; flex-direction: column; gap: 20px; }
-@media (min-width: 1200px) {
-  .pos-layout {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "mesas catalogo"
-      "mesas carrito";
-    align-items: start;
-  }
-  .pos-mesas { grid-area: mesas; min-width: 0; }
-  .pos-catalogo { grid-area: catalogo; min-width: 0; }
-  .pos-carrito { grid-area: carrito; min-width: 0; max-width: 900px; }
+@media (min-width: 1024px) {
+  .pos-layout { flex-direction: row; align-items: flex-start; }
+  .pos-catalogo { flex: 1.4; min-width: 0; }
+  .pos-carrito { flex: 1; min-width: 340px; position: sticky; top: 16px; }
 }
 
 .pos-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
@@ -408,53 +398,6 @@ a { color: inherit; }
 .pos-pago-fields.oculto { display: none; }
 .pos-pago-fields > div { flex: 1; min-width: 130px; }
 .pos-item-row.pos-item-nota { grid-template-columns: 1fr auto auto; }
-
-.mesa-grid-box {
-  border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface);
-  padding: 12px;
-}
-.mesa-grid-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
-.mesa-grid-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0; }
-.mesa-grid-hint { margin: -4px 0 10px; }
-.mesa-grid { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 60px; gap: 8px; }
-.mesa-tile {
-  position: relative;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  min-width: 0; overflow-wrap: break-word;
-  border: 1px solid #2d7a39; border-radius: var(--radius-sm); background: #3fa34d;
-  padding: 4px 6px; font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; line-height: 1.15;
-  color: #ffffff; transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.mesa-tile:hover { border-color: var(--accent); }
-.mesa-tile.mesa-ocupada { background: #d9a521; border-color: #a67816; color: #3a2a05; }
-.mesa-tile.mesa-etiqueta {
-  cursor: default; background: transparent; border-color: transparent;
-  color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-}
-.mesa-tile.mesa-etiqueta:hover { border-color: transparent; }
-.modo-edicion .mesa-tile.mesa-etiqueta {
-  cursor: grab; background: var(--surface); border-color: var(--border-strong);
-  color: var(--muted); font-weight: 700; text-transform: none; letter-spacing: normal;
-}
-.mesa-tile-timer { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: #3a2a05; }
-.mesa-tile.selected .mesa-tile-timer { color: #ffffff; }
-.mesa-tile.selected { background: var(--accent); border-color: var(--accent); color: #ffffff; }
-.mesa-grid-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 10px 0 0; }
-.mesa-grid-legend-item { display: flex; align-items: center; gap: 6px; }
-.mesa-grid-legend-dot { width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
-.mesa-grid-legend-dot-libre { background: #3fa34d; }
-.mesa-grid-legend-dot-ocupada { background: #d9a521; }
-.modo-edicion .mesa-tile { cursor: grab; }
-.modo-edicion .mesa-tile:active { cursor: grabbing; }
-.mesa-slot { border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-soft); }
-.mesa-grid-nueva { margin-top: 12px; }
-.mesa-tile-eliminar {
-  position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; padding: 0;
-  border-radius: 999px; border: 1px solid var(--border-strong); background: #ffffff; color: var(--red);
-  font-size: 13px; line-height: 1; font-weight: 700; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.mesa-tile-eliminar:hover { background: var(--red); color: #ffffff; border-color: var(--red); }
 .pos-descuento-popup {
   border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-soft);
   padding: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px;
