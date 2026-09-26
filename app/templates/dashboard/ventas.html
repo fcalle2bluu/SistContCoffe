@@ -356,8 +356,13 @@
     <h3 class="subsection-title">Nuevo pedido</h3>
     <form method="post" action="/dashboard/ventas/ordenes" class="card pos-form" id="form-nuevo-pedido">
       <input type="hidden" name="turno_id" value="{{ turno.id }}" />
+      <input type="hidden" name="orden_id_existente" id="orden-existente-input" value="" />
 
       <div class="pos-layout">
+        <div class="pos-mesas">
+          {% include "partials/_mesa_grid.html" %}
+        </div>
+
         <div class="pos-catalogo">
           <input type="text" id="pos-buscar-producto" class="input" placeholder="Buscar producto…" autocomplete="off" style="margin-bottom:10px;" />
           <div class="pos-tabs" id="pos-tabs">
@@ -401,19 +406,6 @@
         </div>
 
         <div class="pos-carrito">
-          <div class="order-row">
-            <div class="flex-1">
-              <label class="field-label">Mesa / referencia</label>
-              {% include "partials/_mesa_select.html" %}
-            </div>
-          </div>
-          <div class="order-row">
-            <input type="text" name="nombre_nueva" placeholder="Nueva mesa: Ej 9, Delivery" class="input flex-1" />
-            <button type="button" class="btn btn-outline btn-sm"
-              hx-post="/dashboard/ventas/mesas" hx-include="closest form"
-              hx-target="#mesa-select" hx-swap="outerHTML">+ Agregar</button>
-          </div>
-
           <div class="pos-items" id="pos-items">
             <p class="muted-sm" id="pos-items-vacio">Toca un producto de la izquierda para agregarlo al pedido.</p>
           </div>
@@ -867,6 +859,27 @@
   var form = document.getElementById("form-nuevo-pedido");
   if (!form) return;
 
+  // Contador de "hace cuánto está pendiente" en las mesas con cuenta abierta.
+  // Se recalcula solo, sin pedir nada al servidor; sobrevive a los swaps de
+  // htmx porque busca los tiles en el DOM en cada tick en vez de guardarlos.
+  function actualizarTemporizadoresMesas() {
+    document.querySelectorAll(".mesa-tile[data-desde]").forEach(function (tile) {
+      var span = tile.querySelector("[data-mesa-timer]");
+      if (!span) return;
+      var desde = new Date(tile.getAttribute("data-desde")).getTime();
+      var ms = Math.max(0, Date.now() - desde);
+      var totalSeg = Math.floor(ms / 1000);
+      var horas = Math.floor(totalSeg / 3600);
+      var minutos = Math.floor((totalSeg % 3600) / 60);
+      var segundos = totalSeg % 60;
+      if (horas > 0) span.textContent = horas + "h " + minutos + "m " + segundos + "s";
+      else if (minutos > 0) span.textContent = minutos + "m " + segundos + "s";
+      else span.textContent = segundos + "s";
+    });
+  }
+  actualizarTemporizadoresMesas();
+  setInterval(actualizarTemporizadoresMesas, 1000);
+
   // Pestañas de categorías: puramente estático, un panel visible a la vez.
   var tabs = document.getElementById("pos-tabs");
   if (tabs) {
@@ -881,6 +894,81 @@
       });
     });
   }
+
+  // Grilla visual de mesas: delegado en el form (sobrevive al swap de htmx
+  // cuando se agrega/mueve/intercambia una mesa).
+  form.addEventListener("click", function (e) {
+    var delBtn = e.target.closest(".mesa-tile-eliminar");
+    if (delBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var nombreEliminar = delBtn.getAttribute("data-mesa-eliminar");
+      if (confirm('¿Eliminar la mesa "' + nombreEliminar + '"?')) {
+        htmx.ajax("POST", "/dashboard/ventas/mesas/eliminar", {
+          target: "#mesa-grid-box", swap: "outerHTML",
+          values: { nombre: nombreEliminar },
+        });
+      }
+      return;
+    }
+    if (document.querySelector(".mesa-grid-box.modo-edicion")) return;
+    var tile = e.target.closest(".mesa-tile");
+    if (!tile || tile.classList.contains("mesa-etiqueta")) return;
+    // Si la mesa ya tiene una cuenta pendiente, en vez de elegirla para un
+    // pedido nuevo se recarga esa cuenta aquí mismo (mismos ítems, mismo
+    // panel) para poder seguir agregando o cobrarla.
+    var ordenId = tile.getAttribute("data-orden-id");
+    if (tile.classList.contains("mesa-ocupada") && ordenId) {
+      cargarCuentaPendiente(ordenId);
+      return;
+    }
+    var input = document.getElementById("mesa-input");
+    if (!input) return;
+    input.value = tile.getAttribute("data-mesa");
+    // Si venías editando otra cuenta pendiente, elegir una mesa distinta
+    // (disponible) larga la referencia: lo que sigas armando en el carrito
+    // es un pedido nuevo para esta mesa, no una actualización de esa cuenta.
+    if (ordenExistenteInput) ordenExistenteInput.value = "";
+    document.querySelectorAll(".mesa-tile").forEach(function (t) { t.classList.remove("selected"); });
+    tile.classList.add("selected");
+  });
+
+  // Modo edición del plano: arrastrar una mesa a un casillero vacío la mueve;
+  // soltarla sobre otra mesa intercambia las posiciones de ambas.
+  form.addEventListener("dragstart", function (e) {
+    var tile = e.target.closest(".mesa-tile");
+    if (!tile || !document.querySelector(".mesa-grid-box.modo-edicion")) return;
+    e.dataTransfer.setData("text/plain", tile.getAttribute("data-mesa"));
+    e.dataTransfer.effectAllowed = "move";
+  });
+
+  form.addEventListener("dragover", function (e) {
+    if (e.target.closest(".mesa-slot") || e.target.closest(".mesa-tile")) {
+      e.preventDefault();
+    }
+  });
+
+  form.addEventListener("drop", function (e) {
+    var slot = e.target.closest(".mesa-slot");
+    var tile = e.target.closest(".mesa-tile");
+    if (!slot && !tile) return;
+    e.preventDefault();
+    var origen = e.dataTransfer.getData("text/plain");
+    if (!origen) return;
+    if (tile) {
+      var destino = tile.getAttribute("data-mesa");
+      if (destino === origen) return;
+      htmx.ajax("POST", "/dashboard/ventas/mesas/intercambiar", {
+        target: "#mesa-grid-box", swap: "outerHTML",
+        values: { origen: origen, destino: destino },
+      });
+    } else {
+      htmx.ajax("POST", "/dashboard/ventas/mesas/mover", {
+        target: "#mesa-grid-box", swap: "outerHTML",
+        values: { nombre: origen, fila: slot.getAttribute("data-fila"), columna: slot.getAttribute("data-columna") },
+      });
+    }
+  });
 
   // Buscador de productos: filtra por nombre en todas las categorías a la
   // vez (ignora tildes/mayúsculas), sin pisar el estado de las pestañas —
@@ -998,6 +1086,48 @@
       );
     }).join("");
   }
+
+  // Recargar una cuenta pendiente en el panel de pedido (clic en su mesa
+  // desde el plano): trae sus ítems y los deja como si se los hubiera
+  // agregado recién, para poder seguir sumando cosas o cobrarla de una vez.
+  var ordenExistenteInput = document.getElementById("orden-existente-input");
+
+  function cargarCuentaPendiente(ordenId) {
+    fetch("/dashboard/ventas/ordenes/" + ordenId + "/carrito.json")
+      .then(function (r) { return r.json(); })
+      .then(function (datos) {
+        if (datos.error) {
+          alert(datos.error);
+          return;
+        }
+        carrito = datos.items.map(function (it) {
+          var item = { id: it.id === null ? "" : String(it.id), nombre: it.nombre, precio: it.precio, cantidad: it.cantidad };
+          if (it.nota) item.nota = it.nota;
+          return item;
+        });
+        renderCarrito();
+        if (ordenExistenteInput) ordenExistenteInput.value = ordenId;
+        var mesaInput = document.getElementById("mesa-input");
+        if (mesaInput) mesaInput.value = datos.mesa;
+        document.querySelectorAll(".mesa-tile").forEach(function (t) { t.classList.remove("selected"); });
+        var tileMesa = document.querySelector('.mesa-tile[data-mesa="' + datos.mesa + '"]');
+        if (tileMesa) tileMesa.classList.add("selected");
+      })
+      .catch(function () { alert("No se pudo cargar la cuenta pendiente."); });
+  }
+
+  // Si la cuenta que se estaba cargando ya se cobró/canceló en otro lado
+  // (otra pestaña, otro cajero) mientras tanto, hay que soltar la referencia:
+  // si no, "Guardar cuenta pendiente" terminaría reescribiendo una cuenta que
+  // ya no existe. El plano se entera solo cada 5s por su propio auto-refresh,
+  // así que se aprovecha esa misma señal para soltarla.
+  document.body.addEventListener("htmx:afterSwap", function (e) {
+    if (!e.target || e.target.id !== "mesa-grid-box") return;
+    var ordenIdActual = ordenExistenteInput ? ordenExistenteInput.value : "";
+    if (!ordenIdActual) return;
+    var sigueAbierta = document.querySelector('.mesa-tile[data-orden-id="' + ordenIdActual + '"]');
+    if (!sigueAbierta) ordenExistenteInput.value = "";
+  });
 
   // Descuentos (precio negativo, p. ej. "DESCUENTO BS"): se escribe el monto y
   // el justificativo en vez de sumar de a uno con los botones +/-.

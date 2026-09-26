@@ -1,6 +1,0 @@
-<select name="mesa" id="mesa-select" required class="input input-w44">
-  <option value="">— Selecciona —</option>
-  {% for m in mesas %}
-  <option value="{{ m.nombre }}" {{ "selected" if m.nombre == mesa_seleccionada }}>{{ m.nombre }}</option>
-  {% endfor %}
-</select>

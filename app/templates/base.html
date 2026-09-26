@@ -10,6 +10,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css?v={{ style_version }}" />
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script>
+    // Por defecto htmx NO reemplaza el contenido cuando el servidor responde
+    // 4xx/5xx (p. ej. un formulario con un error de validación, status_code=400)
+    // — la respuesta se descarta en silencio y no se ve el mensaje de error.
+    // Como en esta app las respuestas 4xx siempre traen la misma página con
+    // el error visible (nunca una página de error genérica), forzamos a que
+    // también se reemplace el contenido en ese caso.
+    document.addEventListener("DOMContentLoaded", function () {
+      htmx.config.responseHandling = [
+        { code: "204", swap: false },
+        { code: "[23]..", swap: true },
+        { code: "[45]..", swap: true, error: true },
+      ];
+    });
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body hx-boost="true">
