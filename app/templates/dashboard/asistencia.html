@@ -1,0 +1,31 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Asistencia — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Asistencia</h2>
+    <p class="section-subtitle">
+      Mostrá este código para que el personal registre su asistencia escaneándolo con la app del celular.
+      Se renueva solo cada pocos segundos, así que una foto vieja no sirve para marcar más tarde.
+    </p>
+  </div>
+
+  <div class="card" style="text-align:center; max-width:340px;">
+    <img id="asistencia-qr" src="/dashboard/asistencia/qr.png" alt="Código QR de asistencia" width="260" height="260"
+      style="margin:0 auto; display:block; border:8px solid #fff; border-radius:8px;" />
+  </div>
+
+  <div id="asistencia-feed" hx-get="/dashboard/asistencia/feed" hx-trigger="every 8s" hx-swap="innerHTML">
+    {% include "partials/_asistencia_feed.html" %}
+  </div>
+</div>
+
+<script>
+  (function () {
+    var img = document.getElementById("asistencia-qr");
+    setInterval(function () {
+      img.src = "/dashboard/asistencia/qr.png?t=" + Date.now();
+    }, 20000);
+  })();
+</script>
+{% endblock %}
