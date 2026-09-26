@@ -11,7 +11,6 @@
       <a href="/dashboard" class="nav-link {{ 'active' if active == 'home' else '' }}">Dashboard</a>
       {% endif %}
       <a href="/dashboard/ventas" class="nav-link {{ 'active' if active == 'ventas' else '' }}">Ventas / Caja</a>
-      <a href="/dashboard/cocina" class="nav-link {{ 'active' if active == 'cocina' else '' }}">Cocina</a>
       <a href="/dashboard/insumos" class="nav-link {{ 'active' if active == 'insumos' else '' }}">Control de Insumos</a>
       <a href="/dashboard/inventario-peps" class="nav-link {{ 'active' if active == 'inventario_peps' else '' }}">Inventario PEPS</a>
       {% if session.role == 'admin' %}
@@ -22,6 +21,7 @@
       <a href="/dashboard/usuarios" class="nav-link {{ 'active' if active == 'usuarios' else '' }}">Usuarios</a>
       <a href="/dashboard/bitacora" class="nav-link {{ 'active' if active == 'bitacora' else '' }}">Bitácora</a>
       {% endif %}
+      <a href="/dashboard/cocina" class="nav-link {{ 'active' if active == 'cocina' else '' }}">Cocina</a>
     </nav>
 
     <div class="sidebar-footer">
