@@ -421,12 +421,12 @@ a { color: inherit; }
   position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-width: 0; overflow-wrap: break-word;
-  border: 1px solid #16a34a; border-radius: var(--radius-sm); background: #4ade80;
+  border: 1px solid #2d7a39; border-radius: var(--radius-sm); background: #3fa34d;
   padding: 4px 6px; font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; line-height: 1.15;
-  color: #052e16; transition: background 0.15s, border-color 0.15s, color 0.15s;
+  color: #ffffff; transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .mesa-tile:hover { border-color: var(--accent); }
-.mesa-tile.mesa-ocupada { background: #facc15; border-color: #a16207; color: #451a03; }
+.mesa-tile.mesa-ocupada { background: #d9a521; border-color: #a67816; color: #3a2a05; }
 .mesa-tile.mesa-etiqueta {
   cursor: default; background: transparent; border-color: transparent;
   color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
@@ -436,14 +436,14 @@ a { color: inherit; }
   cursor: grab; background: var(--surface); border-color: var(--border-strong);
   color: var(--muted); font-weight: 700; text-transform: none; letter-spacing: normal;
 }
-.mesa-tile-timer { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: #451a03; }
+.mesa-tile-timer { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: #3a2a05; }
 .mesa-tile.selected .mesa-tile-timer { color: #ffffff; }
 .mesa-tile.selected { background: var(--accent); border-color: var(--accent); color: #ffffff; }
 .mesa-grid-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 10px 0 0; }
 .mesa-grid-legend-item { display: flex; align-items: center; gap: 6px; }
 .mesa-grid-legend-dot { width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
-.mesa-grid-legend-dot-libre { background: #4ade80; }
-.mesa-grid-legend-dot-ocupada { background: #facc15; }
+.mesa-grid-legend-dot-libre { background: #3fa34d; }
+.mesa-grid-legend-dot-ocupada { background: #d9a521; }
 .modo-edicion .mesa-tile { cursor: grab; }
 .modo-edicion .mesa-tile:active { cursor: grabbing; }
 .mesa-slot { border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--surface-soft); }

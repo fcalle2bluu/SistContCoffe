@@ -1,8 +1,4 @@
-<div class="mesa-grid-box{{ ' modo-edicion' if modo_edicion else '' }}" id="mesa-grid-box"
-  {% if not modo_edicion %}
-  hx-get="/dashboard/ventas/mesas/grid" hx-trigger="every 5s" hx-include="#mesa-input"
-  hx-target="#mesa-grid-box" hx-swap="outerHTML"
-  {% endif %}>
+<div class="mesa-grid-box{{ ' modo-edicion' if modo_edicion else '' }}" id="mesa-grid-box">
   <div class="mesa-grid-header">
     <p class="mesa-grid-title">Selecciona una mesa</p>
     {% if modo_edicion %}
