@@ -1,5 +1,8 @@
+import io
+
+import qrcode
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app import bitacora
 from app.db import pool
@@ -46,6 +49,20 @@ async def login(request: Request, username: str = Form(...), password: str = For
     response = RedirectResponse(role_home(user["role"]), status_code=303)
     set_session_cookie(response, user)
     return response
+
+
+@router.get("/instalar", response_class=HTMLResponse)
+async def instalar_app(request: Request):
+    return templates.TemplateResponse(request, "instalar.html", {})
+
+
+@router.get("/instalar/qr.png")
+async def instalar_qr(request: Request):
+    url = str(request.base_url)
+    img = qrcode.make(url, box_size=10, border=2)
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")
 
 
 @router.post("/logout")

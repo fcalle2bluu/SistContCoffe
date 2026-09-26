@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Instalar app — Café Yanaloma{% endblock %}
+{% block body %}
+<div class="login-screen">
+  <div class="login-card" style="text-align:center;">
+    <div class="login-header">
+      <p class="eyebrow">Café Yanaloma</p>
+      <h1 class="brand-title">Instalar la app</h1>
+      <div class="rule"></div>
+    </div>
+
+    <p class="section-subtitle" style="margin-top:12px;">
+      Escaneá este código con la cámara de tu celular.
+    </p>
+    <img src="/instalar/qr.png" alt="Código QR para instalar la app" width="260" height="260"
+      style="margin:16px auto; display:block; border:8px solid #fff; border-radius:8px;" />
+
+    <ol class="stack-3" style="text-align:left; max-width:340px; margin:16px auto 0; padding-left:20px;">
+      <li>Escaneá el código de arriba (se abre en el navegador del celular).</li>
+      <li>Tocá el menú del navegador (⋮ en Chrome, o el botón de compartir en Safari).</li>
+      <li>Elegí <strong>"Instalar app"</strong> o <strong>"Agregar a pantalla de inicio"</strong>.</li>
+      <li>Va a quedar un ícono de Café Yanaloma en tu celular, como cualquier otra app.</li>
+    </ol>
+
+    <p class="footnote">© 2026 The Roasting Lab S.R.L.</p>
+  </div>
+</div>
+{% endblock %}
