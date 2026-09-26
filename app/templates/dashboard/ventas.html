@@ -1066,7 +1066,15 @@
       }
       var input = document.getElementById("mesa-input");
       if (!input) return;
-      input.value = tile.getAttribute("data-mesa");
+      var mesaNueva = tile.getAttribute("data-mesa");
+      // Cambiar a otra mesa distinta de la que tenías elegida limpia el
+      // carrito: si no, quedan ahí productos de la mesa anterior y se
+      // presta a confusión (parecería que son de la mesa nueva).
+      if (input.value && input.value !== mesaNueva && carrito.length) {
+        carrito = [];
+        renderCarrito();
+      }
+      input.value = mesaNueva;
       // Si venías editando otra cuenta pendiente, elegir una mesa distinta
       // (disponible) larga la referencia: lo que sigas armando en el carrito
       // es un pedido nuevo para esta mesa, no una actualización de esa cuenta.
