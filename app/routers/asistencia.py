@@ -78,6 +78,25 @@ async def asistencia_qr(request: Request, session: dict = Depends(require_admin)
     )
 
 
+@router.get("/api/asistencia/mias")
+async def mis_asistencias(session: dict = Depends(require_session)):
+    total = await pool().fetchval("SELECT COUNT(*) FROM asistencias WHERE usuario_id = $1", session["id"])
+    ya_hoy = await pool().fetchval(
+        "SELECT 1 FROM asistencias WHERE usuario_id = $1 "
+        "AND marcado_en >= date_trunc('day', now() AT TIME ZONE 'America/La_Paz') AT TIME ZONE 'America/La_Paz'",
+        session["id"],
+    )
+    ultimas = await pool().fetch(
+        "SELECT marcado_en FROM asistencias WHERE usuario_id = $1 ORDER BY marcado_en DESC LIMIT 10",
+        session["id"],
+    )
+    return JSONResponse({
+        "total": total,
+        "ya_hoy": bool(ya_hoy),
+        "ultimas": [r["marcado_en"].isoformat() for r in ultimas],
+    })
+
+
 @router.post("/api/asistencia/marcar")
 async def marcar_asistencia(token: str, session: dict = Depends(require_session)):
     if not _token_valido(token):
