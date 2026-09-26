@@ -15,6 +15,7 @@ from app.routers import (
     auth,
     bitacora,
     clientes,
+    cocina,
     contabilidad,
     dashboard_api,
     insumos,
@@ -61,6 +62,7 @@ async def _redirect_to(request: Request, exc: RedirectTo):
 
 app.include_router(auth.router)
 app.include_router(ventas.router)
+app.include_router(cocina.router)
 app.include_router(insumos.router)
 app.include_router(inventario_peps.router)
 app.include_router(clientes.router)

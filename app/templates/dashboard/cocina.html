@@ -1,0 +1,78 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Cocina — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div class="cocina-header">
+    <div>
+      <h2 class="section-title">Cocina</h2>
+      <p class="section-subtitle">Pedidos en vivo — pagados y cuentas pendientes. Solo lectura.</p>
+    </div>
+    <button type="button" id="btn-activar-sonido" class="btn btn-primary">🔔 Activar sonido</button>
+  </div>
+
+  <div id="cocina-feed" hx-get="/dashboard/cocina/feed" hx-trigger="every 4s" hx-swap="innerHTML">
+    {% include "partials/_cocina_feed.html" %}
+  </div>
+</div>
+
+<script>
+(function () {
+  var audioCtx = null;
+  var sonidoActivo = false;
+  var vistos = null; // null = todavía no inicializado con la primera carga
+
+  function idsActuales() {
+    var ids = [];
+    document.querySelectorAll("#cocina-feed [data-orden-id]").forEach(function (el) {
+      ids.push(el.getAttribute("data-orden-id"));
+    });
+    return ids;
+  }
+
+  function pitido() {
+    if (!sonidoActivo || !audioCtx) return;
+    [0, 260, 520].forEach(function (delay) {
+      setTimeout(function () {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.value = 0.35;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      }, delay);
+    });
+  }
+
+  function vibrar() {
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); } catch (e) {}
+  }
+
+  document.getElementById("btn-activar-sonido").addEventListener("click", function () {
+    if (!audioCtx) {
+      var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClass();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    sonidoActivo = true;
+    this.textContent = "🔔 Sonido activado";
+    this.classList.add("btn-outline");
+    pitido();
+  });
+
+  // La primera carga (la que ya viene renderizada en la página) no debe sonar
+  // — solo alertamos cuando aparece un pedido nuevo en una actualización.
+  vistos = idsActuales();
+
+  document.body.addEventListener("htmx:afterSwap", function (evt) {
+    if (evt.target.id !== "cocina-feed") return;
+    var actuales = idsActuales();
+    var hayNuevo = actuales.some(function (id) { return vistos.indexOf(id) === -1; });
+    vistos = actuales;
+    if (hayNuevo) { pitido(); vibrar(); }
+  });
+})();
+</script>
+{% endblock %}

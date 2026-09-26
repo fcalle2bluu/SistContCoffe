@@ -1,0 +1,22 @@
+{% if pedidos|length == 0 %}
+<p class="muted" style="text-align:center; padding:40px 0; font-size:1.1rem;">No hay pedidos pendientes de cocinar por ahora.</p>
+{% else %}
+<div class="cocina-grid">
+  {% for p in pedidos %}
+  <div class="cocina-card {{ 'cocina-card-pendiente' if p.orden.estado == 'abierta' else 'cocina-card-pagado' }}" data-orden-id="{{ p.orden.id }}">
+    <div class="cocina-card-head">
+      <span class="cocina-mesa">{{ p.orden.mesa }}</span>
+      <span class="cocina-badge">{{ 'PENDIENTE' if p.orden.estado == 'abierta' else 'PAGADO' }}</span>
+    </div>
+    <ul class="cocina-items">
+      {% for it in p.productos %}
+      <li>{{ "%g"|format(it.cantidad) }}× {{ it.producto_nombre }}</li>
+      {% else %}
+      <li class="muted-sm">Sin productos</li>
+      {% endfor %}
+    </ul>
+    <div class="cocina-hora">{{ (p.orden.cobrado_en if p.orden.estado != 'abierta' else p.orden.creado_en)|hora }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
