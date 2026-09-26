@@ -592,40 +592,102 @@ async def agregar_fila_mayor(
     return RedirectResponse(destino, status_code=303)
 
 
-@router.get("/resultados", response_class=HTMLResponse)
-async def resultados_page(request: Request, session: dict = Depends(require_admin), periodo: int | None = None):
+async def _composicion_periodo(fecha_inicio: date, fecha_fin: date) -> dict:
+    """Lo que el sistema tiene realmente registrado para un rango de fechas
+    (ventas cobradas, egresos de caja y compras de insumos), para comparar
+    contra lo que se cargó a mano en el estado de resultados."""
+    inicio = datetime.combine(fecha_inicio, time.min, BOLIVIA_TZ)
+    fin = datetime.combine(fecha_fin, time.min, BOLIVIA_TZ) + timedelta(days=1)
+
+    ventas_por_tipo = await pool().fetch(
+        "SELECT tipo_pago, COALESCE(SUM(total), 0) AS monto, count(*) AS cantidad FROM ordenes "
+        "WHERE estado = 'cobrada' AND cobrado_en >= $1 AND cobrado_en < $2 "
+        "GROUP BY tipo_pago ORDER BY monto DESC",
+        inicio, fin,
+    )
+    ventas_reales = sum(float(r["monto"]) for r in ventas_por_tipo)
+
+    egresos_por_categoria = await pool().fetch(
+        "SELECT COALESCE(categoria, 'Sin categoría') AS categoria, COALESCE(SUM(monto), 0) AS monto FROM movimientos_caja "
+        "WHERE tipo = 'egreso' AND creado_en >= $1 AND creado_en < $2 "
+        "GROUP BY COALESCE(categoria, 'Sin categoría') ORDER BY monto DESC",
+        inicio, fin,
+    )
+    egresos_reales = sum(float(r["monto"]) for r in egresos_por_categoria)
+    compras_reales = float(
+        await pool().fetchval(
+            "SELECT COALESCE(SUM(total), 0) FROM compras_insumos WHERE fecha >= $1 AND fecha <= $2",
+            fecha_inicio, fecha_fin,
+        )
+    )
+    costos_reales = egresos_reales + compras_reales
+
+    return {
+        "INGRESOS": {"real": ventas_reales, "detalle": ventas_por_tipo},
+        "COSTOS": {
+            "real": costos_reales,
+            "detalle": egresos_por_categoria,
+            "compras_reales": compras_reales,
+        },
+    }
+
+
+def _resumen_diferencia(manual: float, real: float) -> dict:
+    diferencia = manual - real
+    if abs(diferencia) < 1:
+        estado = "ok"
+    elif diferencia < 0:
+        estado = "falta"
+    else:
+        estado = "de_mas"
+    return {"manual": manual, "real": real, "diferencia": diferencia, "estado": estado}
+
+
+async def _contexto_resultados(error: str | None = None) -> dict:
     periodos = await pool().fetch(
         "SELECT id, nombre, fecha_inicio, fecha_fin FROM periodos_contables ORDER BY fecha_inicio DESC"
     )
-    periodo_actual = None
-    items_por_seccion: dict[str, list] = {}
-    totales = {"INGRESOS": 0, "COSTOS": 0, "IMPUESTOS": 0}
-    if periodos and (periodo or periodos[0]["id"]):
-        periodo_id = periodo or periodos[0]["id"]
-        periodo_actual = next((p for p in periodos if p["id"] == periodo_id), None)
+    vistas_periodo = []
+    for p in periodos:
         items = await pool().fetch(
             "SELECT seccion, concepto, monto FROM estado_resultados_items WHERE periodo_id = $1 ORDER BY orden",
-            periodo_id,
+            p["id"],
         )
+        items_por_seccion: dict[str, list] = {}
+        totales = {"INGRESOS": 0.0, "COSTOS": 0.0, "IMPUESTOS": 0.0}
         for it in items:
             items_por_seccion.setdefault(it["seccion"], []).append(it)
-            totales[it["seccion"]] = totales.get(it["seccion"], 0) + float(it["monto"])
+            totales[it["seccion"]] = totales.get(it["seccion"], 0.0) + float(it["monto"])
+        total_final = totales.get("INGRESOS", 0) - totales.get("COSTOS", 0) - totales.get("IMPUESTOS", 0)
 
-    total_final = totales.get("INGRESOS", 0) - totales.get("COSTOS", 0) - totales.get("IMPUESTOS", 0)
+        composicion = await _composicion_periodo(p["fecha_inicio"], p["fecha_fin"])
+        comparacion = {
+            "INGRESOS": _resumen_diferencia(totales.get("INGRESOS", 0), composicion["INGRESOS"]["real"]),
+            "COSTOS": _resumen_diferencia(totales.get("COSTOS", 0), composicion["COSTOS"]["real"]),
+        }
 
-    return templates.TemplateResponse(
-        request,
-        "dashboard/contabilidad_resultados.html",
-        {
-            "session": session,
-            "active": "contabilidad",
-            "periodos": periodos,
-            "periodo_actual": periodo_actual,
+        vistas_periodo.append({
+            "periodo": p,
             "items_por_seccion": items_por_seccion,
             "totales": totales,
             "total_final": total_final,
-        },
-    )
+            "composicion": composicion,
+            "comparacion": comparacion,
+        })
+
+    return {
+        "active": "contabilidad",
+        "periodos": periodos,
+        "vistas_periodo": vistas_periodo,
+        "error": error,
+    }
+
+
+@router.get("/resultados", response_class=HTMLResponse)
+async def resultados_page(request: Request, session: dict = Depends(require_admin)):
+    contexto = await _contexto_resultados()
+    contexto["session"] = session
+    return templates.TemplateResponse(request, "dashboard/contabilidad_resultados.html", contexto)
 
 
 @router.post("/resultados", response_class=HTMLResponse)
@@ -650,23 +712,10 @@ async def crear_periodo_resultados(
             items.append((s, c.strip(), monto_num))
 
     if not nombre or not fecha_inicio or not fecha_fin or not items:
-        periodos = await pool().fetch(
-            "SELECT id, nombre, fecha_inicio, fecha_fin FROM periodos_contables ORDER BY fecha_inicio DESC"
-        )
+        contexto = await _contexto_resultados(error="Completa nombre, fechas y al menos un concepto con monto.")
+        contexto["session"] = session
         return templates.TemplateResponse(
-            request,
-            "dashboard/contabilidad_resultados.html",
-            {
-                "session": session,
-                "active": "contabilidad",
-                "periodos": periodos,
-                "periodo_actual": None,
-                "items_por_seccion": {},
-                "totales": {},
-                "total_final": 0,
-                "error": "Completa nombre, fechas y al menos un concepto con monto.",
-            },
-            status_code=400,
+            request, "dashboard/contabilidad_resultados.html", contexto, status_code=400
         )
 
     fecha_inicio_date = date.fromisoformat(fecha_inicio)
@@ -696,7 +745,7 @@ async def crear_periodo_resultados(
                     m,
                     i,
                 )
-    return RedirectResponse(f"/dashboard/contabilidad/resultados?periodo={periodo_id}", status_code=303)
+    return RedirectResponse(f"/dashboard/contabilidad/resultados#periodo-{periodo_id}", status_code=303)
 
 
 @router.get("/facturas", response_class=HTMLResponse)

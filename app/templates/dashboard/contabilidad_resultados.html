@@ -4,50 +4,120 @@
 <div class="stack-8 report-shell">
   <div>
     <h2 class="section-title">Estado de Resultados</h2>
-    <p class="section-subtitle">Ingresos, costos e impuestos por período — solo administración.</p>
+    <p class="section-subtitle">Ingresos, costos e impuestos por mes — solo administración.</p>
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}
 
-  {% if periodos|length > 0 %}
-  <form method="get" action="/dashboard/contabilidad/resultados" class="toolbar">
-    <span class="toolbar-group">
-      <label class="field-label">Período</label>
-      <select name="periodo" class="input">
-        {% for p in periodos %}
-        <option value="{{ p.id }}" {{ "selected" if periodo_actual and periodo_actual.id == p.id }}>{{ p.nombre }}</option>
-        {% endfor %}
-      </select>
-    </span>
-    <button type="submit" class="btn btn-outline btn-sm">Ver</button>
-  </form>
+  {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+
+  {% if not vistas_periodo %}
+  <p class="muted">Todavía no hay ningún período cargado. Creá el primero abajo.</p>
   {% endif %}
 
-  {% if periodo_actual %}
-  <div class="table-wrap">
-    <table class="ledger">
-      <tbody>
-        {% for seccion, label in [("INGRESOS", "Ingresos totales"), ("COSTOS", "Costos totales"), ("IMPUESTOS", "Impuestos")] %}
-        <tr class="group-row"><td colspan="2">{{ label }}</td></tr>
-        {% for it in items_por_seccion.get(seccion, []) %}
-        <tr class="line-row">
-          <td class="indent">{{ it.concepto }}</td>
-          <td class="num">{{ it.monto|bs }}</td>
-        </tr>
-        {% endfor %}
-        <tr class="subtotal-row">
-          <td>Subtotal {{ label|lower }}</td>
-          <td class="num">{{ totales.get(seccion, 0)|bs }}</td>
-        </tr>
-        {% endfor %}
-        <tr class="total-row">
-          <td>Resultado del período</td>
-          <td class="num">{{ total_final|bs }}</td>
-        </tr>
-      </tbody>
-    </table>
+  {% for vista in vistas_periodo %}
+  <div class="card stack-4" id="periodo-{{ vista.periodo.id }}">
+    <h3 class="subsection-title">{{ vista.periodo.nombre }}
+      <span class="muted-sm">({{ vista.periodo.fecha_inicio|fecha }} — {{ vista.periodo.fecha_fin|fecha }})</span>
+    </h3>
+
+    <div class="table-wrap">
+      <table class="ledger">
+        <tbody>
+          {% for seccion, label in [("INGRESOS", "Ingresos totales"), ("COSTOS", "Costos totales"), ("IMPUESTOS", "Impuestos")] %}
+          <tr class="group-row"><td colspan="2">{{ label }}</td></tr>
+          {% for it in vista.items_por_seccion.get(seccion, []) %}
+          <tr class="line-row">
+            <td class="indent">{{ it.concepto }}</td>
+            <td class="num">{{ it.monto|bs }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="subtotal-row">
+            <td>Subtotal {{ label|lower }}</td>
+            <td class="num">{{ vista.totales.get(seccion, 0)|bs }}</td>
+          </tr>
+          {% if seccion in vista.comparacion %}
+          <tr>
+            <td colspan="2" style="padding:8px 10px;">
+              {% set comp = vista.comparacion[seccion] %}
+              {% if comp.estado == "ok" %}
+              <p class="success-box">✓ Coincide con lo registrado en el sistema (Bs {{ "%.2f"|format(comp.real) }}).</p>
+              {% elif comp.estado == "falta" %}
+              <p class="error-box">
+                ⚠ El sistema tiene registrado Bs {{ "%.2f"|format(comp.real) }} para este período, pero acá solo
+                cargaste Bs {{ "%.2f"|format(comp.manual) }}. Puede faltar agregar Bs {{ "%.2f"|format(-comp.diferencia) }}.
+              </p>
+              {% else %}
+              <p class="muted-sm">
+                El sistema solo tiene registrado Bs {{ "%.2f"|format(comp.real) }} para este período (cargaste
+                Bs {{ "%.2f"|format(comp.manual) }} a mano) — la diferencia de Bs {{ "%.2f"|format(comp.diferencia) }}
+                puede venir de conceptos que no pasan por el sistema.
+              </p>
+              {% endif %}
+
+              <details class="disclosure">
+                <summary class="link-muted">Ver de qué está compuesto según el sistema</summary>
+                <div class="disclosure-content">
+                  {% if seccion == "INGRESOS" %}
+                  {% if vista.composicion.INGRESOS.detalle %}
+                  <div class="table-wrap">
+                    <table class="data-table">
+                      <thead><tr><th>Método de pago</th><th class="text-right">Ventas</th><th class="text-right">Monto</th></tr></thead>
+                      <tbody>
+                        {% for d in vista.composicion.INGRESOS.detalle %}
+                        <tr>
+                          <td>{{ d.tipo_pago or "—" }}</td>
+                          <td class="text-right mono">{{ d.cantidad }}</td>
+                          <td class="text-right mono">Bs {{ "%.2f"|format(d.monto) }}</td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                  {% else %}
+                  <p class="muted-sm">No hay ventas cobradas en el sistema para este rango de fechas.</p>
+                  {% endif %}
+                  {% else %}
+                  {% if vista.composicion.COSTOS.detalle %}
+                  <div class="table-wrap">
+                    <table class="data-table">
+                      <thead><tr><th>Categoría de egreso</th><th class="text-right">Monto</th></tr></thead>
+                      <tbody>
+                        {% for d in vista.composicion.COSTOS.detalle %}
+                        <tr>
+                          <td>{{ d.categoria }}</td>
+                          <td class="text-right mono">Bs {{ "%.2f"|format(d.monto) }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                          <td>Compras de insumos</td>
+                          <td class="text-right mono">Bs {{ "%.2f"|format(vista.composicion.COSTOS.compras_reales) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  {% else %}
+                  <p class="muted-sm">
+                    No hay egresos de caja registrados para este rango de fechas
+                    (compras de insumos: Bs {{ "%.2f"|format(vista.composicion.COSTOS.compras_reales) }}).
+                  </p>
+                  {% endif %}
+                  {% endif %}
+                </div>
+              </details>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+          <tr class="total-row">
+            <td>Resultado del período</td>
+            <td class="num">{{ vista.total_final|bs }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  {% endif %}
+  {% endfor %}
 
   <div>
     <h3 class="subsection-title">Nuevo período</h3>
@@ -95,7 +165,6 @@
       <div class="order-actions">
         <button type="submit" class="btn btn-primary">Guardar período</button>
       </div>
-      {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
     </form>
   </div>
 </div>
