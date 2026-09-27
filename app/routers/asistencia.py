@@ -79,11 +79,64 @@ def _agrupar_historial(filas: list) -> tuple[list[dict], float]:
     return resultado, round(horas_totales, 2)
 
 
+async def _historial_general() -> tuple[list[dict], list[dict]]:
+    """Historial de asistencia de TODOS los usuarios, agrupado por persona y
+    día, con las horas trabajadas de cada jornada cerrada y el total
+    acumulado por persona (para el resumen que ve el admin)."""
+    filas = await pool().fetch(
+        "SELECT usuario_id, nombre, tipo, marcado_en FROM asistencias ORDER BY marcado_en"
+    )
+    dias: dict[tuple[int, str], dict] = {}
+    for f in filas:
+        fecha = f["marcado_en"].astimezone(_TZ_BOLIVIA).date().isoformat()
+        clave = (f["usuario_id"], fecha)
+        dia = dias.setdefault(
+            clave,
+            {"usuario_id": f["usuario_id"], "nombre": f["nombre"], "fecha": fecha, "entrada": None, "salida": None},
+        )
+        if f["tipo"] == "entrada" and dia["entrada"] is None:
+            dia["entrada"] = f["marcado_en"]
+        elif f["tipo"] == "salida":
+            dia["salida"] = f["marcado_en"]
+
+    resumen_por_persona: dict[int, dict] = {}
+    historial = []
+    for dia in dias.values():
+        segundos = None
+        if dia["entrada"] and dia["salida"]:
+            segundos = int((dia["salida"] - dia["entrada"]).total_seconds())
+        dia["segundos"] = segundos
+        dia["abierto"] = dia["entrada"] is not None and dia["salida"] is None
+        historial.append(dia)
+
+        persona = resumen_por_persona.setdefault(
+            dia["usuario_id"], {"nombre": dia["nombre"], "dias": 0, "segundos_totales": 0, "abierto_desde": None}
+        )
+        persona["dias"] += 1
+        if segundos is not None:
+            persona["segundos_totales"] += segundos
+        elif dia["abierto"]:
+            persona["abierto_desde"] = dia["entrada"]
+
+    historial.sort(key=lambda d: (d["fecha"], d["nombre"]), reverse=True)
+    personas = sorted(resumen_por_persona.values(), key=lambda p: p["nombre"])
+    return historial, personas
+
+
 @router.get("/dashboard/asistencia", response_class=HTMLResponse)
 async def asistencia_page(request: Request, session: dict = Depends(require_admin)):
     marcadas = await _asistencias_hoy()
+    historial, personas = await _historial_general()
     return templates.TemplateResponse(
-        request, "dashboard/asistencia.html", {"session": session, "active": "asistencia", "marcadas": marcadas}
+        request,
+        "dashboard/asistencia.html",
+        {
+            "session": session,
+            "active": "asistencia",
+            "marcadas": marcadas,
+            "historial": historial,
+            "personas": personas,
+        },
     )
 
 

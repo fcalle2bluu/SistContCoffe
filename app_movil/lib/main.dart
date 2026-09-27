@@ -323,6 +323,23 @@ String _claveFecha(DateTime d) {
   return '${d.year}-${dos(d.month)}-${dos(d.day)}';
 }
 
+String _formatearDuracion(int segundosTotales) {
+  final h = segundosTotales ~/ 3600;
+  final m = (segundosTotales % 3600) ~/ 60;
+  final s = segundosTotales % 60;
+  String dos(int n) => n.toString().padLeft(2, '0');
+  return '${h}h ${dos(m)}m ${dos(s)}s';
+}
+
+/// Segundos trabajados en ese día: null si el día sigue abierto (todavía sin
+/// salida) o si no hay entrada registrada.
+int? _segundosDelDia(Map<String, dynamic> dia) {
+  final entradaIso = dia['entrada'] as String?;
+  final salidaIso = dia['salida'] as String?;
+  if (entradaIso == null || salidaIso == null) return null;
+  return DateTime.parse(salidaIso).difference(DateTime.parse(entradaIso)).inSeconds;
+}
+
 const _nombresMes = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
@@ -344,7 +361,6 @@ class _AsistenciaTab extends StatefulWidget {
 
 class _AsistenciaTabState extends State<_AsistenciaTab> {
   List<Map<String, dynamic>> _dias = [];
-  double _horasTotales = 0;
   bool _cargando = true;
   bool _huboError = false;
 
@@ -367,7 +383,6 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
     }
     setState(() {
       _dias = (resumen['dias'] as List? ?? []).cast<Map<String, dynamic>>();
-      _horasTotales = (resumen['horas_totales'] as num? ?? 0).toDouble();
       _huboError = false;
       _cargando = false;
     });
@@ -395,13 +410,6 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
       ),
     );
     _cargarHistorial();
-  }
-
-  String _formatearHoras(double horas) {
-    final totalMin = (horas * 60).round();
-    final h = totalMin ~/ 60;
-    final m = totalMin % 60;
-    return '${h}h ${m.toString().padLeft(2, '0')}m';
   }
 
   String _formatearHora(String? iso) {
@@ -436,7 +444,8 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
       texto = 'Entrada registrada — falta tu salida.';
       color = Colors.orangeAccent;
     } else {
-      texto = 'Jornada de hoy completa (${dia['horas']} h).';
+      final segundos = _segundosDelDia(dia);
+      texto = 'Jornada de hoy completa (${segundos != null ? _formatearDuracion(segundos) : "—"}).';
       color = Colors.greenAccent;
     }
     return Text(texto, textAlign: TextAlign.center, style: TextStyle(color: color, fontSize: 13));
@@ -482,14 +491,7 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: _colorAcento.withValues(alpha: 0.35)),
               ),
-              child: Column(
-                children: [
-                  Text(_formatearHoras(_horasTotales),
-                      style: const TextStyle(color: _colorAcento, fontSize: 40, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Text('Horas trabajadas en total', style: TextStyle(color: Colors.white60, fontSize: 13)),
-                ],
-              ),
+              child: _ContadorHoras(dias: _dias),
             ),
             const SizedBox(height: 24),
             Container(
@@ -527,7 +529,10 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
                           Text(_formatearHora(dia['salida'] as String?), style: const TextStyle(color: Colors.white70, fontSize: 13)),
                         ]),
                         Text(
-                          dia['horas'] != null ? '${dia['horas']} h' : '—',
+                          () {
+                            final segundos = _segundosDelDia(dia);
+                            return segundos != null ? _formatearDuracion(segundos) : '—';
+                          }(),
                           style: const TextStyle(color: _colorAcento, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ],
@@ -540,6 +545,84 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Contador grande de horas trabajadas, con segundos. Si la jornada de hoy
+/// sigue abierta (hay entrada pero no salida), tiquea en vivo cada segundo.
+class _ContadorHoras extends StatefulWidget {
+  final List<Map<String, dynamic>> dias;
+  const _ContadorHoras({required this.dias});
+
+  @override
+  State<_ContadorHoras> createState() => _ContadorHorasState();
+}
+
+class _ContadorHorasState extends State<_ContadorHoras> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _reprogramarTicker();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ContadorHoras oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _reprogramarTicker();
+  }
+
+  void _reprogramarTicker() {
+    _ticker?.cancel();
+    _ticker = _hayJornadaAbiertaHoy()
+        ? Timer.periodic(const Duration(seconds: 1), (_) {
+            if (mounted) setState(() {});
+          })
+        : null;
+  }
+
+  bool _hayJornadaAbiertaHoy() {
+    final hoyIso = _claveFecha(DateTime.now());
+    for (final d in widget.dias) {
+      if (d['fecha'] == hoyIso && d['entrada'] != null && d['salida'] == null) return true;
+    }
+    return false;
+  }
+
+  int _segundosTotales() {
+    var total = 0;
+    final hoyIso = _claveFecha(DateTime.now());
+    for (final d in widget.dias) {
+      final entradaIso = d['entrada'] as String?;
+      if (entradaIso == null) continue;
+      final salidaIso = d['salida'] as String?;
+      final entrada = DateTime.parse(entradaIso);
+      if (salidaIso != null) {
+        total += DateTime.parse(salidaIso).difference(entrada).inSeconds;
+      } else if (d['fecha'] == hoyIso) {
+        total += DateTime.now().difference(entrada).inSeconds;
+      }
+    }
+    return total;
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(_formatearDuracion(_segundosTotales()),
+            style: const TextStyle(color: _colorAcento, fontSize: 34, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        const Text('Horas trabajadas en total', style: TextStyle(color: Colors.white60, fontSize: 13)),
+      ],
     );
   }
 }

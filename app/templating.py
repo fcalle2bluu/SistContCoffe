@@ -60,6 +60,16 @@ def formato_mes_anio(iso: str) -> str:
     return f"{MESES_ES[dt.month - 1]} {dt.year}"
 
 
+def formato_duracion(segundos) -> str:
+    try:
+        s = int(segundos)
+    except (TypeError, ValueError):
+        return "—"
+    h, resto = divmod(s, 3600)
+    m, sec = divmod(resto, 60)
+    return f"{h}h {m:02d}m {sec:02d}s"
+
+
 def formato_bs(value) -> str:
     try:
         num = float(value)
@@ -75,6 +85,7 @@ templates.env.filters["hora"] = formato_hora
 templates.env.filters["fechahora"] = formato_fecha_hora
 templates.env.filters["fecha"] = formato_fecha
 templates.env.filters["bs"] = formato_bs
+templates.env.filters["duracion"] = formato_duracion
 templates.env.filters["ticket_fecha"] = formato_ticket_fecha
 templates.env.filters["datetime_local"] = formato_datetime_local
 templates.env.filters["mes_anio"] = formato_mes_anio

@@ -18,6 +18,64 @@
   <div id="asistencia-feed" hx-get="/dashboard/asistencia/feed" hx-trigger="every 8s" hx-swap="innerHTML">
     {% include "partials/_asistencia_feed.html" %}
   </div>
+
+  {% if personas|length > 0 %}
+  <div>
+    <h3 class="section-subtitle">Resumen por persona</h3>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Nombre</th><th class="text-right">Días registrados</th><th class="text-right">Horas totales</th></tr></thead>
+        <tbody>
+          {% for p in personas %}
+          <tr>
+            <td class="strong">{{ p.nombre }}</td>
+            <td class="text-right mono">{{ p.dias }}</td>
+            <td class="text-right mono">
+              {% if p.abierto_desde %}
+              <span data-vivo data-base="{{ p.segundos_totales }}" data-desde="{{ p.abierto_desde.isoformat() }}">calculando…</span>
+              {% else %}
+              {{ p.segundos_totales|duracion }}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div>
+    <h3 class="section-subtitle">Historial de asistencia</h3>
+    {% if historial|length == 0 %}
+    <p class="muted">Todavía no hay historial de asistencia.</p>
+    {% else %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Fecha</th><th>Nombre</th><th>Entrada</th><th>Salida</th><th class="text-right">Horas</th></tr></thead>
+        <tbody>
+          {% for d in historial %}
+          <tr>
+            <td class="small">{{ d.fecha|fecha }}</td>
+            <td>{{ d.nombre }}</td>
+            <td class="mono">{{ (d.entrada|hora) if d.entrada else "—" }}</td>
+            <td class="mono">{{ (d.salida|hora) if d.salida else "—" }}</td>
+            <td class="text-right mono">
+              {% if d.abierto %}
+              <span data-vivo data-base="0" data-desde="{{ d.entrada.isoformat() }}">calculando…</span>
+              {% elif d.segundos is not none %}
+              {{ d.segundos|duracion }}
+              {% else %}
+              —
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
 </div>
 
 <script>
@@ -26,6 +84,26 @@
     setInterval(function () {
       img.src = "/dashboard/asistencia/qr.png?t=" + Date.now();
     }, 20000);
+  })();
+
+  (function () {
+    function dos(n) { return String(n).padStart(2, "0"); }
+    function formatearDuracion(segundos) {
+      var h = Math.floor(segundos / 3600);
+      var m = Math.floor((segundos % 3600) / 60);
+      var s = Math.floor(segundos % 60);
+      return h + "h " + dos(m) + "m " + dos(s) + "s";
+    }
+    function actualizarVivos() {
+      document.querySelectorAll("[data-vivo]").forEach(function (el) {
+        var base = parseInt(el.getAttribute("data-base"), 10) || 0;
+        var desde = new Date(el.getAttribute("data-desde")).getTime();
+        var transcurrido = Math.floor((Date.now() - desde) / 1000);
+        el.textContent = formatearDuracion(base + Math.max(0, transcurrido));
+      });
+    }
+    actualizarVivos();
+    setInterval(actualizarVivos, 1000);
   })();
 </script>
 {% endblock %}
