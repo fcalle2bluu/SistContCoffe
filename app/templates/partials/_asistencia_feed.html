@@ -3,13 +3,20 @@
 {% else %}
 <div class="table-wrap">
   <table class="data-table">
-    <thead><tr><th>Nombre</th><th>Tipo</th><th>Hora</th></tr></thead>
+    <thead><tr><th>Nombre</th><th>Tipo</th><th>Hora</th><th></th></tr></thead>
     <tbody>
       {% for m in marcadas %}
       <tr>
         <td class="strong">{{ m.nombre }}</td>
         <td>{{ 'Entrada' if m.tipo == 'entrada' else 'Salida' }}</td>
         <td class="mono">{{ m.marcado_en|hora }}</td>
+        <td class="text-right">
+          <form method="post" action="/dashboard/asistencia/{{ m.id }}/eliminar"
+            onsubmit="return confirm('¿Eliminar esta marca de asistencia de {{ m.nombre }}? Esta acción no se puede deshacer.');"
+            style="display:inline;">
+            <button type="submit" class="link-danger">Eliminar</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

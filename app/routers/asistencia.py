@@ -8,8 +8,9 @@ from zoneinfo import ZoneInfo
 
 import qrcode
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
+from app import bitacora
 from app.db import pool
 from app.deps import require_admin, require_session
 from app.templating import templates
@@ -47,7 +48,7 @@ def _token_valido(token: str) -> bool:
 
 async def _asistencias_hoy() -> list:
     return await pool().fetch(
-        "SELECT nombre, tipo, marcado_en FROM asistencias "
+        "SELECT id, nombre, tipo, marcado_en FROM asistencias "
         "WHERE marcado_en >= date_trunc('day', now() AT TIME ZONE 'America/La_Paz') AT TIME ZONE 'America/La_Paz' "
         "ORDER BY marcado_en DESC"
     )
@@ -84,7 +85,7 @@ async def _historial_general() -> tuple[list[dict], list[dict]]:
     día, con las horas trabajadas de cada jornada cerrada y el total
     acumulado por persona (para el resumen que ve el admin)."""
     filas = await pool().fetch(
-        "SELECT usuario_id, nombre, tipo, marcado_en FROM asistencias ORDER BY marcado_en"
+        "SELECT id, usuario_id, nombre, tipo, marcado_en FROM asistencias ORDER BY marcado_en"
     )
     dias: dict[tuple[int, str], dict] = {}
     for f in filas:
@@ -92,12 +93,22 @@ async def _historial_general() -> tuple[list[dict], list[dict]]:
         clave = (f["usuario_id"], fecha)
         dia = dias.setdefault(
             clave,
-            {"usuario_id": f["usuario_id"], "nombre": f["nombre"], "fecha": fecha, "entrada": None, "salida": None},
+            {
+                "usuario_id": f["usuario_id"],
+                "nombre": f["nombre"],
+                "fecha": fecha,
+                "entrada": None,
+                "entrada_id": None,
+                "salida": None,
+                "salida_id": None,
+            },
         )
         if f["tipo"] == "entrada" and dia["entrada"] is None:
             dia["entrada"] = f["marcado_en"]
+            dia["entrada_id"] = f["id"]
         elif f["tipo"] == "salida":
             dia["salida"] = f["marcado_en"]
+            dia["salida_id"] = f["id"]
 
     resumen_por_persona: dict[int, dict] = {}
     historial = []
@@ -144,6 +155,21 @@ async def asistencia_page(request: Request, session: dict = Depends(require_admi
 async def asistencia_feed(request: Request, session: dict = Depends(require_admin)):
     marcadas = await _asistencias_hoy()
     return templates.TemplateResponse(request, "partials/_asistencia_feed.html", {"marcadas": marcadas})
+
+
+@router.post("/dashboard/asistencia/{asistencia_id}/eliminar")
+async def eliminar_asistencia(asistencia_id: int, session: dict = Depends(require_admin)):
+    fila = await pool().fetchrow(
+        "SELECT nombre, tipo, marcado_en FROM asistencias WHERE id = $1", asistencia_id
+    )
+    if fila:
+        await pool().execute("DELETE FROM asistencias WHERE id = $1", asistencia_id)
+        await bitacora.registrar(
+            session,
+            "Eliminó marca de asistencia",
+            f"{fila['nombre']} — {fila['tipo']} del {fila['marcado_en'].astimezone(_TZ_BOLIVIA).strftime('%d/%m/%Y %H:%M')}",
+        )
+    return RedirectResponse("/dashboard/asistencia", status_code=303)
 
 
 @router.get("/dashboard/asistencia/qr.png")

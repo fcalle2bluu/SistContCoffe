@@ -52,7 +52,7 @@
     {% else %}
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Fecha</th><th>Nombre</th><th>Entrada</th><th>Salida</th><th class="text-right">Horas</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Nombre</th><th>Entrada</th><th>Salida</th><th class="text-right">Horas</th><th></th></tr></thead>
         <tbody>
           {% for d in historial %}
           <tr>
@@ -67,6 +67,22 @@
               {{ d.segundos|duracion }}
               {% else %}
               —
+              {% endif %}
+            </td>
+            <td class="text-right">
+              {% if d.entrada_id %}
+              <form method="post" action="/dashboard/asistencia/{{ d.entrada_id }}/eliminar"
+                onsubmit="return confirm('¿Eliminar la entrada de {{ d.nombre }} del {{ d.fecha|fecha }}? Esta acción no se puede deshacer.');"
+                style="display:inline;">
+                <button type="submit" class="link-danger">Entrada</button>
+              </form>
+              {% endif %}
+              {% if d.salida_id %}
+              <form method="post" action="/dashboard/asistencia/{{ d.salida_id }}/eliminar"
+                onsubmit="return confirm('¿Eliminar la salida de {{ d.nombre }} del {{ d.fecha|fecha }}? Esta acción no se puede deshacer.');"
+                style="display:inline; margin-left:8px;">
+                <button type="submit" class="link-danger">Salida</button>
+              </form>
               {% endif %}
             </td>
           </tr>
