@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -62,7 +65,7 @@ class _ArranqueState extends State<_Arranque> {
     if (_sesion == null) {
       return LoginScreen(onLogin: (s) => setState(() => _sesion = s));
     }
-    return ScanScreen(sesion: _sesion!, onLogout: () => setState(() => _sesion = null));
+    return _HomeShell(sesion: _sesion!, onLogout: () => setState(() => _sesion = null));
   }
 }
 
@@ -151,24 +154,24 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class ScanScreen extends StatefulWidget {
+/// Contenedor de las dos pestañas de la app (Asistencia y Cocina), con la
+/// barra superior compartida que muestra la versión instalada.
+class _HomeShell extends StatefulWidget {
   final Sesion sesion;
   final VoidCallback onLogout;
-  const ScanScreen({super.key, required this.sesion, required this.onLogout});
+  const _HomeShell({required this.sesion, required this.onLogout});
 
   @override
-  State<ScanScreen> createState() => _ScanScreenState();
+  State<_HomeShell> createState() => _HomeShellState();
 }
 
-class _ScanScreenState extends State<ScanScreen> {
-  Map<String, dynamic>? _resumen;
-  bool _cargandoResumen = true;
+class _HomeShellState extends State<_HomeShell> {
+  int _tab = 0;
   String? _version;
 
   @override
   void initState() {
     super.initState();
-    _cargarResumen();
     _revisarActualizaciones();
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _version = 'v${info.version}');
@@ -237,6 +240,70 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: _colorFondo,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: const SizedBox.shrink(),
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: GestureDetector(
+                onTap: () => _revisarActualizaciones(mostrarSiNoHay: true),
+                child: Text(_version ?? '', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: IndexedStack(
+          index: _tab,
+          children: [
+            _AsistenciaTab(sesion: widget.sesion, onLogout: widget.onLogout),
+            _CocinaTab(sesion: widget.sesion),
+          ],
+        ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFF141414),
+        indicatorColor: _colorAcento.withValues(alpha: 0.25),
+        selectedIndex: _tab,
+        onDestinationSelected: (i) => setState(() => _tab = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Asistencia'),
+          NavigationDestination(icon: Icon(Icons.restaurant), label: 'Cocina'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pestaña de asistencia: escanear el QR y ver el resumen propio (igual que
+/// la única pantalla que tenía la app antes de agregar Cocina).
+class _AsistenciaTab extends StatefulWidget {
+  final Sesion sesion;
+  final VoidCallback onLogout;
+  const _AsistenciaTab({required this.sesion, required this.onLogout});
+
+  @override
+  State<_AsistenciaTab> createState() => _AsistenciaTabState();
+}
+
+class _AsistenciaTabState extends State<_AsistenciaTab> {
+  Map<String, dynamic>? _resumen;
+  bool _cargandoResumen = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarResumen();
+  }
+
   Future<void> _cargarResumen() async {
     setState(() => _cargandoResumen = true);
     final resumen = await ApiClient.misAsistencias(widget.sesion);
@@ -281,103 +348,242 @@ class _ScanScreenState extends State<ScanScreen> {
     final yaHoy = _resumen?['ya_hoy'] as bool? ?? false;
     final ultimas = (_resumen?['ultimas'] as List?)?.cast<String>() ?? const <String>[];
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: _colorFondo,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: const SizedBox.shrink(),
-        actions: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: GestureDetector(
-                onTap: () => _revisarActualizaciones(mostrarSiNoHay: true),
-                child: Text(_version ?? '', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+    return RefreshIndicator(
+      onRefresh: _cargarResumen,
+      color: _colorAcento,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 8),
+          const Icon(Icons.qr_code_scanner, color: _colorAcento, size: 64),
+          const SizedBox(height: 16),
+          Text('Hola, ${widget.sesion.nombre}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text(
+            'Escaneá el código QR que muestra el encargado para registrar tu asistencia de hoy.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white60),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _abrirEscaner,
+              style: FilledButton.styleFrom(backgroundColor: _colorAcento, padding: const EdgeInsets.all(18)),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Escanear QR de asistencia'),
+            ),
+          ),
+          const SizedBox(height: 28),
+          if (_cargandoResumen)
+            const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: _colorAcento)))
+          else if (_resumen == null)
+            const Text('No se pudo cargar tu historial de asistencia.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white38))
+          else ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Column(children: [
+                    Text('$total', style: const TextStyle(color: _colorAcento, fontSize: 28, fontWeight: FontWeight.bold)),
+                    const Text('Asistencias totales', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                  ]),
+                  Column(children: [
+                    Icon(yaHoy ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: yaHoy ? Colors.greenAccent : Colors.white38, size: 28),
+                    Text(yaHoy ? 'Ya marcaste hoy' : 'Todavía no marcaste hoy',
+                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                  ]),
+                ],
               ),
             ),
+            if (ultimas.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Align(alignment: Alignment.centerLeft, child: Text('Últimas veces', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold))),
+              const SizedBox(height: 8),
+              ...ultimas.map((iso) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(children: [
+                      const Icon(Icons.history, color: Colors.white38, size: 16),
+                      const SizedBox(width: 8),
+                      Text(_formatearFechaHora(iso), style: const TextStyle(color: Colors.white70)),
+                    ]),
+                  )),
+            ],
+          ],
+          const SizedBox(height: 24),
+          Center(
+            child: TextButton(onPressed: _cerrarSesion, child: const Text('Cerrar sesión', style: TextStyle(color: Colors.white38))),
           ),
         ],
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _cargarResumen,
-          color: _colorAcento,
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              const SizedBox(height: 8),
-              const Icon(Icons.qr_code_scanner, color: _colorAcento, size: 64),
-              const SizedBox(height: 16),
-              Text('Hola, ${widget.sesion.nombre}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const Text(
-                'Escaneá el código QR que muestra el encargado para registrar tu asistencia de hoy.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white60),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _abrirEscaner,
-                  style: FilledButton.styleFrom(backgroundColor: _colorAcento, padding: const EdgeInsets.all(18)),
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Escanear QR de asistencia'),
+    );
+  }
+}
+
+/// Pestaña de Cocina: la misma vista en vivo que la del sistema web (pedidos
+/// pagados del turno actual + cuentas pendientes), solo lectura, con sonido
+/// y vibración cuando aparece un pedido nuevo. Se actualiza sola cada 4s.
+class _CocinaTab extends StatefulWidget {
+  final Sesion sesion;
+  const _CocinaTab({required this.sesion});
+
+  @override
+  State<_CocinaTab> createState() => _CocinaTabState();
+}
+
+class _CocinaTabState extends State<_CocinaTab> {
+  Timer? _temporizador;
+  List<Map<String, dynamic>> _pedidos = [];
+  Set<int> _vistos = {};
+  bool _primeraCarga = true;
+  bool _cargando = true;
+  bool _huboError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+    _temporizador = Timer.periodic(const Duration(seconds: 4), (_) => _cargar());
+  }
+
+  @override
+  void dispose() {
+    _temporizador?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _cargar() async {
+    final pedidos = await ApiClient.pedidosCocina(widget.sesion);
+    if (!mounted) return;
+    if (pedidos == null) {
+      setState(() {
+        _huboError = true;
+        _cargando = false;
+      });
+      return;
+    }
+    final idsActuales = pedidos.map((p) => p['id'] as int).toSet();
+    if (!_primeraCarga && idsActuales.difference(_vistos).isNotEmpty) {
+      _alertar();
+    }
+    _primeraCarga = false;
+    _vistos = idsActuales;
+    setState(() {
+      _pedidos = pedidos;
+      _cargando = false;
+      _huboError = false;
+    });
+  }
+
+  void _alertar() {
+    for (final delay in [0, 260, 520]) {
+      Future.delayed(Duration(milliseconds: delay), () => SystemSound.play(SystemSoundType.alert));
+    }
+    for (final delay in [0, 300, 600]) {
+      Future.delayed(Duration(milliseconds: delay), () => HapticFeedback.vibrate());
+    }
+  }
+
+  String _formatearHora(String? iso) {
+    if (iso == null) return '';
+    final dt = DateTime.parse(iso).toLocal();
+    String dos(int n) => n.toString().padLeft(2, '0');
+    return '${dos(dt.hour)}:${dos(dt.minute)}';
+  }
+
+  String _formatearCantidad(dynamic cantidad) {
+    if (cantidad is num) {
+      return cantidad == cantidad.roundToDouble() ? cantidad.toInt().toString() : cantidad.toString();
+    }
+    return '$cantidad';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_cargando) {
+      return const Center(child: CircularProgressIndicator(color: _colorAcento));
+    }
+    if (_huboError && _pedidos.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('No se pudo conectar con el sistema.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white38)),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _cargar,
+      color: _colorAcento,
+      child: _pedidos.isEmpty
+          ? ListView(
+              children: const [
+                Padding(
+                  padding: EdgeInsets.only(top: 120),
+                  child: Text(
+                    'No hay pedidos pendientes de cocinar por ahora.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white38, fontSize: 16),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 28),
-              if (_cargandoResumen)
-                const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: _colorAcento)))
-              else if (_resumen == null)
-                const Text('No se pudo cargar tu historial de asistencia.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white38))
-              else ...[
-                Container(
+              ],
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _pedidos.length,
+              itemBuilder: (_, i) {
+                final p = _pedidos[i];
+                final pendiente = p['pendiente'] as bool;
+                final productos = (p['productos'] as List).cast<Map<String, dynamic>>();
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: pendiente ? Colors.orange.withValues(alpha: 0.12) : Colors.green.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: pendiente ? Colors.orange.withValues(alpha: 0.4) : Colors.green.withValues(alpha: 0.35)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(children: [
-                        Text('$total', style: const TextStyle(color: _colorAcento, fontSize: 28, fontWeight: FontWeight.bold)),
-                        const Text('Asistencias totales', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                      ]),
-                      Column(children: [
-                        Icon(yaHoy ? Icons.check_circle : Icons.radio_button_unchecked,
-                            color: yaHoy ? Colors.greenAccent : Colors.white38, size: 28),
-                        Text(yaHoy ? 'Ya marcaste hoy' : 'Todavía no marcaste hoy',
-                            style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                      ]),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${p['mesa']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: pendiente ? Colors.orange.shade700 : Colors.green.shade700,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(pendiente ? 'PENDIENTE' : 'PAGADO',
+                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      if (productos.isEmpty)
+                        const Text('Sin productos', style: TextStyle(color: Colors.white38, fontSize: 13))
+                      else
+                        ...productos.map((it) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text('${_formatearCantidad(it['cantidad'])}× ${it['nombre']}',
+                                  style: const TextStyle(color: Colors.white70)),
+                            )),
+                      const SizedBox(height: 10),
+                      Text(_formatearHora(p['hora'] as String?), style: const TextStyle(color: Colors.white38, fontSize: 12)),
                     ],
                   ),
-                ),
-                if (ultimas.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  const Align(alignment: Alignment.centerLeft, child: Text('Últimas veces', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold))),
-                  const SizedBox(height: 8),
-                  ...ultimas.map((iso) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(children: [
-                          const Icon(Icons.history, color: Colors.white38, size: 16),
-                          const SizedBox(width: 8),
-                          Text(_formatearFechaHora(iso), style: const TextStyle(color: Colors.white70)),
-                        ]),
-                      )),
-                ],
-              ],
-              const SizedBox(height: 24),
-              Center(
-                child: TextButton(onPressed: _cerrarSesion, child: const Text('Cerrar sesión', style: TextStyle(color: Colors.white38))),
-              ),
-            ],
-          ),
-        ),
-      ),
+                );
+              },
+            ),
     );
   }
 }

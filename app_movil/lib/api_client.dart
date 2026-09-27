@@ -106,6 +106,23 @@ class ApiClient {
     }
   }
 
+  /// Trae los pedidos en vivo para la pantalla de Cocina (pagados del turno
+  /// actual + cuentas pendientes), igual que la pestaña Cocina del sistema web.
+  static Future<List<Map<String, dynamic>>?> pedidosCocina(Sesion sesion) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$baseUrl/api/cocina/pedidos'),
+        headers: {'Cookie': sesion.cookie},
+      );
+      if (resp.statusCode != 200) return null;
+      final datos = jsonDecode(resp.body);
+      if (datos is! List) return null;
+      return datos.cast<Map<String, dynamic>>();
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Escanea el QR de asistencia: pega el token al endpoint del backend
   /// usando la cookie de la sesión guardada.
   static Future<Map<String, dynamic>> marcarAsistencia(Sesion sesion, String token) async {

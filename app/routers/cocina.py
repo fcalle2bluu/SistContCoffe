@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.db import pool
 from app.deps import require_session
 from app.templating import templates
 
 router = APIRouter(prefix="/dashboard/cocina")
+router_api = APIRouter()
 
 
 def _es_htmx(request: Request) -> bool:
@@ -50,3 +51,30 @@ async def cocina_page(request: Request, session: dict = Depends(require_session)
 async def cocina_feed(request: Request, session: dict = Depends(require_session)):
     pedidos = await _pedidos_cocina()
     return templates.TemplateResponse(request, "partials/_cocina_feed.html", {"pedidos": pedidos})
+
+
+def _serializar_pedidos(pedidos: list) -> list:
+    resultado = []
+    for p in pedidos:
+        o = p["orden"]
+        pendiente = o["estado"] == "abierta"
+        hora = o["creado_en"] if pendiente else o["cobrado_en"]
+        resultado.append(
+            {
+                "id": o["id"],
+                "mesa": o["mesa"],
+                "pendiente": pendiente,
+                "hora": hora.isoformat() if hora else None,
+                "productos": [
+                    {"nombre": it["producto_nombre"], "cantidad": float(it["cantidad"])}
+                    for it in p["productos"]
+                ],
+            }
+        )
+    return resultado
+
+
+@router_api.get("/api/cocina/pedidos")
+async def cocina_pedidos_api(session: dict = Depends(require_session)):
+    pedidos = await _pedidos_cocina()
+    return JSONResponse(_serializar_pedidos(pedidos))
