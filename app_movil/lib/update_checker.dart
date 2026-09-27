@@ -8,9 +8,12 @@ import 'package:path_provider/path_provider.dart';
 
 /// Cada build que sube el workflow de GitHub Actions publica un release con
 /// tag `v<numero>` (el numero de corrida de esa Action, siempre creciente) y
-/// el APK adjunto. Comparamos ese numero contra el buildNumber instalado.
+/// el APK adjunto. El repo tiene otros releases de otras cosas (con tags
+/// tipo "v2026.09.19-xxxxx"), así que no alcanza con pedir "latest" — hay
+/// que buscar el más reciente cuyo tag sea justo `v<numero>`.
 const String _repoReleasesUrl =
-    'https://api.github.com/repos/fcalle2bluu/SistContCoffe/releases/latest';
+    'https://api.github.com/repos/fcalle2bluu/SistContCoffe/releases';
+final RegExp _tagAppMovil = RegExp(r'^v(\d+)$');
 
 class InfoActualizacion {
   final int build;
@@ -27,10 +30,19 @@ Future<InfoActualizacion?> buscarUltimaVersion() async {
         .timeout(const Duration(seconds: 10));
     if (resp.statusCode != 200) return null;
 
-    final data = jsonDecode(resp.body) as Map<String, dynamic>;
-    final tag = data['tag_name'] as String? ?? '';
-    final build = int.tryParse(tag.replaceFirst('v', ''));
-    if (build == null) return null;
+    final lista = jsonDecode(resp.body) as List;
+    Map<String, dynamic>? data;
+    for (final r in lista) {
+      final mapa = r as Map<String, dynamic>;
+      if (_tagAppMovil.hasMatch(mapa['tag_name'] as String? ?? '')) {
+        data = mapa;
+        break;
+      }
+    }
+    if (data == null) return null;
+
+    final tag = data['tag_name'] as String;
+    final build = int.parse(_tagAppMovil.firstMatch(tag)!.group(1)!);
 
     final assets = (data['assets'] as List?) ?? [];
     Map<String, dynamic>? apk;
