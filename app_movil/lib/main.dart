@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'api_client.dart';
 import 'update_checker.dart';
@@ -162,12 +163,16 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   Map<String, dynamic>? _resumen;
   bool _cargandoResumen = true;
+  String? _version;
 
   @override
   void initState() {
     super.initState();
     _cargarResumen();
     _revisarActualizaciones();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = 'v${info.version}');
+    });
   }
 
   Future<void> _revisarActualizaciones({bool mostrarSiNoHay = false}) async {
@@ -277,6 +282,23 @@ class _ScanScreenState extends State<ScanScreen> {
     final ultimas = (_resumen?['ultimas'] as List?)?.cast<String>() ?? const <String>[];
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: _colorFondo,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: const SizedBox.shrink(),
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: GestureDetector(
+                onTap: () => _revisarActualizaciones(mostrarSiNoHay: true),
+                child: Text(_version ?? '', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _cargarResumen,
@@ -349,12 +371,6 @@ class _ScanScreenState extends State<ScanScreen> {
                 ],
               ],
               const SizedBox(height: 24),
-              Center(
-                child: TextButton(
-                  onPressed: () => _revisarActualizaciones(mostrarSiNoHay: true),
-                  child: const Text('Buscar actualizaciones', style: TextStyle(color: Colors.white38)),
-                ),
-              ),
               Center(
                 child: TextButton(onPressed: _cerrarSesion, child: const Text('Cerrar sesión', style: TextStyle(color: Colors.white38))),
               ),
