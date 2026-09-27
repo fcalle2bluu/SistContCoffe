@@ -168,18 +168,36 @@ class _HomeShell extends StatefulWidget {
 class _HomeShellState extends State<_HomeShell> {
   int _tab = 0;
   String? _version;
+  InfoActualizacion? _actualizacionDisponible;
+  Timer? _timerActualizacion;
 
   @override
   void initState() {
     super.initState();
     _revisarActualizaciones();
+    _timerActualizacion = Timer.periodic(const Duration(minutes: 2), (_) => _chequeoSilencioso());
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _version = 'v${info.version}');
     });
   }
 
+  @override
+  void dispose() {
+    _timerActualizacion?.cancel();
+    super.dispose();
+  }
+
+  /// Chequeo de fondo (sin diálogo) para que la esquina de arriba muestre
+  /// "Actualizar" apenas exista una versión nueva, sin que el usuario tenga
+  /// que tocar nada.
+  Future<void> _chequeoSilencioso() async {
+    final info = await revisarSiHayActualizacion();
+    if (mounted) setState(() => _actualizacionDisponible = info);
+  }
+
   Future<void> _revisarActualizaciones({bool mostrarSiNoHay = false}) async {
     final info = await revisarSiHayActualizacion();
+    if (mounted) setState(() => _actualizacionDisponible = info);
     if (info == null) {
       if (mostrarSiNoHay && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -254,7 +272,16 @@ class _HomeShellState extends State<_HomeShell> {
               padding: const EdgeInsets.only(right: 16),
               child: GestureDetector(
                 onTap: () => _revisarActualizaciones(mostrarSiNoHay: true),
-                child: Text(_version ?? '', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                child: _actualizacionDisponible != null
+                    ? const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_circle_up, color: _colorAcento, size: 16),
+                          SizedBox(width: 4),
+                          Text('Actualizar', style: TextStyle(color: _colorAcento, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ],
+                      )
+                    : Text(_version ?? '', style: const TextStyle(color: Colors.white38, fontSize: 12)),
               ),
             ),
           ),
@@ -283,8 +310,21 @@ class _HomeShellState extends State<_HomeShell> {
   }
 }
 
-/// Pestaña de asistencia: escanear el QR y ver el resumen propio (igual que
-/// la única pantalla que tenía la app antes de agregar Cocina).
+String _claveFecha(DateTime d) {
+  String dos(int n) => n.toString().padLeft(2, '0');
+  return '${d.year}-${dos(d.month)}-${dos(d.day)}';
+}
+
+const _nombresMes = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+const _nombresMesCorto = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+/// Pestaña de asistencia: escanear el QR (entrada/salida), ver el contador de
+/// horas trabajadas, el calendario del mes y el historial completo.
 class _AsistenciaTab extends StatefulWidget {
   final Sesion sesion;
   final VoidCallback onLogout;
@@ -295,22 +335,33 @@ class _AsistenciaTab extends StatefulWidget {
 }
 
 class _AsistenciaTabState extends State<_AsistenciaTab> {
-  Map<String, dynamic>? _resumen;
-  bool _cargandoResumen = true;
+  List<Map<String, dynamic>> _dias = [];
+  double _horasTotales = 0;
+  bool _cargando = true;
+  bool _huboError = false;
 
   @override
   void initState() {
     super.initState();
-    _cargarResumen();
+    _cargarHistorial();
   }
 
-  Future<void> _cargarResumen() async {
-    setState(() => _cargandoResumen = true);
+  Future<void> _cargarHistorial() async {
+    setState(() => _cargando = true);
     final resumen = await ApiClient.misAsistencias(widget.sesion);
     if (!mounted) return;
+    if (resumen == null) {
+      setState(() {
+        _huboError = true;
+        _cargando = false;
+      });
+      return;
+    }
     setState(() {
-      _resumen = resumen;
-      _cargandoResumen = false;
+      _dias = (resumen['dias'] as List? ?? []).cast<Map<String, dynamic>>();
+      _horasTotales = (resumen['horas_totales'] as num? ?? 0).toDouble();
+      _huboError = false;
+      _cargando = false;
     });
   }
 
@@ -325,98 +376,155 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
     );
     if (resultado == null || !mounted) return;
     final ok = resultado['ok'] == true;
+    final tipo = resultado['tipo'] as String?;
+    final etiquetaTipo = tipo == 'salida' ? 'Salida' : 'Entrada';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: ok ? Colors.green.shade700 : Colors.red.shade700,
         content: Text(ok
-            ? '¡Asistencia registrada, ${resultado['nombre']}!'
+            ? '¡$etiquetaTipo registrada, ${resultado['nombre']}!'
             : (resultado['error'] as String? ?? 'No se pudo registrar la asistencia.')),
       ),
     );
-    _cargarResumen();
+    _cargarHistorial();
   }
 
-  String _formatearFechaHora(String iso) {
+  String _formatearHoras(double horas) {
+    final totalMin = (horas * 60).round();
+    final h = totalMin ~/ 60;
+    final m = totalMin % 60;
+    return '${h}h ${m.toString().padLeft(2, '0')}m';
+  }
+
+  String _formatearHora(String? iso) {
+    if (iso == null) return '—';
     final dt = DateTime.parse(iso).toLocal();
     String dos(int n) => n.toString().padLeft(2, '0');
-    return '${dos(dt.day)}/${dos(dt.month)} ${dos(dt.hour)}:${dos(dt.minute)}';
+    return '${dos(dt.hour)}:${dos(dt.minute)}';
+  }
+
+  String _formatearFecha(String fechaIso) {
+    final partes = fechaIso.split('-');
+    final dia = int.parse(partes[2]);
+    final mes = int.parse(partes[1]);
+    return '$dia ${_nombresMesCorto[mes - 1]} ${partes[0]}';
+  }
+
+  Widget _estadoHoy() {
+    final hoyIso = _claveFecha(DateTime.now());
+    Map<String, dynamic>? dia;
+    for (final d in _dias) {
+      if (d['fecha'] == hoyIso) {
+        dia = d;
+        break;
+      }
+    }
+    String texto;
+    Color color;
+    if (dia == null) {
+      texto = 'Todavía no registraste tu entrada hoy.';
+      color = Colors.white60;
+    } else if (dia['salida'] == null) {
+      texto = 'Entrada registrada — falta tu salida.';
+      color = Colors.orangeAccent;
+    } else {
+      texto = 'Jornada de hoy completa (${dia['horas']} h).';
+      color = Colors.greenAccent;
+    }
+    return Text(texto, textAlign: TextAlign.center, style: TextStyle(color: color, fontSize: 13));
   }
 
   @override
   Widget build(BuildContext context) {
-    final total = _resumen?['total'] as int?;
-    final yaHoy = _resumen?['ya_hoy'] as bool? ?? false;
-    final ultimas = (_resumen?['ultimas'] as List?)?.cast<String>() ?? const <String>[];
+    final diasPorFecha = {for (final d in _dias) d['fecha'] as String: d};
 
     return RefreshIndicator(
-      onRefresh: _cargarResumen,
+      onRefresh: _cargarHistorial,
       color: _colorAcento,
       child: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         children: [
-          const SizedBox(height: 8),
-          const Icon(Icons.qr_code_scanner, color: _colorAcento, size: 64),
-          const SizedBox(height: 16),
           Text('Hola, ${widget.sesion.nombre}',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text(
-            'Escaneá el código QR que muestra el encargado para registrar tu asistencia de hoy.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60),
-          ),
-          const SizedBox(height: 24),
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: _abrirEscaner,
-              style: FilledButton.styleFrom(backgroundColor: _colorAcento, padding: const EdgeInsets.all(18)),
+              style: FilledButton.styleFrom(backgroundColor: _colorAcento, padding: const EdgeInsets.all(16)),
               icon: const Icon(Icons.qr_code_scanner),
               label: const Text('Escanear QR de asistencia'),
             ),
           ),
-          const SizedBox(height: 28),
-          if (_cargandoResumen)
-            const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: _colorAcento)))
-          else if (_resumen == null)
-            const Text('No se pudo cargar tu historial de asistencia.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white38))
+          const SizedBox(height: 10),
+          _estadoHoy(),
+          const SizedBox(height: 20),
+          if (_cargando)
+            const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: _colorAcento)))
+          else if (_huboError)
+            const Text('No se pudo cargar tu historial de asistencia.',
+                textAlign: TextAlign.center, style: TextStyle(color: Colors.white38))
           else ...[
             Container(
-              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
+                color: _colorAcento.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _colorAcento.withValues(alpha: 0.35)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Column(
                 children: [
-                  Column(children: [
-                    Text('$total', style: const TextStyle(color: _colorAcento, fontSize: 28, fontWeight: FontWeight.bold)),
-                    const Text('Asistencias totales', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                  ]),
-                  Column(children: [
-                    Icon(yaHoy ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: yaHoy ? Colors.greenAccent : Colors.white38, size: 28),
-                    Text(yaHoy ? 'Ya marcaste hoy' : 'Todavía no marcaste hoy',
-                        style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                  ]),
+                  Text(_formatearHoras(_horasTotales),
+                      style: const TextStyle(color: _colorAcento, fontSize: 40, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  const Text('Horas trabajadas en total', style: TextStyle(color: Colors.white60, fontSize: 13)),
                 ],
               ),
             ),
-            if (ultimas.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              const Align(alignment: Alignment.centerLeft, child: Text('Últimas veces', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold))),
-              const SizedBox(height: 8),
-              ...ultimas.map((iso) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(children: [
-                      const Icon(Icons.history, color: Colors.white38, size: 16),
-                      const SizedBox(width: 8),
-                      Text(_formatearFechaHora(iso), style: const TextStyle(color: Colors.white70)),
-                    ]),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(16)),
+              child: _CalendarioAsistencia(diasPorFecha: diasPorFecha),
+            ),
+            const SizedBox(height: 24),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Historial completo', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 8),
+            if (_dias.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Text('Todavía no tenés asistencias registradas.', style: TextStyle(color: Colors.white38)),
+              )
+            else
+              ..._dias.map((dia) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_formatearFecha(dia['fecha'] as String), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                        Row(children: [
+                          const Icon(Icons.login, color: Colors.greenAccent, size: 14),
+                          const SizedBox(width: 3),
+                          Text(_formatearHora(dia['entrada'] as String?), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                          const SizedBox(width: 12),
+                          const Icon(Icons.logout, color: Colors.orangeAccent, size: 14),
+                          const SizedBox(width: 3),
+                          Text(_formatearHora(dia['salida'] as String?), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        ]),
+                        Text(
+                          dia['horas'] != null ? '${dia['horas']} h' : '—',
+                          style: const TextStyle(color: _colorAcento, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   )),
-            ],
           ],
           const SizedBox(height: 24),
           Center(
@@ -425,6 +533,116 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
         ],
       ),
     );
+  }
+}
+
+/// Calendario mensual simple: cada día se colorea según si esa fecha tiene
+/// jornada completa (entrada+salida), solo entrada, o nada, con navegación
+/// entre meses para ver el historial completo.
+class _CalendarioAsistencia extends StatefulWidget {
+  final Map<String, Map<String, dynamic>> diasPorFecha;
+  const _CalendarioAsistencia({required this.diasPorFecha});
+
+  @override
+  State<_CalendarioAsistencia> createState() => _CalendarioAsistenciaState();
+}
+
+class _CalendarioAsistenciaState extends State<_CalendarioAsistencia> {
+  late DateTime _mes;
+
+  @override
+  void initState() {
+    super.initState();
+    final ahora = DateTime.now();
+    _mes = DateTime(ahora.year, ahora.month, 1);
+  }
+
+  void _cambiarMes(int delta) => setState(() => _mes = DateTime(_mes.year, _mes.month + delta, 1));
+
+  @override
+  Widget build(BuildContext context) {
+    final primerDiaSemana = _mes.weekday; // 1 = lunes ... 7 = domingo
+    final diasEnMes = DateTime(_mes.year, _mes.month + 1, 0).day;
+    final hoy = DateTime.now();
+
+    final celdas = <Widget>[];
+    for (var i = 1; i < primerDiaSemana; i++) {
+      celdas.add(const SizedBox());
+    }
+    for (var dia = 1; dia <= diasEnMes; dia++) {
+      final fecha = DateTime(_mes.year, _mes.month, dia);
+      final info = widget.diasPorFecha[_claveFecha(fecha)];
+      final Color color;
+      if (info == null) {
+        color = Colors.white.withValues(alpha: 0.06);
+      } else if (info['entrada'] != null && info['salida'] != null) {
+        color = Colors.green.shade700;
+      } else {
+        color = Colors.orange.shade700;
+      }
+      final esHoy = fecha.year == hoy.year && fecha.month == hoy.month && fecha.day == hoy.day;
+      celdas.add(Container(
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(6),
+          border: esHoy ? Border.all(color: Colors.white, width: 1.5) : null,
+        ),
+        alignment: Alignment.center,
+        child: Text('$dia', style: TextStyle(color: info == null ? Colors.white38 : Colors.white, fontSize: 12)),
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(onPressed: () => _cambiarMes(-1), icon: const Icon(Icons.chevron_left, color: Colors.white70)),
+            Text('${_nombresMes[_mes.month - 1]} ${_mes.year}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            IconButton(onPressed: () => _cambiarMes(1), icon: const Icon(Icons.chevron_right, color: Colors.white70)),
+          ],
+        ),
+        const Row(
+          children: [
+            Expanded(child: Center(child: Text('L', style: TextStyle(color: Colors.white38, fontSize: 11)))),
+            Expanded(child: Center(child: Text('M', style: TextStyle(color: Colors.white38, fontSize: 11)))),
+            Expanded(child: Center(child: Text('X', style: TextStyle(color: Colors.white38, fontSize: 11)))),
+            Expanded(child: Center(child: Text('J', style: TextStyle(color: Colors.white38, fontSize: 11)))),
+            Expanded(child: Center(child: Text('V', style: TextStyle(color: Colors.white38, fontSize: 11)))),
+            Expanded(child: Center(child: Text('S', style: TextStyle(color: Colors.white38, fontSize: 11)))),
+            Expanded(child: Center(child: Text('D', style: TextStyle(color: Colors.white38, fontSize: 11)))),
+          ],
+        ),
+        GridView.count(
+          crossAxisCount: 7,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.3,
+          children: celdas,
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 14,
+          runSpacing: 6,
+          children: [
+            _leyenda(Colors.green.shade700, 'Completo'),
+            _leyenda(Colors.orange.shade700, 'Solo entrada'),
+            _leyenda(Colors.white.withValues(alpha: 0.06), 'Sin marca'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _leyenda(Color color, String texto) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
+      const SizedBox(width: 4),
+      Text(texto, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+    ]);
   }
 }
 
