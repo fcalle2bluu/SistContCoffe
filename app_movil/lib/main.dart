@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'api_client.dart';
+import 'update_checker.dart';
 
 void main() {
   runApp(const YanalomaApp());
@@ -166,6 +167,69 @@ class _ScanScreenState extends State<ScanScreen> {
   void initState() {
     super.initState();
     _cargarResumen();
+    _revisarActualizaciones();
+  }
+
+  Future<void> _revisarActualizaciones({bool mostrarSiNoHay = false}) async {
+    final info = await revisarSiHayActualizacion();
+    if (info == null) {
+      if (mostrarSiNoHay && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ya tenés la última versión instalada.')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    final aceptar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        title: const Text('Actualización disponible', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Hay una nueva versión de la app (${info.tag}). ¿Descargarla e instalarla ahora?',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Después')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _colorAcento),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    );
+    if (aceptar != true || !mounted) return;
+
+    final progreso = ValueNotifier<double>(0);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161616),
+        content: ValueListenableBuilder<double>(
+          valueListenable: progreso,
+          builder: (_, valor, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Descargando actualización...', style: TextStyle(color: Colors.white70)),
+              const SizedBox(height: 12),
+              LinearProgressIndicator(value: valor == 0 ? null : valor, color: _colorAcento),
+            ],
+          ),
+        ),
+      ),
+    );
+    try {
+      await descargarEInstalarActualizacion(info, (p) => progreso.value = p);
+    } catch (_) {
+      // Si falla la descarga simplemente se queda en la versión actual;
+      // se vuelve a ofrecer la próxima vez que abra la app.
+    } finally {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    }
   }
 
   Future<void> _cargarResumen() async {
@@ -285,6 +349,12 @@ class _ScanScreenState extends State<ScanScreen> {
                 ],
               ],
               const SizedBox(height: 24),
+              Center(
+                child: TextButton(
+                  onPressed: () => _revisarActualizaciones(mostrarSiNoHay: true),
+                  child: const Text('Buscar actualizaciones', style: TextStyle(color: Colors.white38)),
+                ),
+              ),
               Center(
                 child: TextButton(onPressed: _cerrarSesion, child: const Text('Cerrar sesión', style: TextStyle(color: Colors.white38))),
               ),

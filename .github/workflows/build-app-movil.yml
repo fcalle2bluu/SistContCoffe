@@ -1,0 +1,42 @@
+name: Compilar app móvil
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app_movil/**"
+      - ".github/workflows/build-app-movil.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app_movil
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Compilar APK release
+        run: |
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }}
+
+      - name: Publicar release en GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Café Yanaloma app v${{ github.run_number }}
+          make_latest: true
+          files: app_movil/build/app/outputs/flutter-apk/app-release.apk
