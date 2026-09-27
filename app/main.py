@@ -24,6 +24,7 @@ from app.routers import (
     pos,
     productos,
     turnos,
+    turnos_api,
     usuarios,
     ventas,
 )
@@ -73,6 +74,7 @@ app.include_router(productos.router)
 app.include_router(contabilidad.router)
 app.include_router(bitacora.router)
 app.include_router(turnos.router)
+app.include_router(turnos_api.router)
 app.include_router(usuarios.router)
 app.include_router(dashboard_api.router)
 app.include_router(pos.router)

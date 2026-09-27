@@ -123,6 +123,33 @@ class ApiClient {
     }
   }
 
+  /// Trae la lista de turnos (Control de Turnos), solo para admins.
+  static Future<List<Map<String, dynamic>>?> turnos(Sesion sesion) async {
+    try {
+      final resp = await http.get(Uri.parse('$baseUrl/api/turnos'), headers: {'Cookie': sesion.cookie});
+      if (resp.statusCode != 200) return null;
+      final datos = jsonDecode(resp.body);
+      if (datos is! List) return null;
+      return datos.cast<Map<String, dynamic>>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Trae el detalle de un turno (ventas, movimientos de caja, resumen de
+  /// pagos), solo para admins.
+  static Future<Map<String, dynamic>?> turnoDetalle(Sesion sesion, int id) async {
+    try {
+      final resp = await http.get(Uri.parse('$baseUrl/api/turnos/$id'), headers: {'Cookie': sesion.cookie});
+      if (resp.statusCode != 200) return null;
+      final datos = jsonDecode(resp.body);
+      if (datos is! Map<String, dynamic>) return null;
+      return datos;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Escanea el QR de asistencia: pega el token al endpoint del backend
   /// usando la cookie de la sesión guardada.
   static Future<Map<String, dynamic>> marcarAsistencia(Sesion sesion, String token) async {

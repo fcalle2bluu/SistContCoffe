@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'api_client.dart';
+import 'turnos_tab.dart';
 import 'update_checker.dart';
 
 void main() {
@@ -260,6 +261,19 @@ class _HomeShellState extends State<_HomeShell> {
 
   @override
   Widget build(BuildContext context) {
+    final esAdmin = widget.sesion.role == 'admin';
+    final paginas = [
+      _AsistenciaTab(sesion: widget.sesion, onLogout: widget.onLogout),
+      _CocinaTab(sesion: widget.sesion),
+      if (esAdmin) TurnosTab(sesion: widget.sesion),
+    ];
+    final destinos = [
+      const NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Asistencia'),
+      const NavigationDestination(icon: Icon(Icons.restaurant), label: 'Cocina'),
+      if (esAdmin) const NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Turnos'),
+    ];
+    final tabActual = _tab < paginas.length ? _tab : 0;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: _colorFondo,
@@ -289,22 +303,16 @@ class _HomeShellState extends State<_HomeShell> {
       ),
       body: SafeArea(
         child: IndexedStack(
-          index: _tab,
-          children: [
-            _AsistenciaTab(sesion: widget.sesion, onLogout: widget.onLogout),
-            _CocinaTab(sesion: widget.sesion),
-          ],
+          index: tabActual,
+          children: paginas,
         ),
       ),
       bottomNavigationBar: NavigationBar(
         backgroundColor: const Color(0xFF141414),
         indicatorColor: _colorAcento.withValues(alpha: 0.25),
-        selectedIndex: _tab,
+        selectedIndex: tabActual,
         onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Asistencia'),
-          NavigationDestination(icon: Icon(Icons.restaurant), label: 'Cocina'),
-        ],
+        destinations: destinos,
       ),
     );
   }
