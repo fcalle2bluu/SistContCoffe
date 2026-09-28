@@ -151,6 +151,17 @@ async def asistencia_page(request: Request, session: dict = Depends(require_admi
     )
 
 
+@router.get("/dashboard/mi-asistencia", response_class=HTMLResponse)
+async def mi_asistencia_page(request: Request, session: dict = Depends(require_session)):
+    """Versión web, optimizada para celular, de la asistencia por QR — pensada
+    para quienes no tienen Android (y por lo tanto no pueden usar la app
+    nativa): escanean con la cámara del navegador y usan las mismas APIs
+    (/api/asistencia/mias y /api/asistencia/marcar) que ya usa la app."""
+    return templates.TemplateResponse(
+        request, "dashboard/mi_asistencia.html", {"session": session, "active": "mi_asistencia"}
+    )
+
+
 @router.get("/dashboard/asistencia/feed", response_class=HTMLResponse)
 async def asistencia_feed(request: Request, session: dict = Depends(require_admin)):
     marcadas = await _asistencias_hoy()

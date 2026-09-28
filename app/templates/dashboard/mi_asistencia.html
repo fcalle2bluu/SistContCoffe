@@ -1,0 +1,202 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Mi Asistencia — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8" style="max-width:480px; margin:0 auto;">
+  <div>
+    <h2 class="section-title">Mi Asistencia</h2>
+    <p class="section-subtitle">
+      Escaneá el código QR que muestra el encargado para registrar tu entrada o salida,
+      directo desde el navegador del celular — no hace falta instalar nada.
+    </p>
+  </div>
+
+  <div class="card" style="text-align:center;">
+    <button type="button" id="btn-escanear" class="btn btn-primary" style="width:100%; padding:16px; font-size:1.05rem;">
+      📷 Escanear QR de asistencia
+    </button>
+    <div id="qr-reader" style="width:100%; margin-top:14px; display:none;"></div>
+    <button type="button" id="btn-cancelar" class="btn btn-outline" style="width:100%; margin-top:10px; display:none;">
+      Cancelar
+    </button>
+    <p id="qr-mensaje" class="muted-sm" style="margin-top:10px; min-height:1.2em;"></p>
+  </div>
+
+  <div class="card" style="text-align:center;">
+    <div id="mi-asistencia-contador" style="font-size:2rem; font-weight:800; color:#d97706;">—</div>
+    <p class="muted-sm">Horas trabajadas en total</p>
+    <p id="mi-asistencia-estado-hoy" class="muted-sm" style="margin-top:6px;"></p>
+  </div>
+
+  <div>
+    <h3 class="section-subtitle">Mis últimos días</h3>
+    <div id="mi-asistencia-historial"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+(function () {
+  function dos(n) { return String(n).padStart(2, "0"); }
+  function formatearDuracion(segundos) {
+    segundos = Math.max(0, Math.round(segundos));
+    var h = Math.floor(segundos / 3600);
+    var m = Math.floor((segundos % 3600) / 60);
+    var s = Math.floor(segundos % 60);
+    return h + "h " + dos(m) + "m " + dos(s) + "s";
+  }
+
+  var html5QrCode = null;
+  var btnEscanear = document.getElementById("btn-escanear");
+  var btnCancelar = document.getElementById("btn-cancelar");
+  var lector = document.getElementById("qr-reader");
+  var mensaje = document.getElementById("qr-mensaje");
+  var ticker = null;
+
+  function extraerToken(texto) {
+    try {
+      var url = new URL(texto);
+      if (!url.pathname.endsWith("/api/asistencia/marcar")) return null;
+      return url.searchParams.get("token");
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function detenerEscaneo() {
+    lector.style.display = "none";
+    btnCancelar.style.display = "none";
+    btnEscanear.style.display = "";
+    if (html5QrCode) {
+      html5QrCode.stop().catch(function () {}).finally(function () {
+        html5QrCode = null;
+      });
+    }
+  }
+
+  async function marcar(token) {
+    mensaje.textContent = "Registrando...";
+    try {
+      var r = await fetch("/api/asistencia/marcar?token=" + encodeURIComponent(token), {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      var data = await r.json();
+      if (data.ok) {
+        var etiqueta = data.tipo === "salida" ? "Salida" : "Entrada";
+        mensaje.textContent = "✅ " + etiqueta + " registrada, " + data.nombre + "!";
+        cargarResumen();
+      } else {
+        mensaje.textContent = "❌ " + (data.error || "No se pudo registrar.");
+      }
+    } catch (e) {
+      mensaje.textContent = "❌ No se pudo conectar con el servidor.";
+    }
+  }
+
+  function onScanSuccess(decodedText) {
+    var token = extraerToken(decodedText);
+    detenerEscaneo();
+    if (!token) {
+      mensaje.textContent = "❌ Ese código no sirve para marcar asistencia.";
+      return;
+    }
+    marcar(token);
+  }
+
+  btnEscanear.addEventListener("click", function () {
+    mensaje.textContent = "";
+    btnEscanear.style.display = "none";
+    lector.style.display = "";
+    btnCancelar.style.display = "";
+    html5QrCode = new Html5Qrcode("qr-reader");
+    html5QrCode
+      .start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 240, height: 240 } }, onScanSuccess)
+      .catch(function () {
+        mensaje.textContent = "❌ No se pudo abrir la cámara. Revisá los permisos del navegador.";
+        detenerEscaneo();
+      });
+  });
+
+  btnCancelar.addEventListener("click", detenerEscaneo);
+
+  function claveFechaLocal(d) {
+    return d.getFullYear() + "-" + dos(d.getMonth() + 1) + "-" + dos(d.getDate());
+  }
+
+  async function cargarResumen() {
+    try {
+      var r = await fetch("/api/asistencia/mias", { credentials: "same-origin" });
+      var data = await r.json();
+      var dias = data.dias || [];
+      var hoyIso = claveFechaLocal(new Date());
+      var hoy = null;
+      for (var i = 0; i < dias.length; i++) {
+        if (dias[i].fecha === hoyIso) { hoy = dias[i]; break; }
+      }
+
+      var contadorEl = document.getElementById("mi-asistencia-contador");
+      var estadoHoyEl = document.getElementById("mi-asistencia-estado-hoy");
+
+      function segundosTotales() {
+        var total = 0;
+        dias.forEach(function (d) {
+          if (!d.entrada) return;
+          var entrada = new Date(d.entrada).getTime();
+          if (d.salida) {
+            total += (new Date(d.salida).getTime() - entrada) / 1000;
+          } else if (d.fecha === hoyIso) {
+            total += (Date.now() - entrada) / 1000;
+          }
+        });
+        return total;
+      }
+
+      function pintarContador() {
+        contadorEl.textContent = formatearDuracion(segundosTotales());
+      }
+      pintarContador();
+      if (ticker) clearInterval(ticker);
+
+      if (!hoy) {
+        estadoHoyEl.textContent = "Todavía no registraste tu entrada hoy.";
+      } else if (!hoy.salida) {
+        estadoHoyEl.textContent = "Entrada registrada — falta tu salida.";
+        ticker = setInterval(pintarContador, 1000);
+      } else {
+        estadoHoyEl.textContent = "Jornada de hoy completa.";
+      }
+
+      var historialEl = document.getElementById("mi-asistencia-historial");
+      if (!dias.length) {
+        historialEl.innerHTML = '<p class="muted-sm">Todavía no tenés asistencias registradas.</p>';
+        return;
+      }
+      historialEl.innerHTML = dias.slice(0, 10).map(function (d) {
+        var entradaTxt = d.entrada
+          ? new Date(d.entrada).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })
+          : "—";
+        var salidaTxt = d.salida
+          ? new Date(d.salida).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })
+          : "—";
+        var horasTxt = "—";
+        if (d.entrada && d.salida) {
+          horasTxt = formatearDuracion((new Date(d.salida).getTime() - new Date(d.entrada).getTime()) / 1000);
+        }
+        return (
+          '<div class="card" style="margin-bottom:8px; padding:12px 14px;">' +
+            '<div style="display:flex; justify-content:space-between; font-weight:600;">' +
+              "<span>" + d.fecha + "</span><span style=\"color:#d97706;\">" + horasTxt + "</span>" +
+            "</div>" +
+            '<div class="muted-sm" style="margin-top:4px;">Entrada ' + entradaTxt + " · Salida " + salidaTxt + "</div>" +
+          "</div>"
+        );
+      }).join("");
+    } catch (e) {
+      // Si falla la carga, el contador se queda en "—"; no bloquea el escaneo.
+    }
+  }
+
+  cargarResumen();
+})();
+</script>
+{% endblock %}
