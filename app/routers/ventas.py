@@ -40,6 +40,25 @@ CUENTAS_POR_CATEGORIA_EGRESO = {
 }
 
 
+async def _siguiente_nro_asiento(conn, fecha, cantidad: int = 1) -> int:
+    """El número de asiento tiene que quedar ordenado por la fecha real de la
+    transacción, no por el orden en que se cargó al sistema (p. ej. al
+    registrar a mano un comprobante viejo mucho después). Calcula la
+    posición que le corresponde a `fecha` entre los asientos ya existentes y
+    corre hacia adelante los que tienen fecha posterior para dejarle el
+    lugar. `cantidad` reserva varios números consecutivos para esa misma
+    fecha, para cuando una sola operación genera más de un asiento separado
+    (p. ej. el cierre de turno con ventas facturadas por varios medios)."""
+    posicion = await conn.fetchval(
+        "SELECT COUNT(DISTINCT nro_asiento) FROM libro_diario WHERE fecha < $1", fecha
+    )
+    nuevo = posicion + 1
+    await conn.execute(
+        "UPDATE libro_diario SET nro_asiento = nro_asiento + $2 WHERE nro_asiento >= $1", nuevo, cantidad
+    )
+    return nuevo
+
+
 def _parse_hora_local(valor: str) -> datetime | None:
     """Convierte el valor de un <input type="datetime-local"> (hora de
     Bolivia, sin zona) a un datetime consciente de zona horaria, para poder
@@ -128,7 +147,7 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
 
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
@@ -160,7 +179,7 @@ async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
 
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
@@ -193,7 +212,7 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
     fecha = hoy_bolivia()
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
@@ -208,9 +227,11 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
 
 async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
     """Asienta un ingreso a caja en el Libro Diario apenas se registra: es un
-    traslado interno (Debe Caja Chica) desde donde salió la plata (Haber Caja
-    Moneda Nacional si fue en efectivo, Banco Bisa si fue por QR). Solo se
-    asienta para EFECTIVO y QR, mismo criterio que egresos y ventas."""
+    traslado interno (Haber Caja Chica, que es la cuenta dinámica que se
+    mueve con las ventas) desde donde salió la plata (Debe Caja Moneda
+    Nacional si fue en efectivo, Banco Bisa si fue por QR — la cuenta que
+    resguarda y no es dinámica). Solo se asienta para EFECTIVO y QR, mismo
+    criterio que egresos y ventas."""
     if tipo_pago == "EFECTIVO":
         cuenta_origen = CUENTA_CAJA_EFECTIVO
     elif tipo_pago == "QR":
@@ -222,16 +243,16 @@ async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo
     fecha = hoy_bolivia()
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
+                fecha, siguiente, cuenta_origen, monto, glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, cuenta_origen, monto, glosa,
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
             )
 
 
@@ -245,7 +266,7 @@ async def _registrar_reposicion_caja_en_diario(monto: float, motivo: str, respon
     fecha = hoy_bolivia()
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
@@ -262,23 +283,25 @@ async def _registrar_traslado_arqueo_a_caja_chica_en_diario(turno_id: int, respo
     """Al cerrar un turno se traslada a Caja Chica todo el efectivo que quedó
     contado en el arqueo — el mismo movimiento que ya hace a mano 'Registrar
     ingreso a caja' durante el turno, pero automático para lo que sobra al
-    cierre, así Caja Moneda Nacional siempre vuelve a cero después de cerrar."""
+    cierre, así Caja Moneda Nacional siempre vuelve a cero después de cerrar.
+    Haber Caja Chica (cuenta dinámica) / Debe Caja Moneda Nacional (cuenta
+    que resguarda, no dinámica) — mismo criterio que _registrar_ingreso_caja_en_diario."""
     if monto <= 0:
         return
     glosa = f"Traslado a Caja Chica del arqueo de cierre del turno de {responsable} (turno #{turno_id})."
     fecha = hoy_bolivia()
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
+                fecha, siguiente, CUENTA_CAJA_EFECTIVO, monto, glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, CUENTA_CAJA_EFECTIVO, monto, glosa,
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
             )
 
 
@@ -306,7 +329,7 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
     async with pool().acquire() as conn:
         async with conn.transaction():
             fecha = hoy_bolivia()
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha, cantidad=len(totales))
 
             async def linea(nro: int, codigo: str, debe: float, haber: float, glosa: str) -> None:
                 await conn.execute(

@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
-from app.routers.ventas import TIPOS_FACTURADOS
+from app.routers.ventas import TIPOS_FACTURADOS, _siguiente_nro_asiento
 from app.templating import templates
 from app.tz import BOLIVIA_TZ, hoy_bolivia
 
@@ -339,7 +339,7 @@ async def crear_asiento(
 
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha_date)
             for l in lineas:
                 await conn.execute(
                     """
@@ -398,6 +398,11 @@ async def editar_asiento(
             if not existe:
                 return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
             await conn.execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
+            # Cierra el hueco que deja el asiento borrado y recién ahí calcula
+            # su nueva posición — así, si cambiaron la fecha, el asiento queda
+            # reordenado donde corresponde en vez de conservar el número viejo.
+            await conn.execute("UPDATE libro_diario SET nro_asiento = nro_asiento - 1 WHERE nro_asiento > $1", nro_asiento)
+            nuevo_nro = await _siguiente_nro_asiento(conn, fecha_date)
             for l in lineas:
                 await conn.execute(
                     """
@@ -405,13 +410,14 @@ async def editar_asiento(
                     VALUES ($1, $2, $3, $4, $5, $6)
                     """,
                     fecha_date,
-                    nro_asiento,
+                    nuevo_nro,
                     l["codigo_cuenta"],
                     l["monto"] if l["lado"] == "DEBE" else 0,
                     l["monto"] if l["lado"] == "HABER" else 0,
                     glosa,
                 )
-    await bitacora.registrar(session, "Editó asiento contable", f"Asiento #{nro_asiento}: {glosa}")
+    detalle_numero = f"Asiento #{nro_asiento}" if nuevo_nro == nro_asiento else f"Asiento #{nro_asiento} (reordenado a #{nuevo_nro})"
+    await bitacora.registrar(session, "Editó asiento contable", f"{detalle_numero}: {glosa}")
     return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
 
 
