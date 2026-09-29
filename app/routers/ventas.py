@@ -240,16 +240,12 @@ async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categ
     espera al cierre de turno, porque el dinero sale de inmediato). Se debita
     la cuenta propia de la categoría cuando existe (ver
     CUENTAS_POR_CATEGORIA_EGRESO); si la categoría todavía no tiene cuenta
-    asignada, se usa Gastos Administrativos. Solo se asienta para EFECTIVO y
-    QR (mismo criterio que las ventas): un egreso por POS/otro medio no tiene
-    contrapartida de caja/banco automática todavía. En efectivo la plata sale
-    de la caja del turno, o sea de Caja Chica."""
-    if tipo_pago == "EFECTIVO":
-        cuenta_contrapartida = CUENTA_CAJA_CHICA
-    elif tipo_pago == "QR":
-        cuenta_contrapartida = CUENTA_BANCO
-    else:
-        return
+    asignada, se usa Gastos Administrativos. Todo egreso se asienta, con
+    cualquier método de pago: en efectivo (con o sin factura) la plata sale
+    de la caja del turno, o sea de Caja Chica; por QR o tarjeta (POS), con o
+    sin factura, sale del Banco. El crédito fiscal de las compras con
+    factura todavía no se separa (pendiente de definir con el contador)."""
+    cuenta_contrapartida = CUENTA_BANCO if tipo_pago in ("QR", "QR/FAC", "POS", "POS/FAC") else CUENTA_CAJA_CHICA
 
     cuenta_debito = _cuenta_egreso_por_categoria(categoria)
     glosa = f"Egreso de caja — {categoria + ': ' if categoria else ''}{motivo} (responsable: {responsable})."
