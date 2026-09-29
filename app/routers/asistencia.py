@@ -164,6 +164,27 @@ def _jornadas(filas) -> tuple[list[dict], list[dict]]:
     return historial, personas
 
 
+def _calendario(inicio_mes: date, fin_mes: date, jornadas: list[dict]) -> list[list[dict | None]]:
+    """Semanas (lunes a domingo) del mes; cada día con sus jornadas en orden
+    de llegada. Los huecos antes del día 1 y después del último son None."""
+    por_dia: dict[str, list[dict]] = {}
+    for j in jornadas:
+        por_dia.setdefault(j["fecha"], []).append(j)
+    semanas: list[list[dict | None]] = []
+    semana: list[dict | None] = [None] * inicio_mes.weekday()
+    d = inicio_mes
+    while d < fin_mes:
+        lista = sorted(por_dia.get(d.isoformat(), []), key=lambda j: (j["entrada"] is None, j["entrada"] or 0, j["nombre"]))
+        semana.append({"fecha": d.isoformat(), "numero": d.day, "jornadas": lista})
+        if len(semana) == 7:
+            semanas.append(semana)
+            semana = []
+        d += timedelta(days=1)
+    if semana:
+        semanas.append(semana + [None] * (7 - len(semana)))
+    return semanas
+
+
 async def _contexto_dia(dia: date) -> dict:
     hoy = hoy_bolivia()
     marcas = await _marcas(dia, dia + timedelta(days=1))
@@ -188,14 +209,15 @@ async def asistencia_page(
     inicio_mes = dia_date.replace(day=1)
     fin_mes = (inicio_mes + timedelta(days=32)).replace(day=1)
     marcas_mes = await _marcas(inicio_mes, fin_mes)
-    _, personas = _jornadas(marcas_mes)
+    jornadas_mes, _ = _jornadas(marcas_mes)
     usuarios = await pool().fetch("SELECT id, nombre FROM usuarios WHERE nombre IS NOT NULL AND nombre <> '' ORDER BY nombre")
     ctx.update({
         "session": session,
         "active": "asistencia",
         "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
-        "personas": personas,
-        "horas_sin_salida": HORAS_JORNADA_SIN_SALIDA,
+        "calendario": _calendario(inicio_mes, fin_mes, jornadas_mes),
+        "mes_anterior": (inicio_mes - timedelta(days=1)).replace(day=1).isoformat(),
+        "mes_siguiente": fin_mes.isoformat() if fin_mes <= hoy_bolivia() else None,
         "marcas_mes": list(reversed(marcas_mes)),
         "mes_nombre": f"{MESES_ES[inicio_mes.month - 1].capitalize()} {inicio_mes.year}",
         "usuarios": usuarios,

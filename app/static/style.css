@@ -688,3 +688,25 @@ a { color: inherit; }
 .fila-clic { cursor: pointer; }
 .fila-clic:hover td { background: var(--accent-soft); }
 .data-table th.text-right { text-align: right; }
+
+/* Asistencia: calendario del mes */
+.calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.cal-cabecera { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 4px 6px; }
+.cal-dia {
+  display: flex; flex-direction: column; gap: 3px; min-height: 120px; padding: 8px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px;
+  text-decoration: none; color: var(--ink);
+}
+.cal-dia:hover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.cal-vacio { min-height: 120px; }
+.cal-numero { font-weight: 800; font-size: 16px; margin-bottom: 2px; }
+.cal-numero small { font-weight: 600; font-size: 11px; color: var(--muted); }
+.cal-persona { font-size: 12.5px; line-height: 1.3; padding: 2px 5px; border-radius: 4px; background: #dcfce7; color: #14532d; }
+.cal-persona b { font-weight: 700; }
+.cal-persona small { color: #166534; opacity: 0.85; }
+.cal-hoy { border: 2px solid var(--accent); }
+.cal-elegido { background: var(--accent-soft); }
+.cal-futuro { opacity: 0.45; }
+@media (max-width: 900px) { .calendario { grid-template-columns: repeat(7, minmax(90px, 1fr)); overflow-x: auto; } }
+.lista-mes { max-height: 420px; overflow-y: auto; }
+.lista-mes thead th { position: sticky; top: 0; background: var(--surface-soft); z-index: 1; }

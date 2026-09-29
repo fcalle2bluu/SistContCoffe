@@ -118,41 +118,12 @@
         {% endif %}
       </div>
 
-      <div>
-        <h3 class="subsection-title">Resumen de {{ mes_nombre }}</h3>
-        {% if personas|length == 0 %}
-        <p class="muted">No hay asistencia registrada en {{ mes_nombre }}.</p>
-        {% else %}
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Nombre</th><th class="text-right">Días trabajados</th><th class="text-right">Horas totales</th><th class="text-right">Promedio por día</th></tr></thead>
-            <tbody>
-              {% for p in personas %}
-              <tr>
-                <td class="strong">{{ p.nombre }}</td>
-                <td class="text-right mono">{{ p.dias }}</td>
-                <td class="text-right mono">
-                  {% if p.abierto_desde %}
-                  <span data-vivo data-base="{{ p.segundos_totales }}" data-desde="{{ p.abierto_desde.isoformat() }}">calculando…</span>
-                  {% else %}
-                  {{ p.segundos_totales|duracion }}
-                  {% endif %}
-                </td>
-                <td class="text-right mono">{{ (p.segundos_totales // p.dias_cerrados)|duracion if p.dias_cerrados else "—" }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <p class="muted-sm">Si un día ya pasó y alguien no marcó la salida, esa jornada cuenta {{ horas_sin_salida }} horas.</p>
-        {% endif %}
-      </div>
 
 
       <details class="todas-marcas" open>
         <summary class="btn btn-outline">Todas las marcas de {{ mes_nombre }} ({{ marcas_mes|length }}) — ver y eliminar</summary>
         {% if marcas_mes %}
-        <div class="table-wrap">
+        <div class="table-wrap lista-mes">
           <table class="data-table">
             <thead><tr><th>Fecha</th><th>Nombre</th><th>Tipo</th><th>Hora</th><th></th></tr></thead>
             <tbody>
@@ -181,11 +152,44 @@
     </div>
   </div>
 
+  <div id="asistencia-calendario">
+    <div class="flex-between">
+      <h3 class="subsection-title">Calendario de asistencia — {{ mes_nombre }}</h3>
+      <div class="month-picker">
+        <a href="?dia={{ mes_anterior }}" class="btn btn-outline btn-sm" title="Mes anterior">‹ Mes anterior</a>
+        {% if mes_siguiente %}<a href="?dia={{ mes_siguiente }}" class="btn btn-outline btn-sm" title="Mes siguiente">Mes siguiente ›</a>{% endif %}
+      </div>
+    </div>
+    <p class="muted-sm">Cada día muestra quién asistió, en orden de llegada: hora de entrada, nombre y hora de salida. Haz clic en un día para verlo arriba.</p>
+    <div class="calendario">
+      {% for nombre_dia in ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"] %}
+      <div class="cal-cabecera">{{ nombre_dia }}</div>
+      {% endfor %}
+      {% for semana in calendario %}
+      {% for c in semana %}
+      {% if c %}
+      <a href="?dia={{ c.fecha }}" class="cal-dia {{ 'cal-hoy' if c.fecha == hoy }} {{ 'cal-elegido' if c.fecha == dia }} {{ 'cal-futuro' if c.fecha > hoy }}">
+        <span class="cal-numero">{{ c.numero }}{% if c.jornadas %} <small>· {{ c.jornadas|length }}</small>{% endif %}</span>
+        {% for j in c.jornadas %}
+        <span class="cal-persona">
+          <b class="mono">{{ (j.entrada|hora) if j.entrada else "—" }}</b> {{ j.nombre }}
+          <small class="mono">{% if j.salida %}→ {{ j.salida|hora }}{% elif j.auto %}sin salida{% elif j.abierto %}trabajando{% endif %}</small>
+        </span>
+        {% endfor %}
+      </a>
+      {% else %}
+      <div class="cal-vacio"></div>
+      {% endif %}
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+
   {# Tiempo real: cada 5 s vuelve a pedir esta misma página y reemplaza solo
      las marcas y la columna derecha (no el QR ni el formulario de marca a
      mano, para no borrar lo que se esté escribiendo). #}
   <div id="asistencia-vivo" hx-get="/dashboard/asistencia?dia={{ dia }}" hx-trigger="every 5s"
-    hx-select-oob="#asistencia-marcas,#asistencia-derecha" hx-swap="none"></div>
+    hx-select-oob="#asistencia-marcas,#asistencia-derecha,#asistencia-calendario" hx-swap="none"></div>
 </div>
 
 <script>
