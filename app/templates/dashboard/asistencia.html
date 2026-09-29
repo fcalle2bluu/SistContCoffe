@@ -86,12 +86,12 @@
                   {% if d.marcas > 2 %}<span class="aviso-marcas" title="Tiene marcas repetidas: revísalas en la lista de la izquierda">{{ d.marcas }} marcas</span>{% endif %}
                 </td>
                 <td class="mono">{{ (d.entrada|hora) if d.entrada else "—" }}</td>
-                <td class="mono">{% if d.salida %}{{ d.salida|hora }}{% elif d.abierto and es_hoy %}<span class="muted-sm">trabajando</span>{% elif d.abierto %}<span class="aviso-marcas">sin salida</span>{% else %}—{% endif %}</td>
+                <td class="mono">{% if d.salida %}{{ d.salida|hora }}{% elif d.abierto and es_hoy %}<span class="muted-sm">trabajando</span>{% elif d.auto %}<span class="aviso-marcas">sin salida</span>{% else %}—{% endif %}</td>
                 <td class="text-right mono">
                   {% if d.abierto and es_hoy %}
                   <span data-vivo data-base="0" data-desde="{{ d.entrada.isoformat() }}">calculando…</span>
                   {% elif d.segundos is not none %}
-                  {{ d.segundos|duracion }}
+                  {{ d.segundos|duracion }}{% if d.auto %} <span class="muted-sm">(auto)</span>{% endif %}
                   {% else %}
                   —
                   {% endif %}
@@ -132,7 +132,7 @@
                 <td class="strong">{{ p.nombre }}</td>
                 <td class="text-right mono">{{ p.dias }}</td>
                 <td class="text-right mono">
-                  {% if p.abierto_desde and es_hoy %}
+                  {% if p.abierto_desde %}
                   <span data-vivo data-base="{{ p.segundos_totales }}" data-desde="{{ p.abierto_desde.isoformat() }}">calculando…</span>
                   {% else %}
                   {{ p.segundos_totales|duracion }}
@@ -144,9 +144,67 @@
             </tbody>
           </table>
         </div>
-        <p class="muted-sm">Solo cuentan las horas de las jornadas con entrada y salida.</p>
+        <p class="muted-sm">Si un día ya pasó y alguien no marcó la salida, esa jornada cuenta {{ horas_sin_salida }} horas.</p>
         {% endif %}
       </div>
+
+      {% if sin_salida %}
+      <div>
+        <h3 class="subsection-title">Jornadas sin salida en {{ mes_nombre }} ({{ sin_salida|length }})</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Fecha</th><th>Nombre</th><th>Entrada</th><th class="text-right">Cuenta</th><th class="text-right"></th></tr></thead>
+            <tbody>
+              {% for d in sin_salida %}
+              <tr>
+                <td class="mono"><a href="?dia={{ d.fecha }}" class="link-muted" title="Ver ese día">{{ d.fecha|fecha }}</a></td>
+                <td class="strong">{{ d.nombre }}</td>
+                <td class="mono">{{ d.entrada|hora }}</td>
+                <td class="text-right mono">{{ horas_sin_salida }}h</td>
+                <td class="text-right nowrap">
+                  <a href="?dia={{ d.fecha }}" class="link-muted">Ver día</a>
+                  <form method="post" action="/dashboard/asistencia/{{ d.entrada_id }}/eliminar" style="display:inline; margin-left:8px;"
+                    onsubmit="return confirm('¿Eliminar la entrada de {{ d.nombre }} del {{ d.fecha|fecha }}? Esta acción no se puede deshacer.');">
+                    <button type="submit" class="link-danger">Eliminar</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="muted-sm">Para registrar la salida real, usa "+ Agregar marca a mano".</p>
+      </div>
+      {% endif %}
+
+      <details class="todas-marcas" open>
+        <summary class="btn btn-outline">Todas las marcas de {{ mes_nombre }} ({{ marcas_mes|length }}) — ver y eliminar</summary>
+        {% if marcas_mes %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Fecha</th><th>Nombre</th><th>Tipo</th><th>Hora</th><th></th></tr></thead>
+            <tbody>
+              {% for m in marcas_mes %}
+              <tr>
+                <td class="mono"><a href="?dia={{ m.marcado_en|fechaiso }}" class="link-muted" title="Ver ese día">{{ m.marcado_en|fechahora_bo }}</a></td>
+                <td class="strong">{{ m.nombre }}</td>
+                <td><span class="marca-tipo marca-{{ m.tipo }}">{{ 'Entrada' if m.tipo == 'entrada' else 'Salida' }}</span></td>
+                <td class="mono">{{ m.marcado_en|hora }}</td>
+                <td class="text-right">
+                  <form method="post" action="/dashboard/asistencia/{{ m.id }}/eliminar" style="display:inline;"
+                    onsubmit="return confirm('¿Eliminar la {{ m.tipo }} de {{ m.nombre }} del {{ m.marcado_en|fechahora_bo }} a las {{ m.marcado_en|hora }}? Esta acción no se puede deshacer.');">
+                    <button type="submit" class="link-danger">Eliminar</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="muted">No hay marcas en {{ mes_nombre }}.</p>
+        {% endif %}
+      </details>
     </div>
   </div>
 </div>

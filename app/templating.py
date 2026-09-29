@@ -91,6 +91,8 @@ templates.env.filters["duracion"] = formato_duracion
 templates.env.filters["ticket_fecha"] = formato_ticket_fecha
 templates.env.filters["datetime_local"] = formato_datetime_local
 templates.env.filters["mes_anio"] = formato_mes_anio
+templates.env.filters["fechaiso"] = lambda iso: _a_hora_bolivia(iso).date().isoformat()
+templates.env.filters["fechahora_bo"] = lambda iso: _a_hora_bolivia(iso).strftime("%d/%m/%Y")
 
 
 # Color de cada cuenta en Contabilidad: así se distingue de un vistazo en el

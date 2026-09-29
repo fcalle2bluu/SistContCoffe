@@ -20,6 +20,11 @@ from app.tz import hoy_bolivia
 router = APIRouter()
 
 VENTANA_TOKEN_SEG = 30
+# Si una jornada de un día que ya pasó quedó sin salida (alguien se olvidó de
+# marcar), se cuenta como jornada completa de 8 horas en vez de seguir
+# sumando horas indefinidamente. No se escribe ninguna marca: si después se
+# agrega la salida real, se usa esa.
+HORAS_JORNADA_SIN_SALIDA = 8
 _TZ_BOLIVIA = ZoneInfo("America/La_Paz")
 
 
@@ -101,7 +106,9 @@ def _agrupar_historial(filas: list) -> tuple[list[dict], float]:
 def _jornadas(filas) -> tuple[list[dict], list[dict]]:
     """Agrupa las marcas (de todos los usuarios) por persona y día, con las
     horas trabajadas de cada jornada cerrada y el total por persona (para el
-    resumen que ve el admin)."""
+    resumen que ve el admin). Las jornadas de días anteriores sin salida se
+    cuentan como HORAS_JORNADA_SIN_SALIDA (marcadas con `auto`)."""
+    hoy = hoy_bolivia().isoformat()
     dias: dict[tuple[int, str], dict] = {}
     for f in filas:
         fecha = f["marcado_en"].astimezone(_TZ_BOLIVIA).date().isoformat()
@@ -131,10 +138,14 @@ def _jornadas(filas) -> tuple[list[dict], list[dict]]:
     historial = []
     for dia in dias.values():
         segundos = None
+        sin_salida = dia["entrada"] is not None and dia["salida"] is None
         if dia["entrada"] and dia["salida"]:
             segundos = int((dia["salida"] - dia["entrada"]).total_seconds())
+        elif sin_salida and dia["fecha"] < hoy:
+            segundos = HORAS_JORNADA_SIN_SALIDA * 3600
         dia["segundos"] = segundos
-        dia["abierto"] = dia["entrada"] is not None and dia["salida"] is None
+        dia["auto"] = sin_salida and dia["fecha"] < hoy
+        dia["abierto"] = sin_salida and dia["fecha"] >= hoy
         historial.append(dia)
 
         persona = resumen_por_persona.setdefault(
@@ -176,13 +187,17 @@ async def asistencia_page(
     jornadas_dia, _ = _jornadas(ctx["marcadas"][::-1])
     inicio_mes = dia_date.replace(day=1)
     fin_mes = (inicio_mes + timedelta(days=32)).replace(day=1)
-    _, personas = _jornadas(await _marcas(inicio_mes, fin_mes))
+    marcas_mes = await _marcas(inicio_mes, fin_mes)
+    jornadas_mes, personas = _jornadas(marcas_mes)
     usuarios = await pool().fetch("SELECT id, nombre FROM usuarios WHERE nombre IS NOT NULL AND nombre <> '' ORDER BY nombre")
     ctx.update({
         "session": session,
         "active": "asistencia",
         "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
         "personas": personas,
+        "sin_salida": sorted((j for j in jornadas_mes if j["auto"]), key=lambda j: (j["fecha"], j["nombre"]), reverse=True),
+        "horas_sin_salida": HORAS_JORNADA_SIN_SALIDA,
+        "marcas_mes": list(reversed(marcas_mes)),
         "mes_nombre": f"{MESES_ES[inicio_mes.month - 1].capitalize()} {inicio_mes.year}",
         "usuarios": usuarios,
         "error": error,

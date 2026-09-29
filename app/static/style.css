@@ -683,3 +683,5 @@ a { color: inherit; }
 .aviso-marcas { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; color: #a16207; background: #fef3c7; }
 .asistencia-shell .data-table td { font-size: 15px; }
 .split-2 .data-table { min-width: 0; }
+.todas-marcas summary { list-style: none; display: inline-flex; margin-bottom: 12px; }
+.todas-marcas summary::-webkit-details-marker { display: none; }
