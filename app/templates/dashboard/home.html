@@ -99,6 +99,10 @@
       <input type="month" id="filtro-mes" class="input" value="{{ hoy_iso[:7] }}" max="{{ hoy_iso[:7] }}" aria-label="Elegir mes" />
       <button type="button" class="btn btn-outline btn-sm" data-mover="1" title="Mes siguiente">›</button>
     </div>
+    {% if session.role == 'admin' %}
+    <a href="/dashboard/informe.pdf" id="btn-informe" class="btn btn-primary" style="margin-left:auto;"
+      title="Gráficos, estadísticas y libros contables del mes en un PDF">📄 Descargar informe PDF del mes</a>
+    {% endif %}
     <p class="muted-sm" id="dashboard-ayuda">Haz clic en cualquier barra o segmento de los gráficos para ver qué productos se vendieron ahí.</p>
     <p class="muted-sm" id="dashboard-cargando" style="display: none;">Actualizando gráficos…</p>
   </div>
@@ -189,6 +193,14 @@
     if (selectPeriodo.value === "mes") return "mes:" + filtroMes.value;
     return selectPeriodo.value;
   }
+  // El informe PDF es del mes elegido en "Un mes"; con cualquier otro período, del mes actual.
+  function actualizarBotonInforme() {
+    var btn = document.getElementById("btn-informe");
+    if (!btn) return;
+    var mes = selectPeriodo.value === "mes" ? filtroMes.value : filtroMes.max;
+    btn.href = "/dashboard/informe.pdf?mes=" + mes;
+    btn.textContent = "📄 Descargar informe PDF (" + mes.split("-").reverse().join("/") + ")";
+  }
   function mostrarPickers() {
     document.getElementById("picker-dia").classList.toggle("oculto", selectPeriodo.value !== "dia");
     document.getElementById("picker-mes").classList.toggle("oculto", selectPeriodo.value !== "mes");
@@ -212,6 +224,7 @@
         var nuevoMes = isoLocal(m).slice(0, 7);
         if (nuevoMes > filtroMes.max) return;
         filtroMes.value = nuevoMes;
+        actualizarBotonInforme();
       }
       cargarResumen();
     });
@@ -486,9 +499,10 @@
     document.getElementById("dashboard-ayuda").style.display = "";
   }
 
-  selectPeriodo.addEventListener("change", function () { mostrarPickers(); cargarResumen(); });
+  selectPeriodo.addEventListener("change", function () { mostrarPickers(); actualizarBotonInforme(); cargarResumen(); });
   filtroDia.addEventListener("change", function () { if (filtroDia.value) cargarResumen(); });
-  filtroMes.addEventListener("change", function () { if (filtroMes.value) cargarResumen(); });
+  filtroMes.addEventListener("change", function () { if (filtroMes.value) { actualizarBotonInforme(); cargarResumen(); } });
+  actualizarBotonInforme();
   cargarResumen();
 
   // Ventas por hora de un día, separadas por turno (una barra apilada por

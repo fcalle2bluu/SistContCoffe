@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.db import close_pool, init_pool
 from app.deps import RedirectTo
+from app.informe import router as informe_router
 from app.routers import (
     asistencia,
     auth,
@@ -72,6 +73,7 @@ app.include_router(inventario_peps.router)
 app.include_router(clientes.router)
 app.include_router(productos.router)
 app.include_router(contabilidad.router)
+app.include_router(informe_router)
 app.include_router(bitacora.router)
 app.include_router(turnos.router)
 app.include_router(turnos_api.router)
