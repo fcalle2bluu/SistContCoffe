@@ -363,21 +363,27 @@ a { color: inherit; }
   --cta-mn: #1d4ed8; --cta-mn-soft: #dbeafe;
   --cta-banco: #7e22ce; --cta-banco-soft: #f3e8ff;
 }
-.cta { display: inline-block; }
-.cta.cta-chica, .cta.cta-mn, .cta.cta-banco {
-  padding: 2px 8px; border-radius: 4px; font-weight: 600; border-left: 4px solid currentColor;
-}
+.cta { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 600; border-left: 4px solid currentColor; }
 .cta.cta-chica { color: var(--cta-chica); background: var(--cta-chica-soft); }
 .cta.cta-mn { color: var(--cta-mn); background: var(--cta-mn-soft); }
 .cta.cta-banco { color: var(--cta-banco); background: var(--cta-banco-soft); }
-.cta small { font-weight: 500; opacity: 0.8; }
-.leyenda-cajas { display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px; }
 .ledger .group-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); border-left: 5px solid var(--cta-chica); }
 .ledger .group-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); border-left: 5px solid var(--cta-mn); }
 .ledger .group-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); border-left: 5px solid var(--cta-banco); }
 .ledger .subtotal-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); }
 .ledger .subtotal-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); }
 .ledger .subtotal-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); }
+/* Resto de las cuentas: rojo, naranja, ámbar, turquesa, rosa, café y gris pizarra. */
+.cta-p0 { --c: #b91c1c; --cs: #fee2e2; }
+.cta-p1 { --c: #c2410c; --cs: #ffedd5; }
+.cta-p2 { --c: #a16207; --cs: #fef3c7; }
+.cta-p3 { --c: #0f766e; --cs: #ccfbf1; }
+.cta-p4 { --c: #be185d; --cs: #fce7f3; }
+.cta-p5 { --c: #7c4a1e; --cs: #f3e5d6; }
+.cta-p6 { --c: #334155; --cs: #e2e8f0; }
+.cta[class*="cta-p"] { color: var(--c); background: var(--cs); }
+.ledger .group-row[class*="cta-p"] td { background: var(--cs); color: var(--c); border-left: 5px solid var(--c); }
+.ledger .subtotal-row[class*="cta-p"] td { background: var(--cs); color: var(--c); }
 
 .pos-form { padding: 16px; }
 .pos-layout { display: flex; flex-direction: column; gap: 20px; }

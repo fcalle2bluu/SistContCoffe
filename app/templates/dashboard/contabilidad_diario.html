@@ -11,7 +11,6 @@
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}
-  {% include "partials/_leyenda_cajas.html" %}
 
   <div>
     <h3 class="subsection-title">{{ "Editar asiento #" + editando_nro|string if editando_nro else "Nuevo asiento" }}</h3>
@@ -92,8 +91,8 @@
           <tr class="line-row">
             <td>{{ a.nro if loop.first else "" }}</td>
             <td>{{ (a.fecha|fecha) if loop.first else "" }}</td>
-            <td>{% if l.debe and l.debe > 0 %}<span class="cta {{ clase_cuenta(l.codigo_cuenta) }}">{{ l.cuenta_nombre or l.codigo_cuenta }}</span>{% endif %}</td>
-            <td>{% if l.haber and l.haber > 0 %}<span class="cta {{ clase_cuenta(l.codigo_cuenta) }}">{{ l.cuenta_nombre or l.codigo_cuenta }}</span>{% endif %}</td>
+            <td>{% if l.debe and l.debe > 0 %}<span {{ color_cuenta(l.codigo_cuenta) }}>{{ l.cuenta_nombre or l.codigo_cuenta }}</span>{% endif %}</td>
+            <td>{% if l.haber and l.haber > 0 %}<span {{ color_cuenta(l.codigo_cuenta) }}>{{ l.cuenta_nombre or l.codigo_cuenta }}</span>{% endif %}</td>
             <td class="num">{{ (l.debe|bs) if l.debe and l.debe > 0 else "" }}</td>
             <td class="num">{{ (l.haber|bs) if l.haber and l.haber > 0 else "" }}</td>
             <td></td>

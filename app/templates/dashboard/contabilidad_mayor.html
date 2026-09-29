@@ -11,7 +11,6 @@
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}
-  {% include "partials/_leyenda_cajas.html" %}
 
   <form method="get" action="/dashboard/contabilidad/mayor" class="toolbar">
     <input type="hidden" name="mes" value="{{ mes.valor }}" />
@@ -76,7 +75,7 @@
       <thead><tr><th>N°</th><th>Fecha</th><th>Glosa</th><th>Cuenta contrapartida</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
       <tbody>
         {% for cta in cuentas_mayor %}
-        <tr class="group-row {{ clase_cuenta(cta.codigo) }}">
+        <tr {{ color_cuenta(cta.codigo, "group-row") }}>
           <td colspan="7">{{ cta.nombre }} ({{ cta.codigo }})</td>
         </tr>
         {% for m in cta.movimientos %}
@@ -84,13 +83,13 @@
           <td class="mono nowrap"><a href="/dashboard/contabilidad/diario/{{ m.nro_asiento }}/editar" class="link-muted">{{ m.nro_asiento }}</a></td>
           <td class="mono nowrap">{{ m.fecha|fecha }}</td>
           <td class="indent">{{ m.glosa }}</td>
-          <td>{% for c in m.contrapartida %}{% if not loop.first %} + {% endif %}<span class="cta {{ clase_cuenta(c.codigo) }}">{{ c.nombre }}</span>{% else %}—{% endfor %}</td>
+          <td>{% for c in m.contrapartida %}{% if not loop.first %} + {% endif %}<span {{ color_cuenta(c.codigo) }}>{{ c.nombre }}</span>{% else %}—{% endfor %}</td>
           <td class="num">{{ (m.debe|bs) if m.debe and m.debe > 0 else "" }}</td>
           <td class="num">{{ (m.haber|bs) if m.haber and m.haber > 0 else "" }}</td>
           <td class="num">{{ m.saldo|bs }}</td>
         </tr>
         {% endfor %}
-        <tr class="subtotal-row {{ clase_cuenta(cta.codigo) }}">
+        <tr {{ color_cuenta(cta.codigo, "subtotal-row") }}>
           <td colspan="6">Saldo final — {{ cta.nombre }}</td>
           <td class="num">{{ cta.saldo_final|bs }}</td>
         </tr>

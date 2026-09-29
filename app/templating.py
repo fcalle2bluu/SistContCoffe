@@ -1,7 +1,9 @@
 from datetime import datetime
 from pathlib import Path
+import zlib
 
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 from app.tz import BOLIVIA_TZ
 
@@ -91,18 +93,26 @@ templates.env.filters["datetime_local"] = formato_datetime_local
 templates.env.filters["mes_anio"] = formato_mes_anio
 
 
-# Color de cada caja en Contabilidad: así se distingue de un vistazo en el
-# Diario y el Mayor adónde entra o de dónde sale la plata.
+# Color de cada cuenta en Contabilidad: así se distingue de un vistazo en el
+# Diario y el Mayor adónde entra o de dónde sale la plata. Las cajas tienen
+# un color fijo (verde, azul, morado); el resto de las cuentas toma uno de
+# CUENTA_COLORES según su código — siempre el mismo para la misma cuenta, y
+# distinto para códigos seguidos (p. ej. IT e IT por pagar).
 CUENTAS_CAJA = {
-    "1110102": ("cta-chica", "Caja Chica", "caja del turno"),
-    "1110101": ("cta-mn", "Caja Moneda Nacional", "resguardo"),
-    "1110103": ("cta-banco", "Banco BISA", "banco"),
+    "1110102": "cta-chica",  # Caja Chica — caja del turno
+    "1110101": "cta-mn",  # Caja Moneda Nacional — resguardo
+    "1110103": "cta-banco",  # Banco BISA
 }
+CUENTA_COLORES = 7  # cantidad de clases .cta-p0 … .cta-p6 en style.css
 
 
-def clase_cuenta(codigo) -> str:
-    return CUENTAS_CAJA.get(str(codigo), ("",))[0]
+def color_cuenta(codigo, clase: str = "cta") -> Markup:
+    codigo = str(codigo)
+    color = CUENTAS_CAJA.get(codigo)
+    if not color:
+        n = int(codigo) if codigo.isdigit() else zlib.crc32(codigo.encode())
+        color = f"cta-p{n % CUENTA_COLORES}"
+    return Markup('class="{} {}"').format(clase, color)
 
 
-templates.env.globals["clase_cuenta"] = clase_cuenta
-templates.env.globals["cuentas_caja"] = CUENTAS_CAJA
+templates.env.globals["color_cuenta"] = color_cuenta

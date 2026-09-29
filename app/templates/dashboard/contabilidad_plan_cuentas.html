@@ -37,7 +37,7 @@
         {% for c in cuentas %}
         <tr class="line-row">
           <td class="mono">{{ c.codigo }}</td>
-          <td>{{ c.nombre }}</td>
+          <td><span {{ color_cuenta(c.codigo) }}>{{ c.nombre }}</span></td>
           <td class="small uppercase">{{ c.tipo }}</td>
         </tr>
         {% endfor %}

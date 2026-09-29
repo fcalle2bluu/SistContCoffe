@@ -6,7 +6,7 @@
       <tbody>
         {% for l in lineas %}
         <tr class="line-row">
-          <td><span class="cta {{ clase_cuenta(l.codigo_cuenta) }}">{{ l.nombre }}</span></td>
+          <td><span {{ color_cuenta(l.codigo_cuenta) }}>{{ l.nombre }}</span></td>
           <td class="num">{{ l.monto|bs if l.lado == "DEBE" else "" }}</td>
           <td class="num">{{ l.monto|bs if l.lado == "HABER" else "" }}</td>
           <td class="text-right">
