@@ -78,9 +78,9 @@
   </div>
 
   <div>
-    <h3 class="subsection-title">Asientos de {{ mes.nombre }} ({{ asientos|length }})</h3>
+    <h3 class="subsection-title">Asientos {{ ("del " ~ mes.dia_nombre) if mes.dia else ("de " ~ mes.nombre) }} ({{ asientos|length }})</h3>
     {% if asientos|length == 0 %}
-    <p class="muted">No hay asientos en {{ mes.nombre }}.</p>
+    <p class="muted">No hay asientos {{ ("el " ~ mes.dia_nombre) if mes.dia else ("en " ~ mes.nombre) }}.</p>
     {% else %}
     <div class="table-wrap">
       <table class="ledger">

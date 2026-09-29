@@ -14,8 +14,8 @@
 
   {% if pendientes_otros_meses > 0 %}
   <p class="error-box">
-    <strong>Hay {{ pendientes_otros_meses }} factura(s) de otros meses sin registrar en el SIAT.</strong>
-    Cambia de mes arriba a la derecha para verlas.
+    <strong>Hay {{ pendientes_otros_meses }} factura(s) de {{ "otros días" if mes.dia else "otros meses" }} sin registrar en el SIAT.</strong>
+    {{ "Quita el filtro de día" if mes.dia else "Cambia de mes" }} arriba a la derecha para verlas.
   </p>
   {% endif %}
   {% if pendientes_atrasadas > 0 %}

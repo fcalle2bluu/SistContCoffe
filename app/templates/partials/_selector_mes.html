@@ -7,5 +7,14 @@
   </form>
   <a href="?mes={{ mes.siguiente }}{{ extra }}" class="btn btn-outline btn-sm" title="Mes siguiente">›</a>
   {% if not mes.es_actual %}<a href="?{{ extra[1:] }}" class="btn btn-outline btn-sm">Mes actual</a>{% endif %}
-  <span class="month-picker-label">{{ mes.nombre }}</span>
+  {% if filtro_dia %}
+  <form method="get" class="month-picker-form day-picker" title="Mostrar solo un día del mes">
+    {% if cuenta_filtro %}<input type="hidden" name="cuenta" value="{{ cuenta_filtro }}" />{% endif %}
+    <label class="day-picker-label">📅 Día</label>
+    <input type="date" name="dia" value="{{ mes.dia or '' }}" min="{{ mes.inicio.isoformat() }}" max="{{ mes.ultimo_dia.isoformat() }}"
+      class="input" onchange="this.form.submit()" aria-label="Filtrar por día" />
+  </form>
+  {% if mes.dia %}<a href="?mes={{ mes.valor }}{{ extra }}" class="btn btn-outline btn-sm">Todo el mes</a>{% endif %}
+  {% endif %}
+  <span class="month-picker-label">{{ mes.nombre }}{% if mes.dia %} — solo el {{ mes.dia_nombre }}{% endif %}</span>
 </div>

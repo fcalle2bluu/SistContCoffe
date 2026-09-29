@@ -15,15 +15,23 @@ router = APIRouter(prefix="/dashboard/contabilidad")
 TIPOS_CUENTA = ("ACTIVO", "PASIVO", "PATRIMONIO", "INGRESO", "EGRESO")
 
 
-def _mes(mes: str | None) -> dict:
+def _mes(mes: str | None, dia: str | None = None) -> dict:
     """Mes que se está viendo en Contabilidad ("2026-09"); si no viene o no
-    es válido, el mes actual. `fin` es el primer día del mes siguiente."""
+    es válido, el mes actual. `fin` es el primer día del mes siguiente.
+    Con `dia` ("2026-09-15") se filtra solo ese día: `desde`/`hasta` (este
+    último exclusivo) son el rango a mostrar, el día o el mes completo."""
     hoy = hoy_bolivia()
+    try:
+        dia_date = date.fromisoformat(dia)
+    except (TypeError, ValueError):
+        dia_date = None
     try:
         anio, num = (int(x) for x in mes.split("-"))
         inicio = date(anio, num, 1)
     except (AttributeError, ValueError):
         inicio = hoy.replace(day=1)
+    if dia_date:
+        inicio = dia_date.replace(day=1)
     fin = (inicio + timedelta(days=32)).replace(day=1)
     anterior = (inicio - timedelta(days=1)).replace(day=1)
     return {
@@ -35,6 +43,10 @@ def _mes(mes: str | None) -> dict:
         "anterior": f"{anterior:%Y-%m}",
         "siguiente": f"{fin:%Y-%m}",
         "es_actual": inicio == hoy.replace(day=1),
+        "dia": dia_date.isoformat() if dia_date else None,
+        "dia_nombre": f"{dia_date:%d/%m/%Y}" if dia_date else None,
+        "desde": dia_date or inicio,
+        "hasta": (dia_date + timedelta(days=1)) if dia_date else fin,
     }
 
 
@@ -183,8 +195,9 @@ async def _diario_context(
     glosa: str = "",
     editando_nro: int | None = None,
     mes: str | None = None,
+    dia: str | None = None,
 ) -> dict:
-    mes_ctx = _mes(mes)
+    mes_ctx = _mes(mes, dia)
     filas = await pool().fetch(
         """
         SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
@@ -194,7 +207,7 @@ async def _diario_context(
         WHERE ld.fecha >= $1 AND ld.fecha < $2
         ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.id
         """,
-        mes_ctx["inicio"], mes_ctx["fin"],
+        mes_ctx["desde"], mes_ctx["hasta"],
     )
     asientos = _agrupar_asientos(filas)
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
@@ -211,18 +224,23 @@ async def _diario_context(
         "total_haber": total_haber,
         "error": error,
         "hoy": hoy_bolivia().isoformat(),
-        "form_fecha": fecha or (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
+        "form_fecha": fecha or mes_ctx["dia"] or (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
         "form_glosa": glosa,
         "editando_nro": editando_nro,
         "mes": mes_ctx,
+        "filtro_dia": True,
     }
 
 
 @router.get("/diario", response_class=HTMLResponse)
 async def diario_page(
-    request: Request, session: dict = Depends(require_admin), error: str | None = None, mes: str | None = None
+    request: Request,
+    session: dict = Depends(require_admin),
+    error: str | None = None,
+    mes: str | None = None,
+    dia: str | None = None,
 ):
-    ctx = await _diario_context(session, error=error, mes=mes)
+    ctx = await _diario_context(session, error=error, mes=mes, dia=dia)
     return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx)
 
 
@@ -488,7 +506,7 @@ async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_adm
 
 async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
     condicion = "WHERE ld.fecha >= $1 AND ld.fecha < $2"
-    args = [mes_ctx["inicio"], mes_ctx["fin"]]
+    args = [mes_ctx["desde"], mes_ctx["hasta"]]
     if cuenta:
         condicion += " AND ld.codigo_cuenta = $3"
         args.append(cuenta)
@@ -569,8 +587,9 @@ async def mayor_page(
     cuenta: str | None = None,
     error: str | None = None,
     mes: str | None = None,
+    dia: str | None = None,
 ):
-    mes_ctx = _mes(mes)
+    mes_ctx = _mes(mes, dia)
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
     cuentas_mayor = await _cuentas_mayor(cuenta, mes_ctx)
 
@@ -584,8 +603,9 @@ async def mayor_page(
             "cuenta_filtro": cuenta,
             "cuentas_mayor": cuentas_mayor,
             "error": error,
-            "hoy": (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
+            "hoy": mes_ctx["dia"] or (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
             "mes": mes_ctx,
+            "filtro_dia": True,
         },
     )
 
@@ -636,6 +656,7 @@ async def agregar_fila_mayor(
                 "error": error,
                 "hoy": fecha or hoy_bolivia().isoformat(),
                 "mes": mes_ctx,
+                "filtro_dia": True,
             },
             status_code=400,
         )
@@ -831,19 +852,22 @@ async def crear_periodo_resultados(
 
 
 @router.get("/facturas", response_class=HTMLResponse)
-async def facturas_page(request: Request, session: dict = Depends(require_admin), mes: str | None = None):
-    mes_ctx = _mes(mes)
+async def facturas_page(
+    request: Request, session: dict = Depends(require_admin), mes: str | None = None, dia: str | None = None
+):
+    mes_ctx = _mes(mes, dia)
     hoy = hoy_bolivia()
     inicio_dia = datetime.combine(hoy, time.min, BOLIVIA_TZ)
     fin_dia = inicio_dia + timedelta(days=1)
-    inicio_mes = datetime.combine(mes_ctx["inicio"], time.min, BOLIVIA_TZ)
-    fin_mes = datetime.combine(mes_ctx["fin"], time.min, BOLIVIA_TZ)
+    # Rango que se muestra: el mes elegido, o solo el día si se filtró por día.
+    inicio_mes = datetime.combine(mes_ctx["desde"], time.min, BOLIVIA_TZ)
+    fin_mes = datetime.combine(mes_ctx["hasta"], time.min, BOLIVIA_TZ)
 
     columnas = (
         "id, mesa, total, tipo_pago, responsable, cobrado_en, "
         "factura_nit, factura_celular, factura_nombre, siat_registrado"
     )
-    facturas_hoy = [] if not mes_ctx["es_actual"] else await pool().fetch(
+    facturas_hoy = [] if not (mes_ctx["desde"] <= hoy < mes_ctx["hasta"]) else await pool().fetch(
         f"""
         SELECT {columnas} FROM ordenes
         WHERE estado = 'cobrada' AND tipo_pago = ANY($1::text[])
@@ -884,6 +908,7 @@ async def facturas_page(request: Request, session: dict = Depends(require_admin)
             "pendientes_atrasadas": len(facturas_atrasadas),
             "pendientes_otros_meses": pendientes_otros_meses,
             "mes": mes_ctx,
+            "filtro_dia": True,
         },
     )
 

@@ -68,7 +68,7 @@
   </div>
 
   {% if cuentas_mayor|length == 0 %}
-  <p class="muted">No hay movimientos en {{ mes.nombre }}.</p>
+  <p class="muted">No hay movimientos {{ ("el " ~ mes.dia_nombre) if mes.dia else ("en " ~ mes.nombre) }}.</p>
   {% else %}
   <div class="table-wrap">
     <table class="ledger">
