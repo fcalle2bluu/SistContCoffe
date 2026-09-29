@@ -224,7 +224,7 @@ async def _diario_context(
         FROM libro_diario ld
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         WHERE ld.fecha >= $1 AND ld.fecha < $2
-        ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.id
+        ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.debe = 0, ld.id  -- en cada asiento, primero el Debe
         """,
         mes_ctx["desde"], mes_ctx["hasta"],
     )
@@ -272,7 +272,7 @@ async def editar_asiento_form(request: Request, nro_asiento: int, session: dict 
         SELECT ld.fecha, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa
         FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         WHERE ld.nro_asiento = $1
-        ORDER BY ld.id
+        ORDER BY ld.debe = 0, ld.id
         """,
         nro_asiento,
     )
