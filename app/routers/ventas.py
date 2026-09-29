@@ -242,9 +242,10 @@ async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categ
     CUENTAS_POR_CATEGORIA_EGRESO); si la categoría todavía no tiene cuenta
     asignada, se usa Gastos Administrativos. Solo se asienta para EFECTIVO y
     QR (mismo criterio que las ventas): un egreso por POS/otro medio no tiene
-    contrapartida de caja/banco automática todavía."""
+    contrapartida de caja/banco automática todavía. En efectivo la plata sale
+    de la caja del turno, o sea de Caja Chica."""
     if tipo_pago == "EFECTIVO":
-        cuenta_contrapartida = CUENTA_CAJA_EFECTIVO
+        cuenta_contrapartida = CUENTA_CAJA_CHICA
     elif tipo_pago == "QR":
         cuenta_contrapartida = CUENTA_BANCO
     else:
