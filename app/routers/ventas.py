@@ -25,8 +25,8 @@ DENOMINACIONES = (
     (5.0, "moneda"), (2.0, "moneda"), (1.0, "moneda"), (0.5, "moneda"), (0.2, "moneda"), (0.1, "moneda"),
 )
 
-CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL
-CUENTA_CAJA_CHICA = "1110102"  # CAJA CHICA — adonde va la plata cuando se traslada desde la caja
+CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL — donde se resguarda la plata que se retira de la caja
+CUENTA_CAJA_CHICA = "1110102"  # CAJA CHICA — la caja del turno: fondo + ventas en efectivo
 CUENTA_BANCO = "1110103"  # BANCO BISA
 CUENTA_VENTAS = "5010101"  # Ventas
 CUENTA_GASTOS_ADMINISTRATIVOS = "405"  # GASTOS ADMINISTRATIVOS (categorías de egreso sin cuenta propia todavía)
@@ -167,7 +167,9 @@ async def _fecha_turno(turno_id: int):
 
 async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
     """Al cerrar un turno, asienta en el Libro Diario el total de ventas en
-    efectivo SIN factura de ese turno (Debe Caja, Haber Ventas). Las ventas
+    efectivo SIN factura de ese turno (Debe Caja Chica, Haber Ventas): la
+    plata entra a la caja del turno y ahí se queda hasta que se retira con
+    "Registrar ingreso a caja". Las ventas
     EFEC/FAC y QR/FAC no pasan por aquí: llevan su propio desglose de IT/IVA
     en _registrar_ventas_facturadas_en_diario. Las ventas por QR sin factura
     se registran en _registrar_ventas_qr_en_diario. Las ventas por POS
@@ -192,7 +194,7 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_CAJA_EFECTIVO, float(total), glosa,
+                fecha, siguiente, CUENTA_CAJA_CHICA, float(total), glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
@@ -266,16 +268,15 @@ async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categ
 
 
 async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
-    """Asienta un ingreso a caja en el Libro Diario apenas se registra: es un
-    traslado interno (Haber Caja Chica, que es la cuenta dinámica que se
-    mueve con las ventas) desde donde salió la plata (Debe Caja Moneda
-    Nacional si fue en efectivo, Banco Bisa si fue por QR — la cuenta que
-    resguarda y no es dinámica). Solo se asienta para EFECTIVO y QR, mismo
-    criterio que egresos y ventas."""
+    """Asienta un ingreso a caja en el Libro Diario apenas se registra: es el
+    retiro de plata de la caja del turno para resguardarla. Sale de Caja
+    Chica (Haber) y entra a Caja Moneda Nacional si se guarda en efectivo, o
+    a Banco Bisa si se deposita/transfiere por QR (Debe). Solo se asienta
+    para EFECTIVO y QR, mismo criterio que egresos y ventas."""
     if tipo_pago == "EFECTIVO":
-        cuenta_origen = CUENTA_CAJA_EFECTIVO
+        cuenta_destino = CUENTA_CAJA_EFECTIVO
     elif tipo_pago == "QR":
-        cuenta_origen = CUENTA_BANCO
+        cuenta_destino = CUENTA_BANCO
     else:
         return
 
@@ -286,7 +287,7 @@ async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str,
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, cuenta_origen, monto, glosa,
+                fecha, siguiente, cuenta_destino, monto, glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
@@ -296,50 +297,23 @@ async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str,
 
 
 async def _registrar_reposicion_caja_en_diario(fecha, monto: float, motivo: str, responsable: str) -> None:
-    """Asienta una reposición de efectivo en la Libro Diario: entra plata a
-    Caja Moneda Nacional (la caja del turno actual) desde Caja Chica — el
-    camino inverso de 'Registrar ingreso a caja', para darle cambio/fondo al
-    cajero durante el turno. Al cerrar, esta plata también se traslada de
-    vuelta a Caja Chica junto con el resto del arqueo, como siempre."""
-    glosa = f"Reposición de caja desde Caja Chica — {motivo} (responsable: {responsable})."
+    """Asienta una reposición de efectivo en el Libro Diario: entra plata a
+    Caja Chica (la caja del turno) desde Caja Moneda Nacional (donde se
+    resguarda) — el camino inverso de 'Registrar ingreso a caja', para darle
+    cambio/fondo al cajero durante el turno."""
+    glosa = f"Reposición de caja desde Caja Moneda Nacional — {motivo} (responsable: {responsable})."
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_CAJA_EFECTIVO, monto, glosa,
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
-            )
-
-
-async def _registrar_traslado_arqueo_a_caja_chica_en_diario(turno_id: int, responsable: str, monto: float) -> None:
-    """Al cerrar un turno se traslada a Caja Chica todo el efectivo que quedó
-    contado en el arqueo — el mismo movimiento que ya hace a mano 'Registrar
-    ingreso a caja' durante el turno, pero automático para lo que sobra al
-    cierre, así Caja Moneda Nacional siempre vuelve a cero después de cerrar.
-    Haber Caja Chica (cuenta dinámica) / Debe Caja Moneda Nacional (cuenta
-    que resguarda, no dinámica) — mismo criterio que _registrar_ingreso_caja_en_diario."""
-    if monto <= 0:
-        return
-    glosa = f"Traslado a Caja Chica del arqueo de cierre del turno de {responsable} (turno #{turno_id})."
-    fecha = await _fecha_turno(turno_id)
-    async with pool().acquire() as conn:
-        async with conn.transaction():
-            siguiente = await _siguiente_nro_asiento(conn, fecha)
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, $4, 0, $5)",
                 fecha, siguiente, CUENTA_CAJA_EFECTIVO, monto, glosa,
-            )
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
             )
 
 
@@ -382,7 +356,7 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
                 iva = round(total * TASA_IVA, 2)
                 venta_neta = round(total - iva, 2)
                 glosa = f"Ventas en efectivo con factura del turno de {turno['responsable']} (turno #{turno_id})."
-                await linea(siguiente, CUENTA_CAJA_EFECTIVO, total, 0, glosa)
+                await linea(siguiente, CUENTA_CAJA_CHICA, total, 0, glosa)
                 await linea(siguiente, CUENTA_IT, it, 0, glosa)
                 await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
                 await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
@@ -1410,7 +1384,6 @@ async def cerrar_turno(
     await _registrar_ventas_efectivo_en_diario(turno_id)
     await _registrar_ventas_qr_en_diario(turno_id)
     await _registrar_ventas_facturadas_en_diario(turno_id)
-    await _registrar_traslado_arqueo_a_caja_chica_en_diario(turno_id, turno_cerrado["responsable"], total)
 
     teorico = await _efectivo_teorico_turno(turno_id, turno_cerrado["monto_inicial"])
     diferencia = round(total - teorico, 2)

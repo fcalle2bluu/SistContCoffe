@@ -174,12 +174,12 @@
       </details>
 
       <details class="disclosure">
-        <summary class="btn btn-outline btn-stack">Registrar ingreso a caja<span class="btn-caption">Efectivo/QR → Caja Chica (1110102)</span></summary>
+        <summary class="btn btn-outline btn-stack">Registrar ingreso a caja<span class="btn-caption">Caja Chica (1110102) → Caja Moneda Nacional / Banco</span></summary>
         <form method="post" hx-push-url="false" action="/dashboard/ventas/movimientos/ingreso" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div class="flex-1">
             <label class="field-label">Motivo</label>
-            <input name="motivo" required placeholder="Ej: traslado de plata de la caja de ventas a Caja Chica" class="input" />
+            <input name="motivo" required placeholder="Ej: retiro de plata de la caja del turno para guardarla" class="input" />
           </div>
           <div>
             <label class="field-label">Método de pago</label>
@@ -203,7 +203,7 @@
       </details>
 
       <details class="disclosure">
-        <summary class="btn btn-outline btn-stack">Reponer caja<span class="btn-caption">Caja Chica (1110102) → Efectivo (1110101)</span></summary>
+        <summary class="btn btn-outline btn-stack">Reponer caja<span class="btn-caption">Caja Moneda Nacional (1110101) → Caja Chica (1110102)</span></summary>
         <form method="post" hx-push-url="false" action="/dashboard/ventas/movimientos/reposicion" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div class="flex-1">
@@ -225,12 +225,12 @@
       </details>
 
       <details class="disclosure" id="disclosure-cerrar-turno">
-        <summary class="btn btn-primary btn-stack">Cerrar turno<span class="btn-caption">Efectivo → Caja Chica</span></summary>
+        <summary class="btn btn-primary btn-stack">Cerrar turno<span class="btn-caption">El efectivo queda en Caja Chica</span></summary>
         <div class="disclosure-content stack-4">
           {% if resumen_pagos %}
           {% set cuentas_destino = {
-            'EFECTIVO': 'Caja Moneda Nacional (1110101) → se traslada entero a Caja Chica al cerrar',
-            'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA → se traslada entero a Caja Chica al cerrar',
+            'EFECTIVO': 'Caja Chica (1110102) — queda en la caja del turno',
+            'EFEC/FAC': 'Caja Chica (1110102) + IT/IVA — queda en la caja del turno',
             'QR': 'Banco Bisa (1110103)',
             'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
             'POS': 'Sin asiento automático (lo registra el contador a mano)',
@@ -258,11 +258,11 @@
               </tbody>
             </table>
           </div>
-          <p class="muted-sm">Al cerrar, todo el efectivo contado se traslada solo a Caja Chica (1110102).</p>
+          <p class="muted-sm">El efectivo contado queda en Caja Chica (1110102): al cerrar no se traslada a otra cuenta.</p>
           {% endif %}
 
           {% if resumen_ingresos_caja %}
-          {% set cuentas_origen_ingreso = {'EFECTIVO': 'Caja Moneda Nacional', 'QR': 'Banco Bisa'} %}
+          {% set cuentas_destino_ingreso = {'EFECTIVO': 'Caja Moneda Nacional (1110101)', 'QR': 'Banco Bisa (1110103)'} %}
           <div class="table-wrap">
             <table class="data-table">
               <thead><tr><th>Ingreso a caja</th><th class="text-right">Cantidad</th><th class="text-right">Monto</th><th>Va a la cuenta</th></tr></thead>
@@ -273,8 +273,8 @@
                   <td class="text-right mono">{{ datos.cantidad }}</td>
                   <td class="text-right mono">Bs {{ "%.2f"|format(datos.monto) }}</td>
                   <td class="small">
-                    {% if tipo in cuentas_origen_ingreso %}
-                    Caja Chica (1110102) — sale de {{ cuentas_origen_ingreso[tipo] }}
+                    {% if tipo in cuentas_destino_ingreso %}
+                    Sale de Caja Chica (1110102) → entra a {{ cuentas_destino_ingreso[tipo] }}
                     {% else %}
                     Sin asiento automático (lo registra el contador a mano)
                     {% endif %}

@@ -43,8 +43,8 @@
   <div>
     <h3 class="subsection-title">Ventas por método de pago</h3>
     {% set cuentas_destino = {
-      'EFECTIVO': 'Caja Moneda Nacional (1110101) → se traslada entero a Caja Chica al cerrar',
-      'EFEC/FAC': 'Caja Moneda Nacional (1110101) + IT/IVA → se traslada entero a Caja Chica al cerrar',
+      'EFECTIVO': 'Caja Chica (1110102) — queda en la caja del turno',
+      'EFEC/FAC': 'Caja Chica (1110102) + IT/IVA — queda en la caja del turno',
       'QR': 'Banco Bisa (1110103)',
       'QR/FAC': 'Vía Linkser → Banco Bisa + comisión + IT/IVA',
       'POS': 'Sin asiento automático (lo registra el contador a mano)',
@@ -78,7 +78,7 @@
   {% if resumen_ingresos_caja %}
   <div>
     <h3 class="subsection-title">Ingresos a caja por método de pago</h3>
-    {% set cuentas_origen_ingreso = {'EFECTIVO': 'Caja Moneda Nacional', 'QR': 'Banco Bisa'} %}
+    {% set cuentas_destino_ingreso = {'EFECTIVO': 'Caja Moneda Nacional (1110101)', 'QR': 'Banco Bisa (1110103)'} %}
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr><th>Método de pago</th><th class="text-right">Cantidad</th><th class="text-right">Monto</th><th>Va a la cuenta</th></tr></thead>
@@ -89,8 +89,8 @@
             <td class="text-right mono">{{ datos.cantidad }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(datos.monto) }}</td>
             <td class="small">
-              {% if tipo in cuentas_origen_ingreso %}
-              Caja Chica (1110102) — sale de {{ cuentas_origen_ingreso[tipo] }}
+              {% if tipo in cuentas_destino_ingreso %}
+              Sale de Caja Chica (1110102) → entra a {{ cuentas_destino_ingreso[tipo] }}
               {% else %}
               Sin asiento automático (lo registra el contador a mano)
               {% endif %}
@@ -165,7 +165,7 @@
           <input type="hidden" name="next" value="/dashboard/turnos/{{ turno.id }}" />
           <div class="flex-1">
             <label class="field-label">Motivo</label>
-            <input name="motivo" required placeholder="Ej: traslado de la caja de ventas a la caja moneda nacional" class="input" />
+            <input name="motivo" required placeholder="Ej: retiro de plata de la caja del turno para guardarla" class="input" />
           </div>
           <div>
             <label class="field-label">Método de pago</label>
