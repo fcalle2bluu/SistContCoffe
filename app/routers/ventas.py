@@ -147,13 +147,10 @@ async def _efectivo_teorico_turno(turno_id: int, monto_inicial) -> float:
 
 TASA_IVA = 0.13
 TASA_IT = 0.03
-TASA_COMISION_LINKSER = 0.018
 
 CUENTA_IT = "1160103"
 CUENTA_IT_POR_PAGAR = "1160104"
 CUENTA_IVA = "900006"
-CUENTA_LINKSER = "502030102"
-CUENTA_COMISION_LINKSER = "502030103"
 
 
 async def _fecha_turno(turno_id: int):
@@ -317,10 +314,10 @@ async def _registrar_reposicion_caja_en_diario(fecha, monto: float, motivo: str,
 async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
     """Al cerrar un turno, asienta las ventas con factura (EFEC/FAC, QR/FAC y
     POS/FAC) desglosando IT (3%) e IVA (13%) sobre el total, igual que se
-    calculaba a mano en el Excel. Las ventas QR/FAC pasan primero por
-    Linkser, que cobra una comisión (1.8%) antes de depositar. Las ventas
-    QR/POS sin factura siguen sin tocarse: ese tratamiento lo sigue armando
-    el contador."""
+    calculaba a mano en el Excel. Las ventas QR/FAC y POS/FAC van directo
+    al Banco (no pasan por Linkser, según el contador). Las ventas POS sin
+    factura siguen sin tocarse: ese tratamiento lo sigue armando el
+    contador."""
     filas = await pool().fetch(
         "SELECT op.tipo_pago, COALESCE(SUM(op.monto), 0) AS total FROM orden_pagos op "
         "JOIN ordenes o ON o.id = op.orden_id "
@@ -362,14 +359,11 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
 
             if "QR/FAC" in totales:
                 total = totales["QR/FAC"]
-                comision = round(total * TASA_COMISION_LINKSER, 2)
-                neto_linkser = round(total - comision, 2)
                 it = round(total * TASA_IT, 2)
                 iva = round(total * TASA_IVA, 2)
                 venta_neta = round(total - iva, 2)
-                glosa = f"Ventas QR con factura (vía Linkser) del turno de {turno['responsable']} (turno #{turno_id})."
-                await linea(siguiente, CUENTA_LINKSER, neto_linkser, 0, glosa)
-                await linea(siguiente, CUENTA_COMISION_LINKSER, comision, 0, glosa)
+                glosa = f"Ventas QR con factura del turno de {turno['responsable']} (turno #{turno_id})."
+                await linea(siguiente, CUENTA_BANCO, total, 0, glosa)
                 await linea(siguiente, CUENTA_IT, it, 0, glosa)
                 await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
                 await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
