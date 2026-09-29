@@ -540,13 +540,12 @@ async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
         for l in todas_lineas:
             lineas_por_asiento.setdefault(l["nro_asiento"], []).append(l)
 
-    def _contrapartida(fila) -> str:
-        otras = [
-            l["cuenta_nombre"] or l["codigo_cuenta"]
+    def _contrapartida(fila) -> list[dict]:
+        return [
+            {"codigo": l["codigo_cuenta"], "nombre": l["cuenta_nombre"] or l["codigo_cuenta"]}
             for l in lineas_por_asiento.get(fila["nro_asiento"], [])
             if l["id"] != fila["id"]
         ]
-        return " + ".join(otras) if otras else "—"
 
     cuentas_mayor = []
     actual = None

@@ -1,0 +1,5 @@
+<div class="leyenda-cajas" aria-label="Colores de las cajas">
+  {% for codigo, (clase, nombre, rol) in cuentas_caja.items() %}
+  <span class="cta {{ clase }}">{{ nombre }} <small>· {{ rol }}</small></span>
+  {% endfor %}
+</div>

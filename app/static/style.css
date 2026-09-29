@@ -280,7 +280,7 @@ a { color: inherit; }
 .totals-row td { border-top: 1px solid var(--border-strong); background: var(--accent-soft); font-weight: 700; }
 
 /* Módulo de contabilidad: vista densa tipo hoja de cálculo */
-.report-shell { max-width: 1100px; margin: 0 auto; }
+.report-shell { max-width: 1320px; margin: 0 auto; }
 
 .toolbar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -339,6 +339,45 @@ a { color: inherit; }
 }
 .capture-grid input:focus, .capture-grid select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .capture-grid input[type="number"] { text-align: right; font-family: "SFMono-Regular", Consolas, monospace; }
+
+/* Contabilidad: letra más grande y legible (solo dentro de .report-shell) */
+.report-shell .ledger { font-size: 15px; }
+.report-shell .ledger th { font-size: 12.5px; padding: 10px 12px; color: #475467; }
+.report-shell .ledger td { padding: 9px 12px; }
+.report-shell .ledger .group-row td { font-size: 13.5px; padding-top: 11px; padding-bottom: 11px; }
+.report-shell .ledger .num { font-size: 15px; }
+.report-shell .ledger .glosa { font-size: 14px; color: #344054; font-style: italic; }
+.report-shell .capture-grid input, .report-shell .capture-grid select { font-size: 15px; padding: 8px 10px; }
+.report-shell .capture-grid th { font-size: 12.5px; }
+.report-shell .input { font-size: 15px; }
+.report-shell .field-label { font-size: 13px; }
+.report-shell .subnav-link { font-size: 14.5px; padding: 8px 16px; }
+.report-shell .section-subtitle { font-size: 15px; }
+.report-shell .data-table td { font-size: 15px; }
+.report-shell .data-table th { font-size: 12.5px; }
+
+/* Colores de las cajas: verde = Caja Chica (caja del turno), azul = Caja
+   Moneda Nacional (resguardo), morado = Banco BISA. */
+:root {
+  --cta-chica: #15803d; --cta-chica-soft: #dcfce7;
+  --cta-mn: #1d4ed8; --cta-mn-soft: #dbeafe;
+  --cta-banco: #7e22ce; --cta-banco-soft: #f3e8ff;
+}
+.cta { display: inline-block; }
+.cta.cta-chica, .cta.cta-mn, .cta.cta-banco {
+  padding: 2px 8px; border-radius: 4px; font-weight: 600; border-left: 4px solid currentColor;
+}
+.cta.cta-chica { color: var(--cta-chica); background: var(--cta-chica-soft); }
+.cta.cta-mn { color: var(--cta-mn); background: var(--cta-mn-soft); }
+.cta.cta-banco { color: var(--cta-banco); background: var(--cta-banco-soft); }
+.cta small { font-weight: 500; opacity: 0.8; }
+.leyenda-cajas { display: flex; flex-wrap: wrap; gap: 8px; font-size: 14px; }
+.ledger .group-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); border-left: 5px solid var(--cta-chica); }
+.ledger .group-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); border-left: 5px solid var(--cta-mn); }
+.ledger .group-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); border-left: 5px solid var(--cta-banco); }
+.ledger .subtotal-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); }
+.ledger .subtotal-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); }
+.ledger .subtotal-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); }
 
 .pos-form { padding: 16px; }
 .pos-layout { display: flex; flex-direction: column; gap: 20px; }

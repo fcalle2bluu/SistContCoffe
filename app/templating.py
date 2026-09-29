@@ -89,3 +89,20 @@ templates.env.filters["duracion"] = formato_duracion
 templates.env.filters["ticket_fecha"] = formato_ticket_fecha
 templates.env.filters["datetime_local"] = formato_datetime_local
 templates.env.filters["mes_anio"] = formato_mes_anio
+
+
+# Color de cada caja en Contabilidad: así se distingue de un vistazo en el
+# Diario y el Mayor adónde entra o de dónde sale la plata.
+CUENTAS_CAJA = {
+    "1110102": ("cta-chica", "Caja Chica", "caja del turno"),
+    "1110101": ("cta-mn", "Caja Moneda Nacional", "resguardo"),
+    "1110103": ("cta-banco", "Banco BISA", "banco"),
+}
+
+
+def clase_cuenta(codigo) -> str:
+    return CUENTAS_CAJA.get(str(codigo), ("",))[0]
+
+
+templates.env.globals["clase_cuenta"] = clase_cuenta
+templates.env.globals["cuentas_caja"] = CUENTAS_CAJA
