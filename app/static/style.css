@@ -685,3 +685,6 @@ a { color: inherit; }
 .split-2 .data-table { min-width: 0; }
 .todas-marcas summary { list-style: none; display: inline-flex; margin-bottom: 12px; }
 .todas-marcas summary::-webkit-details-marker { display: none; }
+.fila-clic { cursor: pointer; }
+.fila-clic:hover td { background: var(--accent-soft); }
+.data-table th.text-right { text-align: right; }

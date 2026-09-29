@@ -110,6 +110,50 @@
     </div>
   </div>
 
+  <div class="card" id="ajustes-card">
+    <h3 class="card-title">Ajustes del período <span class="muted-sm">(no son productos)</span></h3>
+    <p class="muted-sm">Amortizaciones, extras, tips y descuentos. Se cobran, pero no se cuentan como productos vendidos.</p>
+    <div class="table-wrap" style="margin-top:12px;">
+      <table class="data-table" id="tabla-ajustes">
+        <thead><tr><th>Ajuste</th><th class="text-right">N° de ventas</th><th class="text-right">Monto</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <dl class="mini-stats-row" style="margin-top:14px;">
+      <div class="mini-stat"><dt>Ventas de productos</dt><dd id="tot-productos">—</dd></div>
+      <div class="mini-stat"><dt>+ Ajustes</dt><dd id="tot-ajustes">—</dd></div>
+      <div class="mini-stat oculto" id="tot-diferencia-box"><dt>+ Otros</dt><dd id="tot-diferencia">—</dd></div>
+      <div class="mini-stat"><dt>= Total cobrado</dt><dd id="tot-cobrado">—</dd></div>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Estadística por día</h3>
+    <p class="muted-sm">Del período elegido arriba. Haz clic en un día para ver sus productos en el detalle de abajo.</p>
+    <div class="table-wrap" style="margin-top:12px; max-height:520px; overflow:auto;">
+      <table class="data-table" id="tabla-por-dia">
+        <thead><tr><th>Día</th><th class="text-right">Ventas</th><th class="text-right">Unidades</th><th class="text-right">Productos</th><th class="text-right">Ajustes</th><th class="text-right">Total cobrado</th><th class="text-right">Ticket promedio</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="flex-between">
+      <div>
+        <h3 class="card-title">Estadística por producto</h3>
+        <p class="muted-sm">Del período elegido arriba, sin ajustes.</p>
+      </div>
+      <input type="search" id="buscar-producto" class="input input-w44" placeholder="Buscar producto…" />
+    </div>
+    <div class="table-wrap" style="margin-top:12px; max-height:520px; overflow:auto;">
+      <table class="data-table" id="tabla-por-producto">
+        <thead><tr><th>Producto</th><th>Categoría</th><th class="text-right">Unidades</th><th class="text-right">Monto</th><th class="text-right">% de ventas</th><th class="text-right">Días vendido</th><th class="text-right">Promedio / día</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="card" id="detalle-card">
     <h3 class="card-title" id="detalle-titulo">Detalle de productos</h3>
     <p class="muted-sm" id="detalle-vacio">Haz clic en una barra, punto o segmento de cualquier gráfico para ver el detalle aquí.</p>
@@ -320,6 +364,66 @@
     });
   }
 
+  function escapar(t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function numero(n) {
+    return Number(n).toLocaleString("es-BO", { maximumFractionDigits: 1 });
+  }
+
+  function pintarEstadisticas(data) {
+    var filasAjustes = data.ajustes.map(function (a) {
+      return "<tr><td>" + escapar(a.nombre) + "</td><td class='text-right mono'>" + a.ventas +
+        "</td><td class='text-right mono'>" + formatoBs(a.monto) + "</td></tr>";
+    });
+    document.querySelector("#tabla-ajustes tbody").innerHTML = filasAjustes.join("") ||
+      "<tr><td colspan='3' class='muted'>No hubo ajustes en este período.</td></tr>";
+    document.getElementById("tot-productos").textContent = formatoBs(data.totales.productos);
+    document.getElementById("tot-ajustes").textContent = formatoBs(data.totales.ajustes);
+    document.getElementById("tot-cobrado").textContent = formatoBs(data.totales.cobrado);
+    document.getElementById("tot-diferencia").textContent = formatoBs(data.totales.diferencia);
+    document.getElementById("tot-diferencia-box").classList.toggle("oculto", Math.abs(data.totales.diferencia) < 0.01);
+
+    document.querySelector("#tabla-por-dia tbody").innerHTML = data.por_dia.map(function (d) {
+      return "<tr class='fila-clic' data-fecha='" + d.fecha + "'><td class='nowrap'>" + escapar(d.etiqueta) +
+        "</td><td class='text-right mono'>" + d.ventas +
+        "</td><td class='text-right mono'>" + numero(d.unidades) +
+        "</td><td class='text-right mono'>" + formatoBs(d.productos) +
+        "</td><td class='text-right mono'>" + (d.ajustes ? formatoBs(d.ajustes) : "—") +
+        "</td><td class='text-right mono strong'>" + formatoBs(d.total) +
+        "</td><td class='text-right mono'>" + formatoBs(d.ticket) + "</td></tr>";
+    }).join("") || "<tr><td colspan='7' class='muted'>No hay ventas en este período.</td></tr>";
+
+    productosPeriodo = data.por_producto;
+    pintarProductos();
+  }
+
+  var productosPeriodo = [];
+  function pintarProductos() {
+    var q = document.getElementById("buscar-producto").value.trim().toLowerCase();
+    var lista = productosPeriodo.filter(function (p) { return !q || p.nombre.toLowerCase().indexOf(q) !== -1; });
+    document.querySelector("#tabla-por-producto tbody").innerHTML = lista.map(function (p) {
+      return "<tr><td class='strong'>" + escapar(p.nombre) + "</td><td class='small'>" + escapar(p.categoria) +
+        "</td><td class='text-right mono'>" + numero(p.unidades) +
+        "</td><td class='text-right mono'>" + formatoBs(p.monto) +
+        "</td><td class='text-right mono'>" + p.pct + " %" +
+        "</td><td class='text-right mono'>" + p.dias +
+        "</td><td class='text-right mono'>" + numero(p.promedio_dia) + "</td></tr>";
+    }).join("") || "<tr><td colspan='7' class='muted'>" + (q ? "Ningún producto coincide." : "No hay productos vendidos en este período.") + "</td></tr>";
+  }
+  document.getElementById("buscar-producto").addEventListener("input", pintarProductos);
+
+  document.querySelector("#tabla-por-dia tbody").addEventListener("click", async function (e) {
+    var fila = e.target.closest("tr[data-fecha]");
+    if (!fila) return;
+    var r = await fetch("/dashboard/api/detalle-dia?fecha=" + fila.getAttribute("data-fecha"));
+    var data = await r.json();
+    mostrarDetalle(data.titulo, data.items);
+    document.getElementById("detalle-card").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
   var solicitudActual = 0;
   async function cargarResumen() {
     var miSolicitud = ++solicitudActual;
@@ -332,6 +436,7 @@
     pintarTopProductos(data.top_productos);
     pintarCategorias(data.categorias);
     pintarPagos(data.metodos_pago);
+    pintarEstadisticas(data);
     document.getElementById("dashboard-cargando").style.display = "none";
     document.getElementById("dashboard-ayuda").style.display = "";
   }

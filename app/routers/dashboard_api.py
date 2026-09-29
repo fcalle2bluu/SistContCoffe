@@ -11,6 +11,15 @@ router = APIRouter(prefix="/dashboard/api")
 
 PERIODOS = ("hoy", "7d", "30d", "anio", "todos")
 
+# Ítems que NO son productos: la categoría AJUSTES (AMORTIZACION BS, Extra,
+# EXTRA BS, Tips...) y los descuentos (precio negativo, con o sin producto).
+# Se cargan con precio 1 Bs y cantidad = monto, así que si se contaran como
+# productos inflarían las unidades vendidas. Se excluyen de las estadísticas
+# de productos y se muestran aparte en "Ajustes". Requiere `LEFT JOIN
+# productos p ON p.id = oi.producto_id`.
+ES_AJUSTE = "(COALESCE(p.categoria, '') = 'AJUSTES' OR oi.precio_unitario < 0)"
+NOMBRE_AJUSTE = "CASE WHEN oi.precio_unitario < 0 THEN 'Descuentos' ELSE COALESCE(p.nombre, oi.producto_nombre) END"
+
 
 def _rango_periodo(periodo: str) -> tuple[str, datetime, datetime]:
     hoy = ahora_bolivia().date()
@@ -79,7 +88,14 @@ async def resumen(periodo: str = "7d", session: dict = Depends(require_dashboard
     granularidad, inicio, fin = _rango_periodo(periodo)
     bucket_sql = _bucket_expr(granularidad)
 
-    filas_serie, top_productos, categorias, metodos_pago = await asyncio.gather(
+    (filas_serie, top_productos, categorias, metodos_pago), (ajustes, por_dia, por_producto) = await asyncio.gather(
+        _consultas_resumen(bucket_sql, inicio, fin), _estadisticas(inicio, fin)
+    )
+    return _armar_resumen(granularidad, inicio, fin, filas_serie, top_productos, categorias, metodos_pago, ajustes, por_dia, por_producto)
+
+
+async def _consultas_resumen(bucket_sql: str, inicio: datetime, fin: datetime):
+    return await asyncio.gather(
         pool().fetch(
             f"SELECT {bucket_sql} AS bucket, SUM(total) AS total FROM ordenes "
             "WHERE estado = 'cobrada' AND cobrado_en >= $1 AND cobrado_en < $2 "
@@ -91,7 +107,8 @@ async def resumen(periodo: str = "7d", session: dict = Depends(require_dashboard
             "SELECT oi.producto_nombre AS nombre, SUM(oi.cantidad) AS cantidad, "
             "SUM(oi.cantidad * oi.precio_unitario) AS monto "
             "FROM orden_items oi JOIN ordenes o ON o.id = oi.orden_id "
-            "WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 "
+            "LEFT JOIN productos p ON p.id = oi.producto_id "
+            f"WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 AND NOT {ES_AJUSTE} "
             "GROUP BY oi.producto_nombre ORDER BY cantidad DESC LIMIT 10",
             inicio,
             fin,
@@ -101,7 +118,7 @@ async def resumen(periodo: str = "7d", session: dict = Depends(require_dashboard
             "SUM(oi.cantidad * oi.precio_unitario) AS monto "
             "FROM orden_items oi JOIN ordenes o ON o.id = oi.orden_id "
             "LEFT JOIN productos p ON p.id = oi.producto_id "
-            "WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 "
+            f"WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 AND NOT {ES_AJUSTE} "
             "GROUP BY p.categoria ORDER BY monto DESC",
             inicio,
             fin,
@@ -114,6 +131,56 @@ async def resumen(periodo: str = "7d", session: dict = Depends(require_dashboard
             fin,
         ),
     )
+
+
+async def _estadisticas(inicio: datetime, fin: datetime):
+    """Ajustes del período (lo que no es producto), totales por día y totales
+    por producto — para las tablas de estadísticas del dashboard."""
+    return await asyncio.gather(
+        pool().fetch(
+            f"SELECT {NOMBRE_AJUSTE} AS nombre, COUNT(DISTINCT o.id) AS ventas, "
+            "SUM(oi.cantidad * oi.precio_unitario) AS monto "
+            "FROM orden_items oi JOIN ordenes o ON o.id = oi.orden_id "
+            "LEFT JOIN productos p ON p.id = oi.producto_id "
+            f"WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 AND {ES_AJUSTE} "
+            "GROUP BY 1 ORDER BY monto DESC",
+            inicio, fin,
+        ),
+        pool().fetch(
+            f"""
+            WITH items AS (
+                SELECT oi.orden_id,
+                       SUM(oi.cantidad) FILTER (WHERE NOT {ES_AJUSTE}) AS unidades,
+                       SUM(oi.cantidad * oi.precio_unitario) FILTER (WHERE NOT {ES_AJUSTE}) AS productos,
+                       SUM(oi.cantidad * oi.precio_unitario) FILTER (WHERE {ES_AJUSTE}) AS ajustes
+                FROM orden_items oi LEFT JOIN productos p ON p.id = oi.producto_id
+                GROUP BY oi.orden_id
+            )
+            SELECT (o.cobrado_en AT TIME ZONE 'America/La_Paz')::date AS dia,
+                   COUNT(*) AS ventas, SUM(o.total) AS total,
+                   COALESCE(SUM(i.unidades), 0) AS unidades,
+                   COALESCE(SUM(i.productos), 0) AS productos,
+                   COALESCE(SUM(i.ajustes), 0) AS ajustes
+            FROM ordenes o LEFT JOIN items i ON i.orden_id = o.id
+            WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2
+            GROUP BY dia ORDER BY dia DESC
+            """,
+            inicio, fin,
+        ),
+        pool().fetch(
+            "SELECT oi.producto_nombre AS nombre, COALESCE(MAX(p.categoria), 'Otros') AS categoria, "
+            "SUM(oi.cantidad) AS unidades, SUM(oi.cantidad * oi.precio_unitario) AS monto, "
+            "COUNT(DISTINCT (o.cobrado_en AT TIME ZONE 'America/La_Paz')::date) AS dias "
+            "FROM orden_items oi JOIN ordenes o ON o.id = oi.orden_id "
+            "LEFT JOIN productos p ON p.id = oi.producto_id "
+            f"WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 AND NOT {ES_AJUSTE} "
+            "GROUP BY oi.producto_nombre ORDER BY monto DESC",
+            inicio, fin,
+        ),
+    )
+
+
+def _armar_resumen(granularidad, inicio, fin, filas_serie, top_productos, categorias, metodos_pago, ajustes, por_dia, por_producto):
     por_bucket = {f["bucket"]: float(f["total"]) for f in filas_serie}
 
     # Postgres devuelve "AT TIME ZONE" como timestamp naive (hora local sin tz);
@@ -156,11 +223,54 @@ async def resumen(periodo: str = "7d", session: dict = Depends(require_dashboard
             {"nombre": r["nombre"], "cantidad": r["cantidad"], "monto": float(r["monto"])}
             for r in metodos_pago
         ],
+        **_tablas_estadisticas(ajustes, por_dia, por_producto),
+    }
+
+
+def _tablas_estadisticas(ajustes, por_dia, por_producto) -> dict:
+    total_cobrado = sum(float(d["total"]) for d in por_dia)
+    total_productos = sum(float(d["productos"]) for d in por_dia)
+    total_ajustes = sum(float(a["monto"]) for a in ajustes)
+    monto_productos = sum(float(p["monto"]) for p in por_producto) or 1.0
+    return {
+        "ajustes": [{"nombre": a["nombre"], "ventas": a["ventas"], "monto": float(a["monto"])} for a in ajustes],
+        "totales": {
+            "cobrado": round(total_cobrado, 2),
+            "productos": round(total_productos, 2),
+            "ajustes": round(total_ajustes, 2),
+            # Lo cobrado que no se explica por los ítems (p. ej. totales editados a mano).
+            "diferencia": round(total_cobrado - total_productos - total_ajustes, 2),
+        },
+        "por_dia": [
+            {
+                "fecha": d["dia"].isoformat(),
+                "etiqueta": f"{DIAS_CORTOS[(d['dia'].weekday() + 1) % 7]} {d['dia']:%d/%m/%Y}",
+                "ventas": d["ventas"],
+                "unidades": float(d["unidades"]),
+                "productos": float(d["productos"]),
+                "ajustes": float(d["ajustes"]),
+                "total": float(d["total"]),
+                "ticket": float(d["total"]) / d["ventas"] if d["ventas"] else 0.0,
+            }
+            for d in por_dia
+        ],
+        "por_producto": [
+            {
+                "nombre": p["nombre"],
+                "categoria": p["categoria"],
+                "unidades": float(p["unidades"]),
+                "monto": float(p["monto"]),
+                "pct": round(float(p["monto"]) / monto_productos * 100, 1),
+                "dias": p["dias"],
+                "promedio_dia": float(p["unidades"]) / p["dias"] if p["dias"] else 0.0,
+            }
+            for p in por_producto
+        ],
     }
 
 
 async def _productos_vendidos(inicio: datetime, fin: datetime, categoria: str | None, metodo: str | None):
-    condiciones = ["o.estado = 'cobrada'", "o.cobrado_en >= $1", "o.cobrado_en < $2"]
+    condiciones = ["o.estado = 'cobrada'", "o.cobrado_en >= $1", "o.cobrado_en < $2", f"NOT {ES_AJUSTE}"]
     args: list = [inicio, fin]
     if categoria:
         args.append(categoria)
@@ -191,6 +301,17 @@ async def detalle_tiempo(periodo: str, clave: str, session: dict = Depends(requi
     inicio, fin = _rango_desde_clave(granularidad, clave)
     items = await _productos_vendidos(inicio, fin, None, None)
     return {"titulo": f"Productos vendidos — {_etiqueta(granularidad, inicio)}", "items": items}
+
+
+@router.get("/detalle-dia")
+async def detalle_dia(fecha: str, session: dict = Depends(require_dashboard)):
+    try:
+        dia = date.fromisoformat(fecha)
+    except ValueError:
+        dia = ahora_bolivia().date()
+    inicio = datetime.combine(dia, time.min, BOLIVIA_TZ)
+    items = await _productos_vendidos(inicio, inicio + timedelta(days=1), None, None)
+    return {"titulo": f"Productos vendidos — {dia:%d/%m/%Y}", "items": items}
 
 
 @router.get("/detalle-categoria")
@@ -371,7 +492,7 @@ async def actividad_ventas(fecha: str, session: dict = Depends(require_dashboard
             "SELECT COALESCE(p.categoria, 'Otros') AS nombre, SUM(oi.cantidad * oi.precio_unitario) AS monto "
             "FROM orden_items oi JOIN ordenes o ON o.id = oi.orden_id "
             "LEFT JOIN productos p ON p.id = oi.producto_id "
-            "WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 "
+            f"WHERE o.estado = 'cobrada' AND o.cobrado_en >= $1 AND o.cobrado_en < $2 AND NOT {ES_AJUSTE} "
             "GROUP BY p.categoria ORDER BY monto DESC",
             datetime.combine(dia, time.min, BOLIVIA_TZ),
             datetime.combine(dia, time.min, BOLIVIA_TZ) + timedelta(days=1),

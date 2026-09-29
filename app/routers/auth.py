@@ -93,7 +93,8 @@ async def _datos_dashboard() -> dict:
         "SELECT COALESCE(SUM(total), 0) FROM compras_insumos "
         "WHERE date_trunc('month', fecha) = date_trunc('month', (now() AT TIME ZONE 'America/La_Paz')::date)"
     )
-    total_productos = await pool().fetchval("SELECT COUNT(*) FROM productos")
+    # Sin la categoría AJUSTES (amortizaciones, extras, tips, descuentos): no son productos.
+    total_productos = await pool().fetchval("SELECT COUNT(*) FROM productos WHERE categoria <> 'AJUSTES'")
     total_clientes = await pool().fetchval("SELECT COUNT(*) FROM clientes")
 
     return {
