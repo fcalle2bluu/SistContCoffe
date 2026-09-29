@@ -14,6 +14,7 @@
           <form method="post" action="/dashboard/asistencia/{{ m.id }}/eliminar"
             onsubmit="return confirm('¿Eliminar la {{ m.tipo }} de {{ m.nombre }} del {{ dia_nombre }} a las {{ m.marcado_en|hora }}? Esta acción no se puede deshacer.');"
             style="display:inline;">
+            <input type="hidden" name="volver" value="{{ dia }}" />
             <button type="submit" class="link-danger">Eliminar</button>
           </form>
         </td>

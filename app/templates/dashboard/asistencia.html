@@ -22,12 +22,10 @@
 
   <div class="split-2">
     <div class="stack-6">
-      {% if es_hoy %}
       <div class="card qr-card">
         <img id="asistencia-qr" src="/dashboard/asistencia/qr.png" alt="Código QR de asistencia" width="240" height="240" />
         <p class="muted-sm">El personal escanea este código con el celular. Se renueva solo cada pocos segundos.</p>
       </div>
-      {% endif %}
 
       <div>
         <h3 class="subsection-title">Marcas {{ "de hoy" if es_hoy else "del " ~ dia_nombre }} ({{ marcadas|length }})</h3>
@@ -100,12 +98,14 @@
                   {% if d.entrada_id %}
                   <form method="post" action="/dashboard/asistencia/{{ d.entrada_id }}/eliminar" style="display:inline;"
                     onsubmit="return confirm('¿Eliminar la entrada de {{ d.nombre }} del {{ dia_nombre }}? Esta acción no se puede deshacer.');">
+                    <input type="hidden" name="volver" value="{{ dia }}" />
                     <button type="submit" class="link-danger">Entrada</button>
                   </form>
                   {% endif %}
                   {% if d.salida_id %}
                   <form method="post" action="/dashboard/asistencia/{{ d.salida_id }}/eliminar" style="display:inline; margin-left:8px;"
                     onsubmit="return confirm('¿Eliminar la salida de {{ d.nombre }} del {{ dia_nombre }}? Esta acción no se puede deshacer.');">
+                    <input type="hidden" name="volver" value="{{ dia }}" />
                     <button type="submit" class="link-danger">Salida</button>
                   </form>
                   {% endif %}
@@ -148,34 +148,6 @@
         {% endif %}
       </div>
 
-      {% if sin_salida %}
-      <div>
-        <h3 class="subsection-title">Jornadas sin salida en {{ mes_nombre }} ({{ sin_salida|length }})</h3>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Fecha</th><th>Nombre</th><th>Entrada</th><th class="text-right">Cuenta</th><th class="text-right"></th></tr></thead>
-            <tbody>
-              {% for d in sin_salida %}
-              <tr>
-                <td class="mono"><a href="?dia={{ d.fecha }}" class="link-muted" title="Ver ese día">{{ d.fecha|fecha }}</a></td>
-                <td class="strong">{{ d.nombre }}</td>
-                <td class="mono">{{ d.entrada|hora }}</td>
-                <td class="text-right mono">{{ horas_sin_salida }}h</td>
-                <td class="text-right nowrap">
-                  <a href="?dia={{ d.fecha }}" class="link-muted">Ver día</a>
-                  <form method="post" action="/dashboard/asistencia/{{ d.entrada_id }}/eliminar" style="display:inline; margin-left:8px;"
-                    onsubmit="return confirm('¿Eliminar la entrada de {{ d.nombre }} del {{ d.fecha|fecha }}? Esta acción no se puede deshacer.');">
-                    <button type="submit" class="link-danger">Eliminar</button>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <p class="muted-sm">Para registrar la salida real, usa "+ Agregar marca a mano".</p>
-      </div>
-      {% endif %}
 
       <details class="todas-marcas" open>
         <summary class="btn btn-outline">Todas las marcas de {{ mes_nombre }} ({{ marcas_mes|length }}) — ver y eliminar</summary>
@@ -193,6 +165,7 @@
                 <td class="text-right">
                   <form method="post" action="/dashboard/asistencia/{{ m.id }}/eliminar" style="display:inline;"
                     onsubmit="return confirm('¿Eliminar la {{ m.tipo }} de {{ m.nombre }} del {{ m.marcado_en|fechahora_bo }} a las {{ m.marcado_en|hora }}? Esta acción no se puede deshacer.');">
+                    <input type="hidden" name="volver" value="{{ dia }}" />
                     <button type="submit" class="link-danger">Eliminar</button>
                   </form>
                 </td>

@@ -188,14 +188,13 @@ async def asistencia_page(
     inicio_mes = dia_date.replace(day=1)
     fin_mes = (inicio_mes + timedelta(days=32)).replace(day=1)
     marcas_mes = await _marcas(inicio_mes, fin_mes)
-    jornadas_mes, personas = _jornadas(marcas_mes)
+    _, personas = _jornadas(marcas_mes)
     usuarios = await pool().fetch("SELECT id, nombre FROM usuarios WHERE nombre IS NOT NULL AND nombre <> '' ORDER BY nombre")
     ctx.update({
         "session": session,
         "active": "asistencia",
         "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
         "personas": personas,
-        "sin_salida": sorted((j for j in jornadas_mes if j["auto"]), key=lambda j: (j["fecha"], j["nombre"]), reverse=True),
         "horas_sin_salida": HORAS_JORNADA_SIN_SALIDA,
         "marcas_mes": list(reversed(marcas_mes)),
         "mes_nombre": f"{MESES_ES[inicio_mes.month - 1].capitalize()} {inicio_mes.year}",
@@ -223,7 +222,7 @@ async def asistencia_feed(request: Request, session: dict = Depends(require_admi
 
 
 @router.post("/dashboard/asistencia/{asistencia_id}/eliminar")
-async def eliminar_asistencia(asistencia_id: int, session: dict = Depends(require_admin)):
+async def eliminar_asistencia(asistencia_id: int, session: dict = Depends(require_admin), volver: str = Form("")):
     fila = await pool().fetchrow(
         "SELECT nombre, tipo, marcado_en FROM asistencias WHERE id = $1", asistencia_id
     )
@@ -234,10 +233,8 @@ async def eliminar_asistencia(asistencia_id: int, session: dict = Depends(requir
             "Eliminó marca de asistencia",
             f"{fila['nombre']} — {fila['tipo']} del {fila['marcado_en'].astimezone(_TZ_BOLIVIA).strftime('%d/%m/%Y %H:%M')}",
         )
-        return RedirectResponse(
-            f"/dashboard/asistencia?dia={fila['marcado_en'].astimezone(_TZ_BOLIVIA).date().isoformat()}", status_code=303
-        )
-    return RedirectResponse("/dashboard/asistencia", status_code=303)
+    # Vuelve al día que se estaba viendo, no al de la marca borrada.
+    return RedirectResponse(f"/dashboard/asistencia?dia={_dia_param(volver).isoformat()}", status_code=303)
 
 
 @router.post("/dashboard/asistencia/manual")
