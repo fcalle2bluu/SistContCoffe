@@ -262,15 +262,14 @@ async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categ
 
 
 async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
-    """Asienta un ingreso a caja en el Libro Diario apenas se registra: es el
-    retiro de plata de la caja del turno para resguardarla. Sale de Caja
-    Chica (Haber) y entra a Caja Moneda Nacional si se guarda en efectivo, o
-    a Banco Bisa si se deposita/transfiere por QR (Debe). Solo se asienta
-    para EFECTIVO y QR, mismo criterio que egresos y ventas."""
+    """Asienta un ingreso a caja en el Libro Diario apenas se registra: Debe
+    Caja Chica / Haber Caja Moneda Nacional si es en efectivo, o Haber Banco
+    Bisa si es por QR (así lo pidió el contador). Solo se asienta para
+    EFECTIVO y QR, mismo criterio que egresos y ventas."""
     if tipo_pago == "EFECTIVO":
-        cuenta_destino = CUENTA_CAJA_EFECTIVO
+        cuenta_contrapartida = CUENTA_CAJA_EFECTIVO
     elif tipo_pago == "QR":
-        cuenta_destino = CUENTA_BANCO
+        cuenta_contrapartida = CUENTA_BANCO
     else:
         return
 
@@ -281,12 +280,12 @@ async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str,
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, cuenta_destino, monto, glosa,
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
+                fecha, siguiente, cuenta_contrapartida, monto, glosa,
             )
 
 

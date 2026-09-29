@@ -174,7 +174,7 @@
       </details>
 
       <details class="disclosure">
-        <summary class="btn btn-outline btn-stack">Registrar ingreso a caja<span class="btn-caption">Caja Chica (1110102) → Caja Moneda Nacional / Banco</span></summary>
+        <summary class="btn btn-outline btn-stack">Registrar ingreso a caja<span class="btn-caption">Caja Moneda Nacional / Banco → Caja Chica (1110102)</span></summary>
         <form method="post" hx-push-url="false" action="/dashboard/ventas/movimientos/ingreso" class="inline-form">
           <input type="hidden" name="turno_id" value="{{ turno.id }}" />
           <div class="flex-1">
@@ -274,7 +274,7 @@
                   <td class="text-right mono">Bs {{ "%.2f"|format(datos.monto) }}</td>
                   <td class="small">
                     {% if tipo in cuentas_destino_ingreso %}
-                    Sale de Caja Chica (1110102) → entra a {{ cuentas_destino_ingreso[tipo] }}
+                    Sale de {{ cuentas_destino_ingreso[tipo] }} → entra a Caja Chica (1110102)
                     {% else %}
                     Sin asiento automático (lo registra el contador a mano)
                     {% endif %}
