@@ -85,7 +85,19 @@
         <option value="30d">Últimos 30 días</option>
         <option value="anio">Este año (por mes)</option>
         <option value="todos">Histórico (por mes)</option>
+        <option value="dia">Un día (por hora)</option>
+        <option value="mes">Un mes (por día)</option>
       </select>
+    </div>
+    <div class="month-picker oculto" id="picker-dia">
+      <button type="button" class="btn btn-outline btn-sm" data-mover="-1" title="Día anterior">‹</button>
+      <input type="date" id="filtro-dia" class="input" value="{{ hoy_iso }}" max="{{ hoy_iso }}" aria-label="Elegir día" />
+      <button type="button" class="btn btn-outline btn-sm" data-mover="1" title="Día siguiente">›</button>
+    </div>
+    <div class="month-picker oculto" id="picker-mes">
+      <button type="button" class="btn btn-outline btn-sm" data-mover="-1" title="Mes anterior">‹</button>
+      <input type="month" id="filtro-mes" class="input" value="{{ hoy_iso[:7] }}" max="{{ hoy_iso[:7] }}" aria-label="Elegir mes" />
+      <button type="button" class="btn btn-outline btn-sm" data-mover="1" title="Mes siguiente">›</button>
     </div>
     <p class="muted-sm" id="dashboard-ayuda">Haz clic en cualquier barra o segmento de los gráficos para ver qué productos se vendieron ahí.</p>
     <p class="muted-sm" id="dashboard-cargando" style="display: none;">Actualizando gráficos…</p>
@@ -170,7 +182,40 @@
   var charts = {};
   var ultimo = { serie: null, categorias: null, metodos_pago: null };
 
-  function periodoActual() { return selectPeriodo.value; }
+  var filtroDia = document.getElementById("filtro-dia");
+  var filtroMes = document.getElementById("filtro-mes");
+  function periodoActual() {
+    if (selectPeriodo.value === "dia") return "dia:" + filtroDia.value;
+    if (selectPeriodo.value === "mes") return "mes:" + filtroMes.value;
+    return selectPeriodo.value;
+  }
+  function mostrarPickers() {
+    document.getElementById("picker-dia").classList.toggle("oculto", selectPeriodo.value !== "dia");
+    document.getElementById("picker-mes").classList.toggle("oculto", selectPeriodo.value !== "mes");
+  }
+  function isoLocal(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  // ‹ › mueven un día o un mes, sin pasar de hoy.
+  document.querySelectorAll("#picker-dia [data-mover], #picker-mes [data-mover]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var paso = parseInt(btn.getAttribute("data-mover"), 10);
+      if (btn.closest("#picker-dia")) {
+        var d = new Date(filtroDia.value + "T12:00:00");
+        d.setDate(d.getDate() + paso);
+        var nuevo = isoLocal(d);
+        if (nuevo > filtroDia.max) return;
+        filtroDia.value = nuevo;
+      } else {
+        var partes = filtroMes.value.split("-").map(Number);
+        var m = new Date(partes[0], partes[1] - 1 + paso, 1);
+        var nuevoMes = isoLocal(m).slice(0, 7);
+        if (nuevoMes > filtroMes.max) return;
+        filtroMes.value = nuevoMes;
+      }
+      cargarResumen();
+    });
+  });
 
   function formatoBs(n) {
     return "Bs " + Number(n).toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -441,7 +486,9 @@
     document.getElementById("dashboard-ayuda").style.display = "";
   }
 
-  selectPeriodo.addEventListener("change", cargarResumen);
+  selectPeriodo.addEventListener("change", function () { mostrarPickers(); cargarResumen(); });
+  filtroDia.addEventListener("change", function () { if (filtroDia.value) cargarResumen(); });
+  filtroMes.addEventListener("change", function () { if (filtroMes.value) cargarResumen(); });
   cargarResumen();
 
   // Ventas por hora de un día, separadas por turno (una barra apilada por

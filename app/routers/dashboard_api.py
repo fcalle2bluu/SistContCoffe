@@ -22,8 +22,24 @@ NOMBRE_AJUSTE = "CASE WHEN oi.precio_unitario < 0 THEN 'Descuentos' ELSE COALESC
 
 
 def _rango_periodo(periodo: str) -> tuple[str, datetime, datetime]:
+    """Rango y granularidad de un período: uno de PERIODOS, o un día
+    ("dia:2026-09-15", por hora) o un mes ("mes:2026-09", por día) elegidos
+    en el dashboard."""
     hoy = ahora_bolivia().date()
     fin = datetime.combine(hoy, time.min, BOLIVIA_TZ) + timedelta(days=1)
+
+    tipo, _, valor = periodo.partition(":")
+    try:
+        if tipo == "dia":
+            inicio = datetime.combine(date.fromisoformat(valor), time.min, BOLIVIA_TZ)
+            return "hora", inicio, inicio + timedelta(days=1)
+        if tipo == "mes":
+            anio, mes = (int(x) for x in valor.split("-"))
+            primero = date(anio, mes, 1)
+            siguiente = (primero + timedelta(days=32)).replace(day=1)
+            return "dia", datetime.combine(primero, time.min, BOLIVIA_TZ), datetime.combine(siguiente, time.min, BOLIVIA_TZ)
+    except ValueError:
+        pass
 
     if periodo == "hoy":
         inicio = datetime.combine(hoy, time.min, BOLIVIA_TZ)
@@ -83,8 +99,6 @@ def _rango_desde_clave(granularidad: str, clave: str) -> tuple[datetime, datetim
 
 @router.get("/resumen")
 async def resumen(periodo: str = "7d", session: dict = Depends(require_dashboard)):
-    if periodo not in PERIODOS:
-        periodo = "7d"
     granularidad, inicio, fin = _rango_periodo(periodo)
     bucket_sql = _bucket_expr(granularidad)
 
@@ -295,8 +309,6 @@ async def _productos_vendidos(inicio: datetime, fin: datetime, categoria: str | 
 
 @router.get("/detalle-tiempo")
 async def detalle_tiempo(periodo: str, clave: str, session: dict = Depends(require_dashboard)):
-    if periodo not in PERIODOS:
-        periodo = "7d"
     granularidad, _, _ = _rango_periodo(periodo)
     inicio, fin = _rango_desde_clave(granularidad, clave)
     items = await _productos_vendidos(inicio, fin, None, None)
@@ -316,8 +328,6 @@ async def detalle_dia(fecha: str, session: dict = Depends(require_dashboard)):
 
 @router.get("/detalle-categoria")
 async def detalle_categoria(periodo: str, categoria: str, session: dict = Depends(require_dashboard)):
-    if periodo not in PERIODOS:
-        periodo = "7d"
     _, inicio, fin = _rango_periodo(periodo)
     items = await _productos_vendidos(inicio, fin, categoria, None)
     return {"titulo": f"Productos vendidos — {categoria}", "items": items}
@@ -325,8 +335,6 @@ async def detalle_categoria(periodo: str, categoria: str, session: dict = Depend
 
 @router.get("/detalle-pago")
 async def detalle_pago(periodo: str, metodo: str, session: dict = Depends(require_dashboard)):
-    if periodo not in PERIODOS:
-        periodo = "7d"
     _, inicio, fin = _rango_periodo(periodo)
     items = await _productos_vendidos(inicio, fin, None, metodo)
     return {"titulo": f"Productos vendidos — pagado con {metodo}", "items": items}
