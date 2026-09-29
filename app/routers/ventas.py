@@ -547,7 +547,7 @@ async def _ventas_context(
     if turno:
         ordenes_cobradas = await pool().fetch(
             "SELECT id, mesa, total, tipo_pago, responsable, cobrado_en, "
-            "factura_nit, factura_celular, factura_nombre FROM ordenes "
+            "factura_nit, factura_celular, factura_nombre, siat_registrado FROM ordenes "
             "WHERE turno_id = $1 AND estado = 'cobrada' ORDER BY cobrado_en DESC",
             turno["id"],
         )
@@ -981,6 +981,31 @@ async def cambiar_metodo_pago_orden(
     if orden["turno_estado"] != "abierto":
         detalle += " (turno ya cerrado: si ya estaba contabilizado en el Libro Diario, revísalo a mano)."
     await bitacora.registrar(session, "Cambió método de pago de venta", detalle)
+    return RedirectResponse(next, status_code=303)
+
+
+@router.post("/ordenes/{orden_id}/tickear")
+async def tickear_factura_venta(
+    orden_id: int,
+    session: dict = Depends(require_session),
+    registrado: str = Form("0"),
+    next: str = Form("/dashboard/ventas#ventas-cobradas"),
+):
+    """Marcar/desmarcar una venta facturada como ya registrada en el SIAT.
+    Antes solo el admin podía hacer esto desde Contabilidad → Facturas, y
+    pasaba que un cajero ya había facturado en el SIAT pero el sistema
+    seguía mostrándola como pendiente, así que el admin la facturaba de
+    nuevo sin saber que ya estaba hecha. Ahora cualquier cajero puede
+    marcarla apenas factura, desde la misma pantalla de Ventas."""
+    marcar = registrado == "1"
+    orden = await pool().fetchrow(
+        "SELECT mesa, tipo_pago FROM ordenes WHERE id = $1 AND tipo_pago = ANY($2::text[])",
+        orden_id, list(TIPOS_FACTURADOS),
+    )
+    if orden:
+        await pool().execute("UPDATE ordenes SET siat_registrado = $1 WHERE id = $2", marcar, orden_id)
+        accion = "Marcó venta como registrada en SIAT" if marcar else "Desmarcó registro SIAT de una venta"
+        await bitacora.registrar(session, accion, f"Venta #{orden_id} — {orden['mesa']} ({orden['tipo_pago']})")
     return RedirectResponse(next, status_code=303)
 
 

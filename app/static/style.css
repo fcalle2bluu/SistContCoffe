@@ -465,6 +465,10 @@ a { color: inherit; }
   display: inline-block; padding: 1px 6px; border-radius: 999px; background: #fdecc8; color: #92620a;
   font-size: 11px; font-weight: 700; text-transform: uppercase; margin-left: 4px;
 }
+.badge-success {
+  display: inline-block; padding: 1px 6px; border-radius: 999px; background: #ecfdf5; color: #059669;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; margin-left: 4px;
+}
 
 .link-danger { background: none; border: none; padding: 0; font-size: 12px; font-weight: 600; color: var(--red); cursor: pointer; text-decoration: none; }
 .link-danger:hover { text-decoration: underline; }

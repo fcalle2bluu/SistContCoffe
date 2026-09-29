@@ -667,6 +667,12 @@
               <span class="muted-sm normal-case">
                 NIT {{ o.factura_nit or "—" }} · {{ o.factura_celular or "—" }} · {{ o.factura_nombre or "—" }}
               </span>
+              <br />
+              {% if o.siat_registrado %}
+              <span class="badge-success normal-case">Facturado</span>
+              {% else %}
+              <span class="badge-warning normal-case">Pendiente de facturar</span>
+              {% endif %}
               {% endif %}
             </td>
             <td class="small">{{ o.cobrado_en|hora if o.cobrado_en else "—" }}</td>
@@ -678,6 +684,12 @@
                 <a href="/dashboard/ventas?metodo_pago={{ o.id }}#ventas-cobradas" class="link-muted">Cambiar pago</a>
                 {% if session.role == 'admin' %}
                 <a href="/dashboard/ventas?hora={{ o.id }}#ventas-cobradas" class="link-muted">Hora</a>
+                {% endif %}
+                {% if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') %}
+                <form method="post" hx-push-url="false" action="/dashboard/ventas/ordenes/{{ o.id }}/tickear">
+                  <input type="hidden" name="registrado" value="{{ '0' if o.siat_registrado else '1' }}" />
+                  <button type="submit" class="link-muted">{{ "Desmarcar facturado" if o.siat_registrado else "Marcar facturado" }}</button>
+                </form>
                 {% endif %}
                 <form method="post" hx-push-url="false" action="/dashboard/ventas/ordenes/{{ o.id }}/eliminar"
                   onsubmit="return confirm('¿Eliminar esta venta? Esta acción no se puede deshacer.');">
