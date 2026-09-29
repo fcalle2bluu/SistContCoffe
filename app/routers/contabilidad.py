@@ -80,6 +80,25 @@ def _agrupar_asientos(filas) -> list[dict]:
     return list(asientos.values())
 
 
+def _resumen_cuentas(filas) -> list[dict]:
+    """Totales por cuenta de las líneas del período que se está viendo: en
+    cuántos asientos aparece, cuánto suma en Debe y en Haber, y el saldo."""
+    por_cuenta: dict[str, dict] = {}
+    for f in filas:
+        r = por_cuenta.setdefault(
+            f["codigo_cuenta"],
+            {"codigo": f["codigo_cuenta"], "nombre": f["cuenta_nombre"] or f["codigo_cuenta"], "asientos": set(), "debe": 0.0, "haber": 0.0},
+        )
+        r["asientos"].add(f["nro_asiento"])
+        r["debe"] += float(f["debe"] or 0)
+        r["haber"] += float(f["haber"] or 0)
+    resumen = sorted(por_cuenta.values(), key=lambda r: r["codigo"])
+    for r in resumen:
+        r["registros"] = len(r.pop("asientos"))
+        r["saldo"] = r["debe"] - r["haber"]
+    return resumen
+
+
 def _parse_monto_pegado(texto: str) -> float:
     texto = texto.strip().replace(" ", "")
     if not texto:
@@ -210,6 +229,7 @@ async def _diario_context(
         mes_ctx["desde"], mes_ctx["hasta"],
     )
     asientos = _agrupar_asientos(filas)
+    resumen_cuentas = _resumen_cuentas(filas)
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
     lineas = lineas or []
     total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
@@ -218,6 +238,7 @@ async def _diario_context(
         "session": session,
         "active": "contabilidad",
         "asientos": asientos,
+        "resumen_cuentas": resumen_cuentas,
         "cuentas": cuentas,
         "lineas": lineas,
         "total_debe": total_debe,

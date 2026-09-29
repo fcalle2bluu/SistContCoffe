@@ -355,6 +355,9 @@ a { color: inherit; }
 .report-shell .section-subtitle { font-size: 15px; }
 .report-shell .data-table td { font-size: 15px; }
 .report-shell .data-table th { font-size: 12.5px; }
+.nuevo-asiento summary { list-style: none; display: inline-flex; }
+.nuevo-asiento summary::-webkit-details-marker { display: none; }
+.nuevo-asiento[open] summary { margin-bottom: 12px; }
 
 /* Colores de las cajas: verde = Caja Chica (caja del turno), azul = Caja
    Moneda Nacional (resguardo), morado = Banco BISA. */
