@@ -27,9 +27,9 @@
         <p class="muted-sm">El personal escanea este código con el celular. Se renueva solo cada pocos segundos.</p>
       </div>
 
-      <div>
+      <div id="asistencia-marcas">
         <h3 class="subsection-title">Marcas {{ "de hoy" if es_hoy else "del " ~ dia_nombre }} ({{ marcadas|length }})</h3>
-        <div id="asistencia-feed" {% if es_hoy %}hx-get="/dashboard/asistencia/feed?dia={{ dia }}" hx-trigger="every 8s" hx-swap="innerHTML"{% endif %}>
+        <div id="asistencia-feed">
           {% include "partials/_asistencia_feed.html" %}
         </div>
       </div>
@@ -67,7 +67,7 @@
       </details>
     </div>
 
-    <div class="stack-6">
+    <div class="stack-6" id="asistencia-derecha">
       <div>
         <h3 class="subsection-title">Jornadas {{ "de hoy" if es_hoy else "del " ~ dia_nombre }}</h3>
         {% if jornadas_dia|length == 0 %}
@@ -180,9 +180,26 @@
       </details>
     </div>
   </div>
+
+  {# Tiempo real: cada 5 s vuelve a pedir esta misma página y reemplaza solo
+     las marcas y la columna derecha (no el QR ni el formulario de marca a
+     mano, para no borrar lo que se esté escribiendo). #}
+  <div id="asistencia-vivo" hx-get="/dashboard/asistencia?dia={{ dia }}" hx-trigger="every 5s"
+    hx-select-oob="#asistencia-marcas,#asistencia-derecha" hx-swap="none"></div>
 </div>
 
 <script>
+  (function () {
+    var todasAbierta = true;
+    document.body.addEventListener("toggle", function (e) {
+      if (e.target.classList && e.target.classList.contains("todas-marcas")) todasAbierta = e.target.open;
+    }, true);
+    document.body.addEventListener("htmx:afterSettle", function () {
+      var d = document.querySelector(".todas-marcas");
+      if (d && d.open !== todasAbierta) d.open = todasAbierta;
+    });
+  })();
+
   (function () {
     var img = document.getElementById("asistencia-qr");
     if (!img) return;
