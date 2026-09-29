@@ -1,102 +1,146 @@
 {% extends "dashboard/_shell.html" %}
 {% block title %}Asistencia — Café Yanaloma{% endblock %}
 {% block content %}
-<div class="stack-8">
-  <div>
-    <h2 class="section-title">Asistencia</h2>
-    <p class="section-subtitle">
-      Mostrá este código para que el personal registre su asistencia escaneándolo con la app del celular.
-      Se renueva solo cada pocos segundos, así que una foto vieja no sirve para marcar más tarde.
-    </p>
-  </div>
-
-  <div class="card" style="text-align:center; max-width:340px;">
-    <img id="asistencia-qr" src="/dashboard/asistencia/qr.png" alt="Código QR de asistencia" width="260" height="260"
-      style="margin:0 auto; display:block; border:8px solid #fff; border-radius:8px;" />
-  </div>
-
-  <div id="asistencia-feed" hx-get="/dashboard/asistencia/feed" hx-trigger="every 8s" hx-swap="innerHTML">
-    {% include "partials/_asistencia_feed.html" %}
-  </div>
-
-  {% if personas|length > 0 %}
-  <div>
-    <h3 class="section-subtitle">Resumen por persona</h3>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>Nombre</th><th class="text-right">Días registrados</th><th class="text-right">Horas totales</th></tr></thead>
-        <tbody>
-          {% for p in personas %}
-          <tr>
-            <td class="strong">{{ p.nombre }}</td>
-            <td class="text-right mono">{{ p.dias }}</td>
-            <td class="text-right mono">
-              {% if p.abierto_desde %}
-              <span data-vivo data-base="{{ p.segundos_totales }}" data-desde="{{ p.abierto_desde.isoformat() }}">calculando…</span>
-              {% else %}
-              {{ p.segundos_totales|duracion }}
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div class="stack-8 asistencia-shell">
+  <div class="page-head">
+    <div>
+      <h2 class="section-title">Asistencia</h2>
+      <p class="section-subtitle">Registro de entradas y salidas del personal.</p>
+    </div>
+    <div class="month-picker" aria-label="Día que se muestra">
+      <a href="?dia={{ dia_anterior }}" class="btn btn-outline btn-sm" title="Día anterior">‹</a>
+      <form method="get" class="month-picker-form">
+        <input type="date" name="dia" value="{{ dia }}" max="{{ hoy }}" class="input" onchange="this.form.submit()" aria-label="Elegir día" />
+      </form>
+      {% if not es_hoy %}<a href="?dia={{ dia_siguiente }}" class="btn btn-outline btn-sm" title="Día siguiente">›</a>{% endif %}
+      {% if not es_hoy %}<a href="?" class="btn btn-outline btn-sm">Hoy</a>{% endif %}
+      <span class="month-picker-label">{{ "Hoy, " if es_hoy }}{{ dia_nombre }}</span>
     </div>
   </div>
-  {% endif %}
 
-  <div>
-    <h3 class="section-subtitle">Historial de asistencia</h3>
-    {% if historial|length == 0 %}
-    <p class="muted">Todavía no hay historial de asistencia.</p>
-    {% else %}
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>Fecha</th><th>Nombre</th><th>Entrada</th><th>Salida</th><th class="text-right">Horas</th><th></th></tr></thead>
-        <tbody>
-          {% for d in historial %}
-          <tr>
-            <td class="small">{{ d.fecha|fecha }}</td>
-            <td>{{ d.nombre }}</td>
-            <td class="mono">{{ (d.entrada|hora) if d.entrada else "—" }}</td>
-            <td class="mono">{{ (d.salida|hora) if d.salida else "—" }}</td>
-            <td class="text-right mono">
-              {% if d.abierto %}
-              <span data-vivo data-base="0" data-desde="{{ d.entrada.isoformat() }}">calculando…</span>
-              {% elif d.segundos is not none %}
-              {{ d.segundos|duracion }}
-              {% else %}
-              —
-              {% endif %}
-            </td>
-            <td class="text-right">
-              {% if d.entrada_id %}
-              <form method="post" action="/dashboard/asistencia/{{ d.entrada_id }}/eliminar"
-                onsubmit="return confirm('¿Eliminar la entrada de {{ d.nombre }} del {{ d.fecha|fecha }}? Esta acción no se puede deshacer.');"
-                style="display:inline;">
-                <button type="submit" class="link-danger">Entrada</button>
-              </form>
-              {% endif %}
-              {% if d.salida_id %}
-              <form method="post" action="/dashboard/asistencia/{{ d.salida_id }}/eliminar"
-                onsubmit="return confirm('¿Eliminar la salida de {{ d.nombre }} del {{ d.fecha|fecha }}? Esta acción no se puede deshacer.');"
-                style="display:inline; margin-left:8px;">
-                <button type="submit" class="link-danger">Salida</button>
-              </form>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+
+  <div class="split-2">
+    <div class="stack-6">
+      {% if es_hoy %}
+      <div class="card qr-card">
+        <img id="asistencia-qr" src="/dashboard/asistencia/qr.png" alt="Código QR de asistencia" width="240" height="240" />
+        <p class="muted-sm">El personal escanea este código con el celular. Se renueva solo cada pocos segundos.</p>
+      </div>
+      {% endif %}
+
+      <div>
+        <h3 class="subsection-title">Marcas {{ "de hoy" if es_hoy else "del " ~ dia_nombre }} ({{ marcadas|length }})</h3>
+        <div id="asistencia-feed" {% if es_hoy %}hx-get="/dashboard/asistencia/feed?dia={{ dia }}" hx-trigger="every 8s" hx-swap="innerHTML"{% endif %}>
+          {% include "partials/_asistencia_feed.html" %}
+        </div>
+      </div>
+
+      <details class="nuevo-asiento">
+        <summary class="btn btn-outline">+ Agregar marca a mano</summary>
+        <form method="post" action="/dashboard/asistencia/manual" class="card stack-4">
+          <p class="muted-sm">Para cuando alguien se olvidó de escanear el código.</p>
+          <div>
+            <label class="field-label">Persona</label>
+            <select name="usuario_id" required class="input">
+              <option value="">— Selecciona —</option>
+              {% for u in usuarios %}<option value="{{ u.id }}">{{ u.nombre }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="order-row">
+            <div>
+              <label class="field-label">Tipo</label>
+              <select name="tipo" required class="input">
+                <option value="entrada">Entrada</option>
+                <option value="salida">Salida</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Fecha</label>
+              <input name="fecha" type="date" value="{{ dia }}" max="{{ hoy }}" required class="input" />
+            </div>
+            <div>
+              <label class="field-label">Hora</label>
+              <input name="hora" type="time" required class="input" />
+            </div>
+          </div>
+          <div><button type="submit" class="btn btn-primary">Guardar marca</button></div>
+        </form>
+      </details>
     </div>
-    {% endif %}
+
+    <div class="stack-6">
+      <div>
+        <h3 class="subsection-title">Jornadas {{ "de hoy" if es_hoy else "del " ~ dia_nombre }}</h3>
+        {% if jornadas_dia|length == 0 %}
+        <p class="muted">Nadie trabajó este día.</p>
+        {% else %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Nombre</th><th>Entrada</th><th>Salida</th><th class="text-right">Horas</th></tr></thead>
+            <tbody>
+              {% for d in jornadas_dia %}
+              <tr>
+                <td class="strong">
+                  {{ d.nombre }}
+                  {% if d.marcas > 2 %}<span class="aviso-marcas" title="Tiene marcas repetidas: revísalas en la lista de la izquierda">{{ d.marcas }} marcas</span>{% endif %}
+                </td>
+                <td class="mono">{{ (d.entrada|hora) if d.entrada else "—" }}</td>
+                <td class="mono">{% if d.salida %}{{ d.salida|hora }}{% elif d.abierto and es_hoy %}<span class="muted-sm">trabajando</span>{% elif d.abierto %}<span class="aviso-marcas">sin salida</span>{% else %}—{% endif %}</td>
+                <td class="text-right mono">
+                  {% if d.abierto and es_hoy %}
+                  <span data-vivo data-base="0" data-desde="{{ d.entrada.isoformat() }}">calculando…</span>
+                  {% elif d.segundos is not none %}
+                  {{ d.segundos|duracion }}
+                  {% else %}
+                  —
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+
+      <div>
+        <h3 class="subsection-title">Resumen de {{ mes_nombre }}</h3>
+        {% if personas|length == 0 %}
+        <p class="muted">No hay asistencia registrada en {{ mes_nombre }}.</p>
+        {% else %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Nombre</th><th class="text-right">Días trabajados</th><th class="text-right">Horas totales</th><th class="text-right">Promedio por día</th></tr></thead>
+            <tbody>
+              {% for p in personas %}
+              <tr>
+                <td class="strong">{{ p.nombre }}</td>
+                <td class="text-right mono">{{ p.dias }}</td>
+                <td class="text-right mono">
+                  {% if p.abierto_desde and es_hoy %}
+                  <span data-vivo data-base="{{ p.segundos_totales }}" data-desde="{{ p.abierto_desde.isoformat() }}">calculando…</span>
+                  {% else %}
+                  {{ p.segundos_totales|duracion }}
+                  {% endif %}
+                </td>
+                <td class="text-right mono">{{ (p.segundos_totales // p.dias_cerrados)|duracion if p.dias_cerrados else "—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="muted-sm">Solo cuentan las horas de las jornadas con entrada y salida.</p>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
   (function () {
     var img = document.getElementById("asistencia-qr");
+    if (!img) return;
     setInterval(function () {
       img.src = "/dashboard/asistencia/qr.png?t=" + Date.now();
     }, 20000);

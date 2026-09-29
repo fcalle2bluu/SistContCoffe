@@ -1,5 +1,5 @@
 {% if marcadas|length == 0 %}
-<p class="muted">Todavía nadie registró asistencia hoy.</p>
+<p class="muted">{{ "Todavía nadie registró asistencia hoy." if es_hoy else "No hay marcas el " ~ dia_nombre ~ "." }}</p>
 {% else %}
 <div class="table-wrap">
   <table class="data-table">
@@ -8,11 +8,11 @@
       {% for m in marcadas %}
       <tr>
         <td class="strong">{{ m.nombre }}</td>
-        <td>{{ 'Entrada' if m.tipo == 'entrada' else 'Salida' }}</td>
+        <td><span class="marca-tipo marca-{{ m.tipo }}">{{ 'Entrada' if m.tipo == 'entrada' else 'Salida' }}</span></td>
         <td class="mono">{{ m.marcado_en|hora }}</td>
         <td class="text-right">
           <form method="post" action="/dashboard/asistencia/{{ m.id }}/eliminar"
-            onsubmit="return confirm('¿Eliminar esta marca de asistencia de {{ m.nombre }}? Esta acción no se puede deshacer.');"
+            onsubmit="return confirm('¿Eliminar la {{ m.tipo }} de {{ m.nombre }} del {{ dia_nombre }} a las {{ m.marcado_en|hora }}? Esta acción no se puede deshacer.');"
             style="display:inline;">
             <button type="submit" class="link-danger">Eliminar</button>
           </form>

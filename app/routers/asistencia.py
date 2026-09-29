@@ -3,17 +3,19 @@ import hmac
 import io
 import os
 import time
-from datetime import datetime
+from urllib.parse import urlencode
+from datetime import date, datetime, time as dtime, timedelta
 from zoneinfo import ZoneInfo
 
 import qrcode
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin, require_session
-from app.templating import templates
+from app.templating import MESES_ES, templates
+from app.tz import hoy_bolivia
 
 router = APIRouter()
 
@@ -46,11 +48,27 @@ def _token_valido(token: str) -> bool:
     return abs(time.time() - ts) <= VENTANA_TOKEN_SEG
 
 
-async def _asistencias_hoy() -> list:
+def _dia_param(dia: str | None) -> date:
+    try:
+        return date.fromisoformat(dia)
+    except (TypeError, ValueError):
+        return hoy_bolivia()
+
+
+def _rango(desde: date, hasta: date) -> tuple[datetime, datetime]:
+    """[desde, hasta) en hora de Bolivia, para filtrar marcado_en."""
+    return (
+        datetime.combine(desde, dtime.min, _TZ_BOLIVIA),
+        datetime.combine(hasta, dtime.min, _TZ_BOLIVIA),
+    )
+
+
+async def _marcas(desde: date, hasta: date) -> list:
+    inicio, fin = _rango(desde, hasta)
     return await pool().fetch(
-        "SELECT id, nombre, tipo, marcado_en FROM asistencias "
-        "WHERE marcado_en >= date_trunc('day', now() AT TIME ZONE 'America/La_Paz') AT TIME ZONE 'America/La_Paz' "
-        "ORDER BY marcado_en DESC"
+        "SELECT id, usuario_id, nombre, tipo, marcado_en FROM asistencias "
+        "WHERE marcado_en >= $1 AND marcado_en < $2 ORDER BY marcado_en",
+        inicio, fin,
     )
 
 
@@ -80,13 +98,10 @@ def _agrupar_historial(filas: list) -> tuple[list[dict], float]:
     return resultado, round(horas_totales, 2)
 
 
-async def _historial_general() -> tuple[list[dict], list[dict]]:
-    """Historial de asistencia de TODOS los usuarios, agrupado por persona y
-    día, con las horas trabajadas de cada jornada cerrada y el total
-    acumulado por persona (para el resumen que ve el admin)."""
-    filas = await pool().fetch(
-        "SELECT id, usuario_id, nombre, tipo, marcado_en FROM asistencias ORDER BY marcado_en"
-    )
+def _jornadas(filas) -> tuple[list[dict], list[dict]]:
+    """Agrupa las marcas (de todos los usuarios) por persona y día, con las
+    horas trabajadas de cada jornada cerrada y el total por persona (para el
+    resumen que ve el admin)."""
     dias: dict[tuple[int, str], dict] = {}
     for f in filas:
         fecha = f["marcado_en"].astimezone(_TZ_BOLIVIA).date().isoformat()
@@ -101,8 +116,10 @@ async def _historial_general() -> tuple[list[dict], list[dict]]:
                 "entrada_id": None,
                 "salida": None,
                 "salida_id": None,
+                "marcas": 0,
             },
         )
+        dia["marcas"] += 1
         if f["tipo"] == "entrada" and dia["entrada"] is None:
             dia["entrada"] = f["marcado_en"]
             dia["entrada_id"] = f["id"]
@@ -121,11 +138,13 @@ async def _historial_general() -> tuple[list[dict], list[dict]]:
         historial.append(dia)
 
         persona = resumen_por_persona.setdefault(
-            dia["usuario_id"], {"nombre": dia["nombre"], "dias": 0, "segundos_totales": 0, "abierto_desde": None}
+            dia["usuario_id"],
+            {"nombre": dia["nombre"], "dias": 0, "dias_cerrados": 0, "segundos_totales": 0, "abierto_desde": None},
         )
         persona["dias"] += 1
         if segundos is not None:
             persona["segundos_totales"] += segundos
+            persona["dias_cerrados"] += 1
         elif dia["abierto"]:
             persona["abierto_desde"] = dia["entrada"]
 
@@ -134,21 +153,41 @@ async def _historial_general() -> tuple[list[dict], list[dict]]:
     return historial, personas
 
 
+async def _contexto_dia(dia: date) -> dict:
+    hoy = hoy_bolivia()
+    marcas = await _marcas(dia, dia + timedelta(days=1))
+    return {
+        "marcadas": list(reversed(marcas)),
+        "dia": dia.isoformat(),
+        "dia_nombre": f"{dia:%d/%m/%Y}",
+        "es_hoy": dia == hoy,
+        "dia_anterior": (dia - timedelta(days=1)).isoformat(),
+        "dia_siguiente": (dia + timedelta(days=1)).isoformat(),
+        "hoy": hoy.isoformat(),
+    }
+
+
 @router.get("/dashboard/asistencia", response_class=HTMLResponse)
-async def asistencia_page(request: Request, session: dict = Depends(require_admin)):
-    marcadas = await _asistencias_hoy()
-    historial, personas = await _historial_general()
-    return templates.TemplateResponse(
-        request,
-        "dashboard/asistencia.html",
-        {
-            "session": session,
-            "active": "asistencia",
-            "marcadas": marcadas,
-            "historial": historial,
-            "personas": personas,
-        },
-    )
+async def asistencia_page(
+    request: Request, session: dict = Depends(require_admin), dia: str | None = None, error: str | None = None
+):
+    dia_date = _dia_param(dia)
+    ctx = await _contexto_dia(dia_date)
+    jornadas_dia, _ = _jornadas(ctx["marcadas"][::-1])
+    inicio_mes = dia_date.replace(day=1)
+    fin_mes = (inicio_mes + timedelta(days=32)).replace(day=1)
+    _, personas = _jornadas(await _marcas(inicio_mes, fin_mes))
+    usuarios = await pool().fetch("SELECT id, nombre FROM usuarios WHERE nombre IS NOT NULL AND nombre <> '' ORDER BY nombre")
+    ctx.update({
+        "session": session,
+        "active": "asistencia",
+        "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
+        "personas": personas,
+        "mes_nombre": f"{MESES_ES[inicio_mes.month - 1].capitalize()} {inicio_mes.year}",
+        "usuarios": usuarios,
+        "error": error,
+    })
+    return templates.TemplateResponse(request, "dashboard/asistencia.html", ctx)
 
 
 @router.get("/dashboard/mi-asistencia", response_class=HTMLResponse)
@@ -163,9 +202,9 @@ async def mi_asistencia_page(request: Request, session: dict = Depends(require_s
 
 
 @router.get("/dashboard/asistencia/feed", response_class=HTMLResponse)
-async def asistencia_feed(request: Request, session: dict = Depends(require_admin)):
-    marcadas = await _asistencias_hoy()
-    return templates.TemplateResponse(request, "partials/_asistencia_feed.html", {"marcadas": marcadas})
+async def asistencia_feed(request: Request, session: dict = Depends(require_admin), dia: str | None = None):
+    ctx = await _contexto_dia(_dia_param(dia))
+    return templates.TemplateResponse(request, "partials/_asistencia_feed.html", ctx)
 
 
 @router.post("/dashboard/asistencia/{asistencia_id}/eliminar")
@@ -180,7 +219,42 @@ async def eliminar_asistencia(asistencia_id: int, session: dict = Depends(requir
             "Eliminó marca de asistencia",
             f"{fila['nombre']} — {fila['tipo']} del {fila['marcado_en'].astimezone(_TZ_BOLIVIA).strftime('%d/%m/%Y %H:%M')}",
         )
+        return RedirectResponse(
+            f"/dashboard/asistencia?dia={fila['marcado_en'].astimezone(_TZ_BOLIVIA).date().isoformat()}", status_code=303
+        )
     return RedirectResponse("/dashboard/asistencia", status_code=303)
+
+
+@router.post("/dashboard/asistencia/manual")
+async def agregar_asistencia_manual(
+    session: dict = Depends(require_admin),
+    usuario_id: str = Form(""),
+    tipo: str = Form(""),
+    fecha: str = Form(""),
+    hora: str = Form(""),
+):
+    """El admin carga a mano una marca que faltó (alguien se olvidó de
+    escanear el QR), con la fecha y hora reales en que entró o salió."""
+    try:
+        marcado_en = datetime.combine(date.fromisoformat(fecha), dtime.fromisoformat(hora), _TZ_BOLIVIA)
+        uid = int(usuario_id)
+    except ValueError:
+        return RedirectResponse(
+            "/dashboard/asistencia?" + urlencode({"dia": fecha, "error": "Completa persona, tipo, fecha y hora."}), status_code=303
+        )
+    usuario = await pool().fetchrow("SELECT id, username, nombre FROM usuarios WHERE id = $1", uid)
+    if usuario is None or tipo not in ("entrada", "salida"):
+        return RedirectResponse(
+            "/dashboard/asistencia?" + urlencode({"dia": fecha, "error": "Completa persona, tipo, fecha y hora."}), status_code=303
+        )
+    await pool().execute(
+        "INSERT INTO asistencias (usuario_id, username, nombre, tipo, marcado_en) VALUES ($1, $2, $3, $4, $5)",
+        usuario["id"], usuario["username"], usuario["nombre"], tipo, marcado_en,
+    )
+    await bitacora.registrar(
+        session, "Agregó marca de asistencia a mano", f"{usuario['nombre']} — {tipo} del {marcado_en:%d/%m/%Y %H:%M}"
+    )
+    return RedirectResponse(f"/dashboard/asistencia?dia={fecha}", status_code=303)
 
 
 @router.get("/dashboard/asistencia/qr.png")

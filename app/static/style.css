@@ -670,3 +670,16 @@ a { color: inherit; }
   .cocina-mesa { font-size: 1.6rem; }
   .cocina-items { font-size: 1.15rem; }
 }
+
+/* Asistencia: pantalla dividida (marcas del día | jornadas y resumen) */
+.asistencia-shell { max-width: 1320px; margin: 0 auto; }
+.split-2 { display: grid; grid-template-columns: minmax(340px, 5fr) 7fr; gap: 28px; align-items: start; }
+@media (max-width: 1000px) { .split-2 { grid-template-columns: 1fr; } }
+.qr-card { text-align: center; }
+.qr-card img { margin: 0 auto 8px; display: block; border: 8px solid #fff; border-radius: 8px; }
+.marca-tipo { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 13px; font-weight: 600; }
+.marca-entrada { color: #15803d; background: #dcfce7; }
+.marca-salida { color: #b91c1c; background: #fee2e2; }
+.aviso-marcas { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; color: #a16207; background: #fef3c7; }
+.asistencia-shell .data-table td { font-size: 15px; }
+.split-2 .data-table { min-width: 0; }
