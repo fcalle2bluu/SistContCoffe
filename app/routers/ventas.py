@@ -17,7 +17,8 @@ def _fecha_bolivia(momento: datetime):
 router = APIRouter(prefix="/dashboard/ventas")
 
 PAGOS_EFECTIVO = ("EFECTIVO", "EFEC/FAC")
-TIPOS_PAGO = ("EFECTIVO", "QR", "POS", "EFEC/FAC", "QR/FAC", "POS/FAC")
+# Sin "POS" (tarjeta sin factura): se quitó a pedido del contador; con tarjeta se cobra siempre POS/FAC.
+TIPOS_PAGO = ("EFECTIVO", "QR", "EFEC/FAC", "QR/FAC", "POS/FAC")
 TIPOS_FACTURADOS = ("EFEC/FAC", "QR/FAC", "POS/FAC")
 
 DENOMINACIONES = (
