@@ -507,6 +507,13 @@ a { color: inherit; }
 .subnav-link:hover { color: var(--ink); background: var(--bg); }
 .subnav-link.active { color: var(--accent-strong); background: var(--accent-soft); font-weight: 600; }
 
+/* Cabecera de Contabilidad: título a la izquierda, selector de mes a la derecha */
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.month-picker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.month-picker-form { margin: 0; }
+.month-picker .input { width: auto; padding: 5px 8px; font-size: 13px; }
+.month-picker-label { flex-basis: 100%; text-align: right; font-size: 12px; font-weight: 600; color: var(--muted); }
+
 /* Tema crema con bordes negros marcados — prueba, por ahora solo en Ventas/Caja. */
 .tema-crema {
   --bg: #f2e6c8;

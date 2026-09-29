@@ -2,14 +2,18 @@
 {% block title %}Libro Mayor — Café Yanaloma{% endblock %}
 {% block content %}
 <div class="stack-8 report-shell">
-  <div>
-    <h2 class="section-title">Libro Mayor</h2>
+  <div class="page-head">
+    <div>
+      <h2 class="section-title">Libro Mayor</h2>
     <p class="section-subtitle">Movimientos y saldo por cuenta — calculado a partir del Libro Diario.</p>
+    </div>
+    {% include "partials/_selector_mes.html" %}
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}
 
   <form method="get" action="/dashboard/contabilidad/mayor" class="toolbar">
+    <input type="hidden" name="mes" value="{{ mes.valor }}" />
     <span class="toolbar-group">
       <label class="field-label">Cuenta</label>
       <select name="cuenta" class="input">
@@ -26,6 +30,7 @@
     <h3 class="subsection-title">Agregar fila</h3>
     <form method="post" action="/dashboard/contabilidad/mayor/fila" class="card stack-4">
       <input type="hidden" name="cuenta_filtro" value="{{ cuenta_filtro or '' }}" />
+      <input type="hidden" name="mes" value="{{ mes.valor }}" />
       <table class="capture-grid">
         <thead>
           <tr>
@@ -63,7 +68,7 @@
   </div>
 
   {% if cuentas_mayor|length == 0 %}
-  <p class="muted">Todavía no hay movimientos registrados.</p>
+  <p class="muted">No hay movimientos en {{ mes.nombre }}.</p>
   {% else %}
   <div class="table-wrap">
     <table class="ledger">

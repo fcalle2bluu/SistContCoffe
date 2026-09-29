@@ -7,12 +7,39 @@ from app import bitacora
 from app.db import pool
 from app.deps import require_admin
 from app.routers.ventas import TIPOS_FACTURADOS, _ordenar_diario, _siguiente_nro_asiento
-from app.templating import templates
+from app.templating import MESES_ES, templates
 from app.tz import BOLIVIA_TZ, hoy_bolivia
 
 router = APIRouter(prefix="/dashboard/contabilidad")
 
 TIPOS_CUENTA = ("ACTIVO", "PASIVO", "PATRIMONIO", "INGRESO", "EGRESO")
+
+
+def _mes(mes: str | None) -> dict:
+    """Mes que se está viendo en Contabilidad ("2026-09"); si no viene o no
+    es válido, el mes actual. `fin` es el primer día del mes siguiente."""
+    hoy = hoy_bolivia()
+    try:
+        anio, num = (int(x) for x in mes.split("-"))
+        inicio = date(anio, num, 1)
+    except (AttributeError, ValueError):
+        inicio = hoy.replace(day=1)
+    fin = (inicio + timedelta(days=32)).replace(day=1)
+    anterior = (inicio - timedelta(days=1)).replace(day=1)
+    return {
+        "valor": f"{inicio:%Y-%m}",
+        "nombre": f"{MESES_ES[inicio.month - 1].capitalize()} {inicio.year}",
+        "inicio": inicio,
+        "fin": fin,
+        "ultimo_dia": fin - timedelta(days=1),
+        "anterior": f"{anterior:%Y-%m}",
+        "siguiente": f"{fin:%Y-%m}",
+        "es_actual": inicio == hoy.replace(day=1),
+    }
+
+
+def _mes_de(fecha: date) -> str:
+    return f"{fecha:%Y-%m}"
 
 
 def _parse_lineas(cuenta: list[str], lado: list[str], monto: list[str]) -> list[dict]:
@@ -82,12 +109,21 @@ def _parse_pegado_diario(pegado: str, cuentas_por_codigo: dict, cuentas_por_nomb
 
 
 @router.get("/plan-cuentas", response_class=HTMLResponse)
-async def plan_cuentas_page(request: Request, session: dict = Depends(require_admin), error: str | None = None):
+async def plan_cuentas_page(
+    request: Request, session: dict = Depends(require_admin), error: str | None = None, mes: str | None = None
+):
     cuentas = await pool().fetch("SELECT codigo, nombre, tipo FROM cuentas_contables ORDER BY codigo")
     return templates.TemplateResponse(
         request,
         "dashboard/contabilidad_plan_cuentas.html",
-        {"session": session, "active": "contabilidad", "cuentas": cuentas, "tipos": TIPOS_CUENTA, "error": error},
+        {
+            "session": session,
+            "active": "contabilidad",
+            "cuentas": cuentas,
+            "tipos": TIPOS_CUENTA,
+            "error": error,
+            "mes": _mes(mes),
+        },
     )
 
 
@@ -111,6 +147,7 @@ async def crear_cuenta(
                 "cuentas": cuentas,
                 "tipos": TIPOS_CUENTA,
                 "error": "Completa código, nombre y tipo válido.",
+                "mes": _mes(None),
             },
             status_code=400,
         )
@@ -130,6 +167,7 @@ async def crear_cuenta(
                 "cuentas": cuentas,
                 "tipos": TIPOS_CUENTA,
                 "error": f"Ya existe una cuenta con código {codigo}.",
+                "mes": _mes(None),
             },
             status_code=400,
         )
@@ -144,15 +182,19 @@ async def _diario_context(
     fecha: str | None = None,
     glosa: str = "",
     editando_nro: int | None = None,
+    mes: str | None = None,
 ) -> dict:
+    mes_ctx = _mes(mes)
     filas = await pool().fetch(
         """
         SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
                ld.debe, ld.haber, ld.glosa
         FROM libro_diario ld
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+        WHERE ld.fecha >= $1 AND ld.fecha < $2
         ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.id
-        """
+        """,
+        mes_ctx["inicio"], mes_ctx["fin"],
     )
     asientos = _agrupar_asientos(filas)
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
@@ -169,15 +211,18 @@ async def _diario_context(
         "total_haber": total_haber,
         "error": error,
         "hoy": hoy_bolivia().isoformat(),
-        "form_fecha": fecha or hoy_bolivia().isoformat(),
+        "form_fecha": fecha or (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
         "form_glosa": glosa,
         "editando_nro": editando_nro,
+        "mes": mes_ctx,
     }
 
 
 @router.get("/diario", response_class=HTMLResponse)
-async def diario_page(request: Request, session: dict = Depends(require_admin), error: str | None = None):
-    ctx = await _diario_context(session, error=error)
+async def diario_page(
+    request: Request, session: dict = Depends(require_admin), error: str | None = None, mes: str | None = None
+):
+    ctx = await _diario_context(session, error=error, mes=mes)
     return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx)
 
 
@@ -208,6 +253,7 @@ async def editar_asiento_form(request: Request, nro_asiento: int, session: dict 
         fecha=filas[0]["fecha"].isoformat(),
         glosa=filas[0]["glosa"],
         editando_nro=nro_asiento,
+        mes=_mes_de(filas[0]["fecha"]),
     )
     return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx)
 
@@ -332,7 +378,7 @@ async def crear_asiento(
         cuentas_map = {c["codigo"]: c["nombre"] for c in await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")}
         for l in lineas:
             l["nombre"] = cuentas_map.get(l["codigo_cuenta"], l["codigo_cuenta"])
-        ctx = await _diario_context(session, error=error, lineas=lineas, fecha=fecha, glosa=glosa)
+        ctx = await _diario_context(session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, mes=fecha[:7])
         return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx, status_code=400)
 
     fecha_date = date.fromisoformat(fecha)
@@ -354,7 +400,7 @@ async def crear_asiento(
                     glosa,
                 )
     await bitacora.registrar(session, "Registró asiento contable", f"Asiento #{siguiente}: {glosa}")
-    return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
+    return RedirectResponse(f"/dashboard/contabilidad/diario?mes={_mes_de(fecha_date)}", status_code=303)
 
 
 @router.post("/diario/{nro_asiento}/editar", response_class=HTMLResponse)
@@ -387,7 +433,9 @@ async def editar_asiento(
         cuentas_map = {c["codigo"]: c["nombre"] for c in await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")}
         for l in lineas:
             l["nombre"] = cuentas_map.get(l["codigo_cuenta"], l["codigo_cuenta"])
-        ctx = await _diario_context(session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, editando_nro=nro_asiento)
+        ctx = await _diario_context(
+            session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, editando_nro=nro_asiento, mes=fecha[:7]
+        )
         return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx, status_code=400)
 
     fecha_date = date.fromisoformat(fecha)
@@ -421,11 +469,11 @@ async def editar_asiento(
                 )
     detalle_numero = f"Asiento #{nro_asiento}" if nuevo_nro == nro_asiento else f"Asiento #{nro_asiento} (reordenado a #{nuevo_nro})"
     await bitacora.registrar(session, "Editó asiento contable", f"{detalle_numero}: {glosa}")
-    return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
+    return RedirectResponse(f"/dashboard/contabilidad/diario?mes={_mes_de(fecha_date)}", status_code=303)
 
 
 @router.post("/diario/{nro_asiento}/eliminar")
-async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_admin)):
+async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_admin), mes: str = Form("")):
     fila = await pool().fetchrow("SELECT glosa FROM libro_diario WHERE nro_asiento = $1 LIMIT 1", nro_asiento)
     if fila:
         async with pool().acquire() as conn:
@@ -435,12 +483,15 @@ async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_adm
                 # desordenados respecto de los que se registren después.
                 await _ordenar_diario(conn)
         await bitacora.registrar(session, "Eliminó asiento contable", f"Asiento #{nro_asiento}: {fila['glosa']}")
-    return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
+    return RedirectResponse(f"/dashboard/contabilidad/diario?mes={_mes(mes)['valor']}", status_code=303)
 
 
-async def _cuentas_mayor(cuenta: str | None):
-    condicion = "WHERE ld.codigo_cuenta = $1" if cuenta else ""
-    args = [cuenta] if cuenta else []
+async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
+    condicion = "WHERE ld.fecha >= $1 AND ld.fecha < $2"
+    args = [mes_ctx["inicio"], mes_ctx["fin"]]
+    if cuenta:
+        condicion += " AND ld.codigo_cuenta = $3"
+        args.append(cuenta)
     filas = await pool().fetch(
         f"""
         SELECT ld.id, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.fecha, ld.glosa, ld.debe, ld.haber
@@ -513,10 +564,15 @@ async def _cuentas_mayor(cuenta: str | None):
 
 @router.get("/mayor", response_class=HTMLResponse)
 async def mayor_page(
-    request: Request, session: dict = Depends(require_admin), cuenta: str | None = None, error: str | None = None
+    request: Request,
+    session: dict = Depends(require_admin),
+    cuenta: str | None = None,
+    error: str | None = None,
+    mes: str | None = None,
 ):
+    mes_ctx = _mes(mes)
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
-    cuentas_mayor = await _cuentas_mayor(cuenta)
+    cuentas_mayor = await _cuentas_mayor(cuenta, mes_ctx)
 
     return templates.TemplateResponse(
         request,
@@ -528,7 +584,8 @@ async def mayor_page(
             "cuenta_filtro": cuenta,
             "cuentas_mayor": cuentas_mayor,
             "error": error,
-            "hoy": hoy_bolivia().isoformat(),
+            "hoy": (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
+            "mes": mes_ctx,
         },
     )
 
@@ -543,6 +600,7 @@ async def agregar_fila_mayor(
     cuenta_haber: str = Form(""),
     monto: str = Form(""),
     cuenta_filtro: str = Form(""),
+    mes: str = Form(""),
 ):
     glosa = glosa.strip()
     try:
@@ -564,7 +622,8 @@ async def agregar_fila_mayor(
 
     if error:
         cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
-        cuentas_mayor = await _cuentas_mayor(cuenta_filtro or None)
+        mes_ctx = _mes(mes)
+        cuentas_mayor = await _cuentas_mayor(cuenta_filtro or None, mes_ctx)
         return templates.TemplateResponse(
             request,
             "dashboard/contabilidad_mayor.html",
@@ -575,7 +634,8 @@ async def agregar_fila_mayor(
                 "cuenta_filtro": cuenta_filtro or None,
                 "cuentas_mayor": cuentas_mayor,
                 "error": error,
-                "hoy": hoy_bolivia().isoformat(),
+                "hoy": fecha or hoy_bolivia().isoformat(),
+                "mes": mes_ctx,
             },
             status_code=400,
         )
@@ -600,9 +660,9 @@ async def agregar_fila_mayor(
             )
 
     await bitacora.registrar(session, "Registró asiento desde el Mayor", f"Asiento #{siguiente}: {glosa}")
-    destino = "/dashboard/contabilidad/mayor"
+    destino = f"/dashboard/contabilidad/mayor?mes={_mes_de(fecha_date)}"
     if cuenta_filtro:
-        destino += f"?cuenta={cuenta_filtro}"
+        destino += f"&cuenta={cuenta_filtro}"
     return RedirectResponse(destino, status_code=303)
 
 
@@ -657,9 +717,12 @@ def _resumen_diferencia(manual: float, real: float) -> dict:
     return {"manual": manual, "real": real, "diferencia": diferencia, "estado": estado}
 
 
-async def _contexto_resultados(error: str | None = None) -> dict:
+async def _contexto_resultados(mes_ctx: dict, error: str | None = None) -> dict:
+    # Períodos que tocan el mes elegido.
     periodos = await pool().fetch(
-        "SELECT id, nombre, fecha_inicio, fecha_fin FROM periodos_contables ORDER BY fecha_inicio DESC"
+        "SELECT id, nombre, fecha_inicio, fecha_fin FROM periodos_contables "
+        "WHERE fecha_inicio < $2 AND fecha_fin >= $1 ORDER BY fecha_inicio DESC",
+        mes_ctx["inicio"], mes_ctx["fin"],
     )
     vistas_periodo = []
     for p in periodos:
@@ -694,12 +757,13 @@ async def _contexto_resultados(error: str | None = None) -> dict:
         "periodos": periodos,
         "vistas_periodo": vistas_periodo,
         "error": error,
+        "mes": mes_ctx,
     }
 
 
 @router.get("/resultados", response_class=HTMLResponse)
-async def resultados_page(request: Request, session: dict = Depends(require_admin)):
-    contexto = await _contexto_resultados()
+async def resultados_page(request: Request, session: dict = Depends(require_admin), mes: str | None = None):
+    contexto = await _contexto_resultados(_mes(mes))
     contexto["session"] = session
     return templates.TemplateResponse(request, "dashboard/contabilidad_resultados.html", contexto)
 
@@ -726,7 +790,9 @@ async def crear_periodo_resultados(
             items.append((s, c.strip(), monto_num))
 
     if not nombre or not fecha_inicio or not fecha_fin or not items:
-        contexto = await _contexto_resultados(error="Completa nombre, fechas y al menos un concepto con monto.")
+        contexto = await _contexto_resultados(
+            _mes(fecha_inicio[:7]), error="Completa nombre, fechas y al menos un concepto con monto."
+        )
         contexto["session"] = session
         return templates.TemplateResponse(
             request, "dashboard/contabilidad_resultados.html", contexto, status_code=400
@@ -759,20 +825,25 @@ async def crear_periodo_resultados(
                     m,
                     i,
                 )
-    return RedirectResponse(f"/dashboard/contabilidad/resultados#periodo-{periodo_id}", status_code=303)
+    return RedirectResponse(
+        f"/dashboard/contabilidad/resultados?mes={_mes_de(fecha_inicio_date)}#periodo-{periodo_id}", status_code=303
+    )
 
 
 @router.get("/facturas", response_class=HTMLResponse)
-async def facturas_page(request: Request, session: dict = Depends(require_admin)):
+async def facturas_page(request: Request, session: dict = Depends(require_admin), mes: str | None = None):
+    mes_ctx = _mes(mes)
     hoy = hoy_bolivia()
     inicio_dia = datetime.combine(hoy, time.min, BOLIVIA_TZ)
     fin_dia = inicio_dia + timedelta(days=1)
+    inicio_mes = datetime.combine(mes_ctx["inicio"], time.min, BOLIVIA_TZ)
+    fin_mes = datetime.combine(mes_ctx["fin"], time.min, BOLIVIA_TZ)
 
     columnas = (
         "id, mesa, total, tipo_pago, responsable, cobrado_en, "
         "factura_nit, factura_celular, factura_nombre, siat_registrado"
     )
-    facturas_hoy = await pool().fetch(
+    facturas_hoy = [] if not mes_ctx["es_actual"] else await pool().fetch(
         f"""
         SELECT {columnas} FROM ordenes
         WHERE estado = 'cobrada' AND tipo_pago = ANY($1::text[])
@@ -785,10 +856,19 @@ async def facturas_page(request: Request, session: dict = Depends(require_admin)
         f"""
         SELECT {columnas} FROM ordenes
         WHERE estado = 'cobrada' AND tipo_pago = ANY($1::text[])
-          AND cobrado_en < $2 AND siat_registrado = false
+          AND cobrado_en >= $2 AND cobrado_en < LEAST($3::timestamptz, $4::timestamptz) AND siat_registrado = false
         ORDER BY cobrado_en
         """,
-        list(TIPOS_FACTURADOS), inicio_dia,
+        list(TIPOS_FACTURADOS), inicio_mes, fin_mes, inicio_dia,
+    )
+    # Pendientes de otros meses: no se listan acá, pero se avisa para que no se olviden.
+    pendientes_otros_meses = await pool().fetchval(
+        """
+        SELECT count(*) FROM ordenes
+        WHERE estado = 'cobrada' AND tipo_pago = ANY($1::text[]) AND siat_registrado = false
+          AND cobrado_en < $4 AND (cobrado_en < $2 OR cobrado_en >= $3)
+        """,
+        list(TIPOS_FACTURADOS), inicio_mes, fin_mes, inicio_dia,
     )
     pendientes_hoy = sum(1 for f in facturas_hoy if not f["siat_registrado"])
 
@@ -802,6 +882,8 @@ async def facturas_page(request: Request, session: dict = Depends(require_admin)
             "facturas_atrasadas": facturas_atrasadas,
             "pendientes_hoy": pendientes_hoy,
             "pendientes_atrasadas": len(facturas_atrasadas),
+            "pendientes_otros_meses": pendientes_otros_meses,
+            "mes": mes_ctx,
         },
     )
 
@@ -811,6 +893,7 @@ async def tickear_factura(
     orden_id: int,
     session: dict = Depends(require_admin),
     registrado: str = Form("0"),
+    mes: str = Form(""),
 ):
     marcar = registrado == "1"
     orden = await pool().fetchrow("SELECT mesa, tipo_pago FROM ordenes WHERE id = $1", orden_id)
@@ -818,4 +901,4 @@ async def tickear_factura(
         await pool().execute("UPDATE ordenes SET siat_registrado = $1 WHERE id = $2", marcar, orden_id)
         accion = "Marcó venta como registrada en SIAT" if marcar else "Desmarcó registro SIAT de una venta"
         await bitacora.registrar(session, accion, f"Venta #{orden_id} — {orden['mesa']} ({orden['tipo_pago']})")
-    return RedirectResponse("/dashboard/contabilidad/facturas", status_code=303)
+    return RedirectResponse(f"/dashboard/contabilidad/facturas?mes={_mes(mes)['valor']}", status_code=303)

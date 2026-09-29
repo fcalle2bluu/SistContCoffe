@@ -2,9 +2,12 @@
 {% block title %}Libro Diario — Café Yanaloma{% endblock %}
 {% block content %}
 <div class="stack-8 report-shell">
-  <div>
-    <h2 class="section-title">Libro Diario</h2>
+  <div class="page-head">
+    <div>
+      <h2 class="section-title">Libro Diario</h2>
     <p class="section-subtitle">Asientos contables de doble entrada — solo administración.</p>
+    </div>
+    {% include "partials/_selector_mes.html" %}
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}
@@ -67,7 +70,7 @@
 
       <div class="order-actions">
         <button type="submit" class="btn btn-primary">{{ "Guardar cambios" if editando_nro else "Registrar asiento" }}</button>
-        {% if editando_nro %}<a href="/dashboard/contabilidad/diario" class="btn btn-outline">Cancelar edición</a>{% endif %}
+        {% if editando_nro %}<a href="/dashboard/contabilidad/diario?mes={{ mes.valor }}" class="btn btn-outline">Cancelar edición</a>{% endif %}
       </div>
 
       {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
@@ -75,9 +78,9 @@
   </div>
 
   <div>
-    <h3 class="subsection-title">Asientos registrados ({{ asientos|length }})</h3>
+    <h3 class="subsection-title">Asientos de {{ mes.nombre }} ({{ asientos|length }})</h3>
     {% if asientos|length == 0 %}
-    <p class="muted">Todavía no hay asientos.</p>
+    <p class="muted">No hay asientos en {{ mes.nombre }}.</p>
     {% else %}
     <div class="table-wrap">
       <table class="ledger">
@@ -109,6 +112,7 @@
                 <a href="/dashboard/contabilidad/diario/{{ a.nro }}/editar" class="link-muted">Editar</a>
                 <form method="post" action="/dashboard/contabilidad/diario/{{ a.nro }}/eliminar"
                   onsubmit="return confirm('¿Eliminar el asiento #{{ a.nro }} completo? Esta acción no se puede deshacer.');">
+                  <input type="hidden" name="mes" value="{{ mes.valor }}" />
                   <button type="submit" class="link-danger">Eliminar</button>
                 </form>
               </div>

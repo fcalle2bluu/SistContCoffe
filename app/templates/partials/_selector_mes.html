@@ -1,0 +1,11 @@
+{% set extra = ("&cuenta=" ~ cuenta_filtro) if cuenta_filtro else "" %}
+<div class="month-picker" aria-label="Mes que se muestra">
+  <a href="?mes={{ mes.anterior }}{{ extra }}" class="btn btn-outline btn-sm" title="Mes anterior">‹</a>
+  <form method="get" class="month-picker-form">
+    {% if cuenta_filtro %}<input type="hidden" name="cuenta" value="{{ cuenta_filtro }}" />{% endif %}
+    <input type="month" name="mes" value="{{ mes.valor }}" class="input" onchange="this.form.submit()" aria-label="Elegir mes" />
+  </form>
+  <a href="?mes={{ mes.siguiente }}{{ extra }}" class="btn btn-outline btn-sm" title="Mes siguiente">›</a>
+  {% if not mes.es_actual %}<a href="?{{ extra[1:] }}" class="btn btn-outline btn-sm">Mes actual</a>{% endif %}
+  <span class="month-picker-label">{{ mes.nombre }}</span>
+</div>

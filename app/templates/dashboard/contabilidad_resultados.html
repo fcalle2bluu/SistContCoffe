@@ -2,9 +2,12 @@
 {% block title %}Estado de Resultados — Café Yanaloma{% endblock %}
 {% block content %}
 <div class="stack-8 report-shell">
-  <div>
-    <h2 class="section-title">Estado de Resultados</h2>
+  <div class="page-head">
+    <div>
+      <h2 class="section-title">Estado de Resultados</h2>
     <p class="section-subtitle">Ingresos, costos e impuestos por mes — solo administración.</p>
+    </div>
+    {% include "partials/_selector_mes.html" %}
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}
@@ -12,7 +15,7 @@
   {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
 
   {% if not vistas_periodo %}
-  <p class="muted">Todavía no hay ningún período cargado. Creá el primero abajo.</p>
+  <p class="muted">No hay ningún período cargado para {{ mes.nombre }}. Créalo abajo.</p>
   {% endif %}
 
   {% for vista in vistas_periodo %}
@@ -125,15 +128,15 @@
       <div class="order-row">
         <div class="flex-1">
           <label class="field-label">Nombre del período</label>
-          <input name="nombre" required placeholder="Ej: SEPTIEMBRE 2026" class="input" />
+          <input name="nombre" required value="{{ mes.nombre|upper }}" class="input" />
         </div>
         <div>
           <label class="field-label">Desde</label>
-          <input name="fecha_inicio" type="date" required class="input" />
+          <input name="fecha_inicio" type="date" value="{{ mes.inicio.isoformat() }}" required class="input" />
         </div>
         <div>
           <label class="field-label">Hasta</label>
-          <input name="fecha_fin" type="date" required class="input" />
+          <input name="fecha_fin" type="date" value="{{ mes.ultimo_dia.isoformat() }}" required class="input" />
         </div>
       </div>
 

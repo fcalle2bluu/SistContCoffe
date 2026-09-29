@@ -2,13 +2,22 @@
 {% block title %}Facturas pendientes — Café Yanaloma{% endblock %}
 {% block content %}
 <div class="stack-8 report-shell">
-  <div>
-    <h2 class="section-title">Facturas pendientes</h2>
+  <div class="page-head">
+    <div>
+      <h2 class="section-title">Facturas pendientes</h2>
     <p class="section-subtitle">Ventas facturadas (EFEC/FAC, QR/FAC, POS/FAC) por registrar en el SIAT.</p>
+    </div>
+    {% include "partials/_selector_mes.html" %}
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}
 
+  {% if pendientes_otros_meses > 0 %}
+  <p class="error-box">
+    <strong>Hay {{ pendientes_otros_meses }} factura(s) de otros meses sin registrar en el SIAT.</strong>
+    Cambia de mes arriba a la derecha para verlas.
+  </p>
+  {% endif %}
   {% if pendientes_atrasadas > 0 %}
   <p class="error-box">
     <strong>Hay {{ pendientes_atrasadas }} factura(s) de días anteriores sin registrar en el SIAT.</strong>
@@ -47,7 +56,7 @@
             <td>{{ f.factura_celular or "—" }}</td>
             <td>{{ f.responsable }}</td>
             <td>
-              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear">
+              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear"><input type="hidden" name="mes" value="{{ mes.valor }}" />
                 <input type="hidden" name="registrado" value="1" />
                 <button type="submit" class="btn btn-primary btn-sm">Marcar tickeada</button>
               </form>
@@ -86,12 +95,12 @@
             <td>{{ f.responsable }}</td>
             <td>
               {% if f.siat_registrado %}
-              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear">
+              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear"><input type="hidden" name="mes" value="{{ mes.valor }}" />
                 <input type="hidden" name="registrado" value="0" />
                 <button type="submit" class="btn btn-outline btn-sm">✓ Tickeada — desmarcar</button>
               </form>
               {% else %}
-              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear">
+              <form method="post" action="/dashboard/contabilidad/facturas/{{ f.id }}/tickear"><input type="hidden" name="mes" value="{{ mes.valor }}" />
                 <input type="hidden" name="registrado" value="1" />
                 <button type="submit" class="btn btn-primary btn-sm">Marcar tickeada</button>
               </form>
