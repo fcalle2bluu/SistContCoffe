@@ -120,8 +120,8 @@
 
 
 
-      <details class="todas-marcas" open>
-        <summary class="btn btn-outline">Todas las marcas de {{ mes_nombre }} ({{ marcas_mes|length }}) — ver y eliminar</summary>
+      <details class="todas-marcas">
+        <summary class="btn btn-outline">Todas las marcas de {{ mes_nombre }} ({{ marcas_mes|length }}) — ▾ ver y eliminar</summary>
         {% if marcas_mes %}
         <div class="table-wrap lista-mes">
           <table class="data-table">
@@ -194,7 +194,7 @@
 
 <script>
   (function () {
-    var todasAbierta = true;
+    var todasAbierta = false;
     document.body.addEventListener("toggle", function (e) {
       if (e.target.classList && e.target.classList.contains("todas-marcas")) todasAbierta = e.target.open;
     }, true);
