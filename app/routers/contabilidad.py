@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
-from app.routers.ventas import TIPOS_FACTURADOS, _siguiente_nro_asiento
+from app.routers.ventas import TIPOS_FACTURADOS, _ordenar_diario, _siguiente_nro_asiento
 from app.templating import templates
 from app.tz import BOLIVIA_TZ, hoy_bolivia
 
@@ -394,15 +394,18 @@ async def editar_asiento(
 
     async with pool().acquire() as conn:
         async with conn.transaction():
-            existe = await conn.fetchval("SELECT COUNT(*) FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
-            if not existe:
+            fecha_anterior = await conn.fetchval("SELECT MIN(fecha) FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
+            if fecha_anterior is None:
                 return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
             await conn.execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
-            # Cierra el hueco que deja el asiento borrado y recién ahí calcula
-            # su nueva posición — así, si cambiaron la fecha, el asiento queda
-            # reordenado donde corresponde en vez de conservar el número viejo.
-            await conn.execute("UPDATE libro_diario SET nro_asiento = nro_asiento - 1 WHERE nro_asiento > $1", nro_asiento)
-            nuevo_nro = await _siguiente_nro_asiento(conn, fecha_date)
+            if fecha_anterior == fecha_date:
+                # Misma fecha: conserva su número y su lugar dentro del día.
+                nuevo_nro = nro_asiento
+            else:
+                # Cambió la fecha: se reubica al final de los asientos de la
+                # fecha nueva (_siguiente_nro_asiento cierra el hueco que
+                # dejó en su fecha vieja).
+                nuevo_nro = await _siguiente_nro_asiento(conn, fecha_date)
             for l in lineas:
                 await conn.execute(
                     """
@@ -425,7 +428,12 @@ async def editar_asiento(
 async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_admin)):
     fila = await pool().fetchrow("SELECT glosa FROM libro_diario WHERE nro_asiento = $1 LIMIT 1", nro_asiento)
     if fila:
-        await pool().execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
+        async with pool().acquire() as conn:
+            async with conn.transaction():
+                await conn.execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro_asiento)
+                # Cierra el hueco para que los asientos siguientes no queden
+                # desordenados respecto de los que se registren después.
+                await _ordenar_diario(conn)
         await bitacora.registrar(session, "Eliminó asiento contable", f"Asiento #{nro_asiento}: {fila['glosa']}")
     return RedirectResponse("/dashboard/contabilidad/diario", status_code=303)
 
@@ -575,7 +583,7 @@ async def agregar_fila_mayor(
     fecha_date = date.fromisoformat(fecha)
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await conn.fetchval("SELECT COALESCE(MAX(nro_asiento), 0) + 1 FROM libro_diario")
+            siguiente = await _siguiente_nro_asiento(conn, fecha_date)
             await conn.execute(
                 """
                 INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa)

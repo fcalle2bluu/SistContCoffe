@@ -9,6 +9,11 @@ from app.deps import require_admin, require_session
 from app.templating import templates
 from app.tz import BOLIVIA_TZ, hoy_bolivia
 
+
+def _fecha_bolivia(momento: datetime):
+    """Día (en hora de Bolivia) de un timestamp de la base."""
+    return momento.astimezone(BOLIVIA_TZ).date()
+
 router = APIRouter(prefix="/dashboard/ventas")
 
 PAGOS_EFECTIVO = ("EFECTIVO", "EFEC/FAC")
@@ -40,17 +45,40 @@ CUENTAS_POR_CATEGORIA_EGRESO = {
 }
 
 
+async def _ordenar_diario(conn) -> None:
+    """Renumbera todo el Libro Diario 1, 2, 3… sin huecos, ordenado por la
+    fecha de la transacción y, dentro del mismo día, por el número que ya
+    tenía cada asiento (orden en que se registró). Cierra los huecos que
+    deja eliminar un asiento y corrige los que hayan quedado fuera de orden.
+    Usa un lock para que dos registros simultáneos no se crucen al
+    renumerar."""
+    await conn.execute("SELECT pg_advisory_xact_lock(hashtext('libro_diario_nro_asiento'))")
+    await conn.execute(
+        """
+        UPDATE libro_diario ld SET nro_asiento = o.nuevo
+        FROM (
+            SELECT nro_asiento, ROW_NUMBER() OVER (ORDER BY MIN(fecha), nro_asiento) AS nuevo
+            FROM libro_diario GROUP BY nro_asiento
+        ) o
+        WHERE ld.nro_asiento = o.nro_asiento AND ld.nro_asiento <> o.nuevo
+        """
+    )
+
+
 async def _siguiente_nro_asiento(conn, fecha, cantidad: int = 1) -> int:
     """El número de asiento tiene que quedar ordenado por la fecha real de la
     transacción, no por el orden en que se cargó al sistema (p. ej. al
-    registrar a mano un comprobante viejo mucho después). Calcula la
-    posición que le corresponde a `fecha` entre los asientos ya existentes y
-    corre hacia adelante los que tienen fecha posterior para dejarle el
-    lugar. `cantidad` reserva varios números consecutivos para esa misma
-    fecha, para cuando una sola operación genera más de un asiento separado
-    (p. ej. el cierre de turno con ventas facturadas por varios medios)."""
+    registrar a mano un comprobante viejo mucho después). Primero deja el
+    Diario ordenado y sin huecos, después ubica el asiento nuevo AL FINAL de
+    los asientos de su misma fecha (así, dentro de un día, quedan en el orden
+    en que se registraron) y corre hacia adelante los de fechas posteriores
+    para dejarle el lugar. `cantidad` reserva varios números consecutivos
+    para esa misma fecha, para cuando una sola operación genera más de un
+    asiento separado (p. ej. el cierre de turno con ventas facturadas por
+    varios medios)."""
+    await _ordenar_diario(conn)
     posicion = await conn.fetchval(
-        "SELECT COUNT(DISTINCT nro_asiento) FROM libro_diario WHERE fecha < $1", fecha
+        "SELECT COUNT(DISTINCT nro_asiento) FROM libro_diario WHERE fecha <= $1", fecha
     )
     nuevo = posicion + 1
     await conn.execute(
@@ -124,6 +152,15 @@ CUENTA_LINKSER = "502030102"
 CUENTA_COMISION_LINKSER = "502030103"
 
 
+async def _fecha_turno(turno_id: int):
+    """Fecha contable de los asientos que genera el cierre de un turno: el
+    día en que se ABRIÓ el turno (cuando se hicieron las ventas), no el día
+    en que se cierra — un turno que se cierra pasada la medianoche sigue
+    perteneciendo al día anterior."""
+    abierto_en = await pool().fetchval("SELECT abierto_en FROM turnos WHERE id = $1", turno_id)
+    return _fecha_bolivia(abierto_en) if abierto_en else hoy_bolivia()
+
+
 async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
     """Al cerrar un turno, asienta en el Libro Diario el total de ventas en
     efectivo SIN factura de ese turno (Debe Caja, Haber Ventas). Las ventas
@@ -143,7 +180,7 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
 
     turno = await pool().fetchrow("SELECT responsable FROM turnos WHERE id = $1", turno_id)
     glosa = f"Ventas en efectivo del turno de {turno['responsable']} (cierre de caja, turno #{turno_id})."
-    fecha = hoy_bolivia()
+    fecha = await _fecha_turno(turno_id)
 
     async with pool().acquire() as conn:
         async with conn.transaction():
@@ -175,7 +212,7 @@ async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
 
     turno = await pool().fetchrow("SELECT responsable FROM turnos WHERE id = $1", turno_id)
     glosa = f"Ventas por QR del turno de {turno['responsable']} (cierre de caja, turno #{turno_id})."
-    fecha = hoy_bolivia()
+    fecha = await _fecha_turno(turno_id)
 
     async with pool().acquire() as conn:
         async with conn.transaction():
@@ -192,7 +229,7 @@ async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
             )
 
 
-async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: str | None, motivo: str, responsable: str) -> None:
+async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categoria: str | None, motivo: str, responsable: str) -> None:
     """Asienta un egreso de caja en el Libro Diario apenas se registra (no se
     espera al cierre de turno, porque el dinero sale de inmediato). Se debita
     la cuenta propia de la categoría cuando existe (ver
@@ -209,7 +246,6 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
 
     cuenta_debito = _cuenta_egreso_por_categoria(categoria)
     glosa = f"Egreso de caja — {categoria + ': ' if categoria else ''}{motivo} (responsable: {responsable})."
-    fecha = hoy_bolivia()
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
@@ -225,7 +261,7 @@ async def _registrar_egreso_en_diario(monto: float, tipo_pago: str, categoria: s
             )
 
 
-async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
+async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
     """Asienta un ingreso a caja en el Libro Diario apenas se registra: es un
     traslado interno (Haber Caja Chica, que es la cuenta dinámica que se
     mueve con las ventas) desde donde salió la plata (Debe Caja Moneda
@@ -240,7 +276,6 @@ async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo
         return
 
     glosa = f"Ingreso a caja chica — {motivo} (responsable: {responsable})."
-    fecha = hoy_bolivia()
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
@@ -256,14 +291,13 @@ async def _registrar_ingreso_caja_en_diario(monto: float, tipo_pago: str, motivo
             )
 
 
-async def _registrar_reposicion_caja_en_diario(monto: float, motivo: str, responsable: str) -> None:
+async def _registrar_reposicion_caja_en_diario(fecha, monto: float, motivo: str, responsable: str) -> None:
     """Asienta una reposición de efectivo en la Libro Diario: entra plata a
     Caja Moneda Nacional (la caja del turno actual) desde Caja Chica — el
     camino inverso de 'Registrar ingreso a caja', para darle cambio/fondo al
     cajero durante el turno. Al cerrar, esta plata también se traslada de
     vuelta a Caja Chica junto con el resto del arqueo, como siempre."""
     glosa = f"Reposición de caja desde Caja Chica — {motivo} (responsable: {responsable})."
-    fecha = hoy_bolivia()
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
@@ -289,7 +323,7 @@ async def _registrar_traslado_arqueo_a_caja_chica_en_diario(turno_id: int, respo
     if monto <= 0:
         return
     glosa = f"Traslado a Caja Chica del arqueo de cierre del turno de {responsable} (turno #{turno_id})."
-    fecha = hoy_bolivia()
+    fecha = await _fecha_turno(turno_id)
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
@@ -325,10 +359,10 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
         return
 
     turno = await pool().fetchrow("SELECT responsable FROM turnos WHERE id = $1", turno_id)
+    fecha = await _fecha_turno(turno_id)
 
     async with pool().acquire() as conn:
         async with conn.transaction():
-            fecha = hoy_bolivia()
             siguiente = await _siguiente_nro_asiento(conn, fecha, cantidad=len(totales))
 
             async def linea(nro: int, codigo: str, debe: float, haber: float, glosa: str) -> None:
@@ -1422,9 +1456,9 @@ async def registrar_movimiento_caja(
     # cargar a mano un egreso atrasado desde Control de Turnos); un cajero
     # no puede adelantar/atrasar el registro.
     hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
-    await pool().execute(
+    creado_en = await pool().fetchval(
         "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, categoria, creado_en) "
-        "VALUES ($1, 'egreso', $2, $3, $4, $5, $6, COALESCE($7, now()))",
+        "VALUES ($1, 'egreso', $2, $3, $4, $5, $6, COALESCE($7, now())) RETURNING creado_en",
         int(turno_id),
         monto_num,
         motivo,
@@ -1433,7 +1467,7 @@ async def registrar_movimiento_caja(
         categoria,
         hora_dt,
     )
-    await _registrar_egreso_en_diario(monto_num, tipo_pago, categoria, motivo, session["nombre"])
+    await _registrar_egreso_en_diario(_fecha_bolivia(creado_en), monto_num, tipo_pago, categoria, motivo, session["nombre"])
     await bitacora.registrar(session, "Registró egreso de caja", f"{categoria} — Bs {monto_num:.2f} — {motivo}")
     return RedirectResponse(next, status_code=303)
 
@@ -1461,9 +1495,9 @@ async def registrar_ingreso_caja(
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
-    await pool().execute(
+    creado_en = await pool().fetchval(
         "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, creado_en) "
-        "VALUES ($1, 'ingreso', $2, $3, $4, $5, COALESCE($6, now()))",
+        "VALUES ($1, 'ingreso', $2, $3, $4, $5, COALESCE($6, now())) RETURNING creado_en",
         int(turno_id),
         monto_num,
         motivo,
@@ -1471,7 +1505,7 @@ async def registrar_ingreso_caja(
         tipo_pago,
         hora_dt,
     )
-    await _registrar_ingreso_caja_en_diario(monto_num, tipo_pago, motivo, session["nombre"])
+    await _registrar_ingreso_caja_en_diario(_fecha_bolivia(creado_en), monto_num, tipo_pago, motivo, session["nombre"])
     await bitacora.registrar(session, "Registró ingreso a caja", f"Bs {monto_num:.2f} — {motivo} ({tipo_pago})")
     return RedirectResponse(next, status_code=303)
 
@@ -1497,16 +1531,16 @@ async def registrar_reposicion_caja(
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
-    await pool().execute(
+    creado_en = await pool().fetchval(
         "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, creado_en) "
-        "VALUES ($1, 'reposicion', $2, $3, $4, 'EFECTIVO', COALESCE($5, now()))",
+        "VALUES ($1, 'reposicion', $2, $3, $4, 'EFECTIVO', COALESCE($5, now())) RETURNING creado_en",
         int(turno_id),
         monto_num,
         motivo,
         session["nombre"],
         hora_dt,
     )
-    await _registrar_reposicion_caja_en_diario(monto_num, motivo, session["nombre"])
+    await _registrar_reposicion_caja_en_diario(_fecha_bolivia(creado_en), monto_num, motivo, session["nombre"])
     await bitacora.registrar(session, "Registró reposición de caja", f"Bs {monto_num:.2f} — {motivo}")
     return RedirectResponse(next, status_code=303)
 
