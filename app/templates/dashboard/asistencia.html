@@ -256,17 +256,18 @@
       data: {
         labels: datos.map(function (p) { return p.nombre; }),
         datasets: [
-          { label: "Faltas", data: datos.map(function (p) { return p.faltas; }), backgroundColor: "#dc2626", borderRadius: 6, yAxisID: "y" },
-          { label: "Horas de exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6, yAxisID: "y1" },
+          { label: "Faltas", data: datos.map(function (p) { return p.faltas; }), backgroundColor: "#dc2626", borderRadius: 6, xAxisID: "x" },
+          { label: "Horas de exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6, xAxisID: "x1" },
         ],
       },
       options: {
+        indexAxis: "y",
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: {
-          y: { beginAtZero: true, position: "left", title: { display: true, text: "Faltas (días)" }, ticks: { precision: 0 } },
-          y1: { beginAtZero: true, position: "right", title: { display: true, text: "Exceso (horas)" }, grid: { drawOnChartArea: false } },
+          x: { beginAtZero: true, position: "top", title: { display: true, text: "Faltas (días)" }, ticks: { precision: 0 } },
+          x1: { beginAtZero: true, position: "bottom", title: { display: true, text: "Exceso (horas)" }, grid: { drawOnChartArea: false } },
         },
       },
     });
