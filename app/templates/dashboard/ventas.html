@@ -154,6 +154,10 @@
             <label class="field-label">Monto (Bs)</label>
             <input name="monto" type="number" step="0.01" required class="input input-w32" />
           </div>
+          <label class="muted-sm" style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" name="con_factura" value="1" />
+            ¿Con factura? (separa 13% de IVA como Crédito Fiscal)
+          </label>
           {% if session.role == 'admin' %}
           <div>
             <label class="field-label">Hora</label>
@@ -834,6 +838,10 @@
                   <label class="field-label">Monto (Bs)</label>
                   <input name="monto" type="number" step="0.01" value="{{ '%.2f'|format(m.monto) }}" required class="input input-w24" />
                 </div>
+                <label class="muted-sm" style="display:flex; align-items:center; gap:8px;">
+                  <input type="checkbox" name="con_factura" value="1" {{ "checked" if m.con_factura }} />
+                  ¿Con factura?
+                </label>
                 {% if session.role == 'admin' %}
                 <div>
                   <label class="field-label">Hora</label>
@@ -847,7 +855,7 @@
           </tr>
           {% else %}
           <tr>
-            <td class="small">{{ m.categoria or "—" }}</td>
+            <td class="small">{{ m.categoria or "—" }}{% if m.con_factura %} <span class="badge-success normal-case">con factura</span>{% endif %}</td>
             <td class="strong">{{ m.motivo }}</td>
             <td class="text-right mono">Bs {{ "%.2f"|format(m.monto) }}</td>
             <td class="uppercase small">{{ m.tipo_pago }}</td>

@@ -234,20 +234,24 @@ async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
             )
 
 
-async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categoria: str | None, motivo: str, responsable: str) -> None:
+async def _registrar_egreso_en_diario(
+    fecha, monto: float, tipo_pago: str, categoria: str | None, motivo: str, responsable: str,
+    con_factura: bool = False,
+) -> None:
     """Asienta un egreso de caja en el Libro Diario apenas se registra (no se
     espera al cierre de turno, porque el dinero sale de inmediato). Se debita
     la cuenta propia de la categoría cuando existe (ver
     CUENTAS_POR_CATEGORIA_EGRESO); si la categoría todavía no tiene cuenta
     asignada, se usa Gastos Administrativos. Todo egreso se asienta, con
     cualquier método de pago: en efectivo la plata sale de la caja del
-    turno, o sea de Caja Chica; por QR o tarjeta (POS) sale del Banco. En
-    Insumos Alimenticios, las compras vienen con factura, así que se separa
-    el Crédito Fiscal (13% de IVA, cuenta 1130203) del costo neto (87%,
-    Insumos Alimenticios) — mismo criterio que usa el contador en el Excel:
-    Debe Insumos Alimenticios (87%) + Debe Crédito Fiscal (13%) = el 100%
-    que sale por Haber. Las demás categorías se asientan enteras a su
-    cuenta, sin separar IVA, hasta que el contador defina ese tratamiento."""
+    turno, o sea de Caja Chica; por QR o tarjeta (POS) sale del Banco.
+    Cuando el egreso viene con factura (`con_factura`), se separa el
+    Crédito Fiscal (13% de IVA, cuenta 1130203) del costo neto (87%) de la
+    cuenta de la categoría que sea — mismo criterio que usa el contador en
+    el Excel para cualquier compra facturada, no solo Insumos Alimenticios:
+    Debe [cuenta de la categoría] (87%) + Debe Crédito Fiscal (13%) = el
+    100% que sale por Haber. Sin factura, se asienta entero a su cuenta,
+    sin separar IVA."""
     cuenta_contrapartida = CUENTA_BANCO if tipo_pago in ("QR", "QR/FAC", "POS", "POS/FAC") else CUENTA_CAJA_CHICA
 
     cuenta_debito = _cuenta_egreso_por_categoria(categoria)
@@ -255,13 +259,13 @@ async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categ
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
-            if cuenta_debito == CUENTA_INSUMOS_ALIMENTICIOS:
+            if con_factura:
                 credito_fiscal = round(monto * TASA_IVA, 2)
                 neto = round(monto - credito_fiscal, 2)
                 await conn.execute(
                     "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                     "VALUES ($1, $2, $3, $4, 0, $5)",
-                    fecha, siguiente, CUENTA_INSUMOS_ALIMENTICIOS, neto, glosa,
+                    fecha, siguiente, cuenta_debito, neto, glosa,
                 )
                 await conn.execute(
                     "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
@@ -589,7 +593,7 @@ async def _ventas_context(
                 float(r["monto"]) for r in pago_rows if r["tipo_pago"] in PAGOS_EFECTIVO
             )
         movimientos = await pool().fetch(
-            "SELECT id, tipo, monto, tipo_pago, motivo, categoria, responsable, creado_en FROM movimientos_caja "
+            "SELECT id, tipo, monto, tipo_pago, motivo, categoria, con_factura, responsable, creado_en FROM movimientos_caja "
             "WHERE turno_id = $1 ORDER BY creado_en DESC",
             turno["id"],
         )
@@ -1448,12 +1452,14 @@ async def registrar_movimiento_caja(
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
     categoria: str = Form(""),
+    con_factura: str = Form("0"),
     hora: str = Form(""),
     next: str = Form("/dashboard/ventas"),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
     categoria = categoria.strip()
+    con_factura_bool = con_factura in ("1", "si", "on", "true")
     try:
         monto_num = float(monto)
     except ValueError:
@@ -1468,18 +1474,24 @@ async def registrar_movimiento_caja(
     # no puede adelantar/atrasar el registro.
     hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
     creado_en = await pool().fetchval(
-        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, categoria, creado_en) "
-        "VALUES ($1, 'egreso', $2, $3, $4, $5, $6, COALESCE($7, now())) RETURNING creado_en",
+        "INSERT INTO movimientos_caja (turno_id, tipo, monto, motivo, responsable, tipo_pago, categoria, con_factura, creado_en) "
+        "VALUES ($1, 'egreso', $2, $3, $4, $5, $6, $7, COALESCE($8, now())) RETURNING creado_en",
         int(turno_id),
         monto_num,
         motivo,
         session["nombre"],
         tipo_pago,
         categoria,
+        con_factura_bool,
         hora_dt,
     )
-    await _registrar_egreso_en_diario(_fecha_bolivia(creado_en), monto_num, tipo_pago, categoria, motivo, session["nombre"])
-    await bitacora.registrar(session, "Registró egreso de caja", f"{categoria} — Bs {monto_num:.2f} — {motivo}")
+    await _registrar_egreso_en_diario(
+        _fecha_bolivia(creado_en), monto_num, tipo_pago, categoria, motivo, session["nombre"], con_factura=con_factura_bool
+    )
+    detalle = f"{categoria} — Bs {monto_num:.2f} — {motivo}"
+    if con_factura_bool:
+        detalle += " (con factura, separa Crédito Fiscal)"
+    await bitacora.registrar(session, "Registró egreso de caja", detalle)
     return RedirectResponse(next, status_code=303)
 
 
@@ -1618,12 +1630,14 @@ async def editar_movimiento_caja(
     motivo: str = Form(""),
     tipo_pago: str = Form(""),
     categoria: str = Form(""),
+    con_factura: str = Form("0"),
     hora: str = Form(""),
     next: str = Form("/dashboard/ventas"),
 ):
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
     categoria = categoria.strip()
+    con_factura_bool = con_factura in ("1", "si", "on", "true")
     try:
         monto_num = float(monto)
     except ValueError:
@@ -1635,12 +1649,13 @@ async def editar_movimiento_caja(
 
     hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
     await pool().execute(
-        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3, categoria = $4, "
-        "creado_en = COALESCE($5, creado_en) WHERE id = $6",
+        "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3, categoria = $4, con_factura = $5, "
+        "creado_en = COALESCE($6, creado_en) WHERE id = $7",
         monto_num,
         motivo,
         tipo_pago,
         categoria,
+        con_factura_bool,
         hora_dt,
         movimiento_id,
     )
