@@ -185,17 +185,17 @@
     </div>
   </div>
 
-  <div id="asistencia-faltas-excesos">
-    <h3 class="subsection-title">Faltas y excesos de {{ mes_nombre }}</h3>
-    {% if faltas_excesos|length == 0 %}
+  <div id="asistencia-atrasos-excesos">
+    <h3 class="subsection-title">Atrasos y excesos de {{ mes_nombre }}</h3>
+    {% if atrasos_excesos|length == 0 %}
     <p class="muted">Nadie tiene un horario asignado todavía — no hay nada que comparar.</p>
     {% else %}
     <p class="muted-sm">
-      Falta: le tocaba venir según su horario y no marcó entrada ese día (no cuenta hoy, hasta que termine).
+      Atraso: horas de más entre la hora en que le tocaba entrar y la hora en que marcó entrada.
       Exceso: horas trabajadas de más sobre lo que le tocaba ese día, ya con la jornada cerrada.
     </p>
     <div class="chart-wrap">
-      <canvas id="chartFaltasExcesos"></canvas>
+      <canvas id="chartAtrasosExcesos"></canvas>
     </div>
     {% endif %}
   </div>
@@ -248,16 +248,16 @@
   })();
 
   (function () {
-    var canvas = document.getElementById("chartFaltasExcesos");
+    var canvas = document.getElementById("chartAtrasosExcesos");
     if (!canvas) return;
-    var datos = {{ faltas_excesos|tojson }};
+    var datos = {{ atrasos_excesos|tojson }};
     new Chart(canvas, {
       type: "bar",
       data: {
         labels: datos.map(function (p) { return p.nombre; }),
         datasets: [
-          { label: "Faltas", data: datos.map(function (p) { return p.faltas; }), backgroundColor: "#dc2626", borderRadius: 6, xAxisID: "x" },
-          { label: "Horas de exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6, xAxisID: "x1" },
+          { label: "Atraso", data: datos.map(function (p) { return p.horas_atraso; }), backgroundColor: "#dc2626", borderRadius: 6 },
+          { label: "Horas de exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6 },
         ],
       },
       options: {
@@ -266,8 +266,7 @@
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: {
-          x: { beginAtZero: true, position: "top", title: { display: true, text: "Faltas (días)" }, ticks: { precision: 0 } },
-          x1: { beginAtZero: true, position: "bottom", title: { display: true, text: "Exceso (horas)" }, grid: { drawOnChartArea: false } },
+          x: { beginAtZero: true, title: { display: true, text: "Horas" } },
         },
       },
     });

@@ -181,38 +181,43 @@ def _horas_esperadas(hora_inicio: dtime, hora_fin: dtime) -> float:
     return round((fin - inicio).total_seconds() / 3600, 2)
 
 
-def _faltas_y_excesos(
+def _atrasos_y_excesos(
     jornadas_mes: list[dict], usuarios: list, horarios: dict[int, dict[int, tuple]], inicio_mes: date, hoy: date
 ) -> list[dict]:
     """Para cada persona con horario asignado, compara día por día (desde el
-    inicio del mes hasta AYER, sin contar hoy para no marcar falta antes de
-    que termine su turno) contra el horario que le toca ese día de la
-    semana. Si le tocaba venir y no hay jornada registrada, es una falta.
-    Si trabajó más horas de las que le tocaban ese día (jornada ya
-    cerrada), la diferencia se suma como horas de exceso. Quien no tiene
-    horario asignado no aparece: no se le puede exigir nada."""
+    inicio del mes hasta AYER, sin contar hoy) contra el horario que le
+    toca ese día de la semana. Si marcó entrada después de la hora que le
+    tocaba, la diferencia se suma como horas de atraso. Si trabajó más
+    horas de las que le tocaban ese día (jornada ya cerrada), la
+    diferencia se suma como horas de exceso. Quien no tiene horario
+    asignado no aparece: no se le puede exigir nada."""
     por_usuario_dia = {(j["usuario_id"], j["fecha"]): j for j in jornadas_mes}
     resultado = []
     for u in usuarios:
         horario_usuario = horarios.get(u["id"])
         if not horario_usuario:
             continue
-        faltas = 0
+        horas_atraso = 0.0
         horas_exceso = 0.0
         d = inicio_mes
         while d < hoy and d.month == inicio_mes.month:
             rango = horario_usuario.get(d.weekday())
             if rango:
-                esperado = _horas_esperadas(*rango)
+                hora_inicio_esperada, hora_fin_esperada = rango
+                esperado = _horas_esperadas(hora_inicio_esperada, hora_fin_esperada)
                 jornada = por_usuario_dia.get((u["id"], d.isoformat()))
-                if jornada is None:
-                    faltas += 1
-                elif jornada["segundos"] is not None:
-                    trabajado = jornada["segundos"] / 3600
-                    if trabajado > esperado:
-                        horas_exceso += trabajado - esperado
+                if jornada is not None and jornada["entrada"] is not None:
+                    entrada_local = jornada["entrada"].astimezone(_TZ_BOLIVIA).time()
+                    if entrada_local > hora_inicio_esperada:
+                        esperada_dt = datetime.combine(date(2000, 1, 1), hora_inicio_esperada)
+                        real_dt = datetime.combine(date(2000, 1, 1), entrada_local)
+                        horas_atraso += (real_dt - esperada_dt).total_seconds() / 3600
+                    if jornada["segundos"] is not None:
+                        trabajado = jornada["segundos"] / 3600
+                        if trabajado > esperado:
+                            horas_exceso += trabajado - esperado
             d += timedelta(days=1)
-        resultado.append({"nombre": u["nombre"], "faltas": faltas, "horas_exceso": round(horas_exceso, 1)})
+        resultado.append({"nombre": u["nombre"], "horas_atraso": round(horas_atraso, 1), "horas_exceso": round(horas_exceso, 1)})
     return resultado
 
 
@@ -268,7 +273,7 @@ async def asistencia_page(
         "session": session,
         "active": "asistencia",
         "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
-        "faltas_excesos": _faltas_y_excesos(jornadas_mes, usuarios, horarios, inicio_mes, hoy_bolivia()),
+        "atrasos_excesos": _atrasos_y_excesos(jornadas_mes, usuarios, horarios, inicio_mes, hoy_bolivia()),
         "calendario": _calendario(inicio_mes, fin_mes, jornadas_mes),
         "mes_anterior": (inicio_mes - timedelta(days=1)).replace(day=1).isoformat(),
         "mes_siguiente": fin_mes.isoformat() if fin_mes <= hoy_bolivia() else None,
