@@ -144,6 +144,9 @@
     if (el.matches('select[name="cuenta_selector"], select[name="lado_selector"], input[name="monto_selector"]')) {
       e.preventDefault();
       agregarLinea();
+    } else if (el.matches('input[name="monto"]')) {
+      e.preventDefault();
+      el.blur();
     }
   });
   document.body.addEventListener("htmx:afterSwap", function (e) {
