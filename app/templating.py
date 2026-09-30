@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import json
 import zlib
 
 from fastapi.templating import Jinja2Templates
@@ -93,6 +94,15 @@ templates.env.filters["datetime_local"] = formato_datetime_local
 templates.env.filters["mes_anio"] = formato_mes_anio
 templates.env.filters["fechaiso"] = lambda iso: _a_hora_bolivia(iso).date().isoformat()
 templates.env.filters["fechahora_bo"] = lambda iso: _a_hora_bolivia(iso).strftime("%d/%m/%Y")
+
+
+def a_json(valor) -> Markup:
+    """Serializa a JSON para incrustar en un <script>, escapando '</' para
+    que no corte el tag si el valor trae texto con eso adentro."""
+    return Markup(json.dumps(valor).replace("</", "<\\/"))
+
+
+templates.env.filters["tojson"] = a_json
 
 
 # Color de cada cuenta en Contabilidad: así se distingue de un vistazo en el

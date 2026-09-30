@@ -185,6 +185,21 @@
     </div>
   </div>
 
+  <div id="asistencia-faltas-excesos">
+    <h3 class="subsection-title">Faltas y excesos de {{ mes_nombre }}</h3>
+    {% if faltas_excesos|length == 0 %}
+    <p class="muted">Nadie tiene un horario asignado todavía — no hay nada que comparar.</p>
+    {% else %}
+    <p class="muted-sm">
+      Falta: le tocaba venir según su horario y no marcó entrada ese día (no cuenta hoy, hasta que termine).
+      Exceso: horas trabajadas de más sobre lo que le tocaba ese día, ya con la jornada cerrada.
+    </p>
+    <div class="chart-wrap">
+      <canvas id="chartFaltasExcesos"></canvas>
+    </div>
+    {% endif %}
+  </div>
+
   {# Tiempo real: cada 5 s vuelve a pedir esta misma página y reemplaza solo
      las marcas y la columna derecha (no el QR ni el formulario de marca a
      mano, para no borrar lo que se esté escribiendo). #}
@@ -230,6 +245,31 @@
     }
     actualizarVivos();
     setInterval(actualizarVivos, 1000);
+  })();
+
+  (function () {
+    var canvas = document.getElementById("chartFaltasExcesos");
+    if (!canvas) return;
+    var datos = {{ faltas_excesos|tojson }};
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: datos.map(function (p) { return p.nombre; }),
+        datasets: [
+          { label: "Faltas", data: datos.map(function (p) { return p.faltas; }), backgroundColor: "#dc2626", borderRadius: 6, yAxisID: "y" },
+          { label: "Horas de exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6, yAxisID: "y1" },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: { beginAtZero: true, position: "left", title: { display: true, text: "Faltas (días)" }, ticks: { precision: 0 } },
+          y1: { beginAtZero: true, position: "right", title: { display: true, text: "Exceso (horas)" }, grid: { drawOnChartArea: false } },
+        },
+      },
+    });
   })();
 </script>
 {% endblock %}

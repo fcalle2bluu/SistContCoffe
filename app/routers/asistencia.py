@@ -164,6 +164,58 @@ def _jornadas(filas) -> tuple[list[dict], list[dict]]:
     return historial, personas
 
 
+async def _horarios_por_usuario() -> dict[int, dict[int, tuple[dtime, dtime]]]:
+    """Horario asignado a cada persona por día de la semana (0=lunes ...
+    6=domingo). Si una persona no tiene fila para un día, ese día no le
+    toca venir (franco) y no cuenta como falta."""
+    filas = await pool().fetch("SELECT usuario_id, dia_semana, hora_inicio, hora_fin FROM horarios_personal")
+    resultado: dict[int, dict[int, tuple[dtime, dtime]]] = {}
+    for f in filas:
+        resultado.setdefault(f["usuario_id"], {})[f["dia_semana"]] = (f["hora_inicio"], f["hora_fin"])
+    return resultado
+
+
+def _horas_esperadas(hora_inicio: dtime, hora_fin: dtime) -> float:
+    inicio = datetime.combine(date(2000, 1, 1), hora_inicio)
+    fin = datetime.combine(date(2000, 1, 1), hora_fin)
+    return round((fin - inicio).total_seconds() / 3600, 2)
+
+
+def _faltas_y_excesos(
+    jornadas_mes: list[dict], usuarios: list, horarios: dict[int, dict[int, tuple]], inicio_mes: date, hoy: date
+) -> list[dict]:
+    """Para cada persona con horario asignado, compara día por día (desde el
+    inicio del mes hasta AYER, sin contar hoy para no marcar falta antes de
+    que termine su turno) contra el horario que le toca ese día de la
+    semana. Si le tocaba venir y no hay jornada registrada, es una falta.
+    Si trabajó más horas de las que le tocaban ese día (jornada ya
+    cerrada), la diferencia se suma como horas de exceso. Quien no tiene
+    horario asignado no aparece: no se le puede exigir nada."""
+    por_usuario_dia = {(j["usuario_id"], j["fecha"]): j for j in jornadas_mes}
+    resultado = []
+    for u in usuarios:
+        horario_usuario = horarios.get(u["id"])
+        if not horario_usuario:
+            continue
+        faltas = 0
+        horas_exceso = 0.0
+        d = inicio_mes
+        while d < hoy and d.month == inicio_mes.month:
+            rango = horario_usuario.get(d.weekday())
+            if rango:
+                esperado = _horas_esperadas(*rango)
+                jornada = por_usuario_dia.get((u["id"], d.isoformat()))
+                if jornada is None:
+                    faltas += 1
+                elif jornada["segundos"] is not None:
+                    trabajado = jornada["segundos"] / 3600
+                    if trabajado > esperado:
+                        horas_exceso += trabajado - esperado
+            d += timedelta(days=1)
+        resultado.append({"nombre": u["nombre"], "faltas": faltas, "horas_exceso": round(horas_exceso, 1)})
+    return resultado
+
+
 def _calendario(inicio_mes: date, fin_mes: date, jornadas: list[dict]) -> list[list[dict | None]]:
     """Semanas (lunes a domingo) del mes; cada día con sus jornadas en orden
     de llegada. Los huecos antes del día 1 y después del último son None."""
@@ -211,10 +263,12 @@ async def asistencia_page(
     marcas_mes = await _marcas(inicio_mes, fin_mes)
     jornadas_mes, _ = _jornadas(marcas_mes)
     usuarios = await pool().fetch("SELECT id, nombre FROM usuarios WHERE nombre IS NOT NULL AND nombre <> '' ORDER BY nombre")
+    horarios = await _horarios_por_usuario()
     ctx.update({
         "session": session,
         "active": "asistencia",
         "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
+        "faltas_excesos": _faltas_y_excesos(jornadas_mes, usuarios, horarios, inicio_mes, hoy_bolivia()),
         "calendario": _calendario(inicio_mes, fin_mes, jornadas_mes),
         "mes_anterior": (inicio_mes - timedelta(days=1)).replace(day=1).isoformat(),
         "mes_siguiente": fin_mes.isoformat() if fin_mes <= hoy_bolivia() else None,
