@@ -598,7 +598,6 @@ async def _ventas_context(
             fila = resumen_pagos.setdefault(tipo, {"cantidad": 0, "monto": 0.0})
             fila["cantidad"] += 1
             fila["monto"] += float(p["monto"])
-    resumen_pagos = {t: v for t, v in resumen_pagos.items() if v["cantidad"] > 0}
 
     resumen_ingresos_caja: dict[str, dict] = {}
     for m in ingresos_lista:
