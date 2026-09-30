@@ -152,6 +152,7 @@ TASA_IT = 0.03
 CUENTA_IT = "1160103"
 CUENTA_IT_POR_PAGAR = "1160104"
 CUENTA_IVA = "900006"
+CUENTA_CREDITO_FISCAL = "1130203"  # CRÉDITO FISCAL — IVA de compras con factura
 
 
 async def _fecha_turno(turno_id: int):
@@ -239,10 +240,14 @@ async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categ
     la cuenta propia de la categoría cuando existe (ver
     CUENTAS_POR_CATEGORIA_EGRESO); si la categoría todavía no tiene cuenta
     asignada, se usa Gastos Administrativos. Todo egreso se asienta, con
-    cualquier método de pago: en efectivo (con o sin factura) la plata sale
-    de la caja del turno, o sea de Caja Chica; por QR o tarjeta (POS), con o
-    sin factura, sale del Banco. El crédito fiscal de las compras con
-    factura todavía no se separa (pendiente de definir con el contador)."""
+    cualquier método de pago: en efectivo la plata sale de la caja del
+    turno, o sea de Caja Chica; por QR o tarjeta (POS) sale del Banco. En
+    Insumos Alimenticios, las compras vienen con factura, así que se separa
+    el Crédito Fiscal (13% de IVA, cuenta 1130203) del costo neto (87%,
+    Insumos Alimenticios) — mismo criterio que usa el contador en el Excel:
+    Debe Insumos Alimenticios (87%) + Debe Crédito Fiscal (13%) = el 100%
+    que sale por Haber. Las demás categorías se asientan enteras a su
+    cuenta, sin separar IVA, hasta que el contador defina ese tratamiento."""
     cuenta_contrapartida = CUENTA_BANCO if tipo_pago in ("QR", "QR/FAC", "POS", "POS/FAC") else CUENTA_CAJA_CHICA
 
     cuenta_debito = _cuenta_egreso_por_categoria(categoria)
@@ -250,11 +255,25 @@ async def _registrar_egreso_en_diario(fecha, monto: float, tipo_pago: str, categ
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, cuenta_debito, monto, glosa,
-            )
+            if cuenta_debito == CUENTA_INSUMOS_ALIMENTICIOS:
+                credito_fiscal = round(monto * TASA_IVA, 2)
+                neto = round(monto - credito_fiscal, 2)
+                await conn.execute(
+                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                    "VALUES ($1, $2, $3, $4, 0, $5)",
+                    fecha, siguiente, CUENTA_INSUMOS_ALIMENTICIOS, neto, glosa,
+                )
+                await conn.execute(
+                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                    "VALUES ($1, $2, $3, $4, 0, $5)",
+                    fecha, siguiente, CUENTA_CREDITO_FISCAL, credito_fiscal, glosa,
+                )
+            else:
+                await conn.execute(
+                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                    "VALUES ($1, $2, $3, $4, 0, $5)",
+                    fecha, siguiente, cuenta_debito, monto, glosa,
+                )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
