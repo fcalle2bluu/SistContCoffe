@@ -67,6 +67,25 @@ def _parse_lineas(cuenta: list[str], lado: list[str], monto: list[str]) -> list[
     return lineas
 
 
+async def _filas_libro_diario(mes_ctx: dict, orden: str = "desc") -> list:
+    """Líneas del Libro Diario del período (mes o día) que se está viendo.
+    `orden` controla si se ve de más reciente a más antiguo ("desc", lo de
+    siempre) o al revés ("asc"), según lo que elija el usuario con el botón
+    de invertir orden."""
+    orden_sql = "ASC" if orden == "asc" else "DESC"
+    return await pool().fetch(
+        f"""
+        SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
+               ld.debe, ld.haber, ld.glosa
+        FROM libro_diario ld
+        LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+        WHERE ld.fecha >= $1 AND ld.fecha < $2
+        ORDER BY ld.fecha {orden_sql}, ld.nro_asiento {orden_sql}, ld.debe = 0, ld.id
+        """,
+        mes_ctx["desde"], mes_ctx["hasta"],
+    )
+
+
 def _agrupar_asientos(filas) -> list[dict]:
     asientos: dict[int, dict] = {}
     for f in filas:
@@ -215,21 +234,12 @@ async def _diario_context(
     editando_nro: int | None = None,
     mes: str | None = None,
     dia: str | None = None,
+    orden: str | None = None,
 ) -> dict:
     mes_ctx = _mes(mes, dia)
-    filas = await pool().fetch(
-        """
-        SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
-               ld.debe, ld.haber, ld.glosa
-        FROM libro_diario ld
-        LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
-        WHERE ld.fecha >= $1 AND ld.fecha < $2
-        ORDER BY ld.fecha DESC, ld.nro_asiento DESC, ld.debe = 0, ld.id  -- en cada asiento, primero el Debe
-        """,
-        mes_ctx["desde"], mes_ctx["hasta"],
-    )
+    orden = "asc" if orden == "asc" else "desc"
+    filas = await _filas_libro_diario(mes_ctx, orden)
     asientos = _agrupar_asientos(filas)
-    resumen_cuentas = _resumen_cuentas(filas)
     cuentas = await pool().fetch("SELECT codigo, nombre FROM cuentas_contables ORDER BY nombre")
     lineas = lineas or []
     total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
@@ -238,7 +248,6 @@ async def _diario_context(
         "session": session,
         "active": "contabilidad",
         "asientos": asientos,
-        "resumen_cuentas": resumen_cuentas,
         "cuentas": cuentas,
         "lineas": lineas,
         "total_debe": total_debe,
@@ -250,6 +259,7 @@ async def _diario_context(
         "editando_nro": editando_nro,
         "mes": mes_ctx,
         "filtro_dia": True,
+        "orden": orden,
     }
 
 
@@ -260,9 +270,32 @@ async def diario_page(
     error: str | None = None,
     mes: str | None = None,
     dia: str | None = None,
+    orden: str | None = None,
 ):
-    ctx = await _diario_context(session, error=error, mes=mes, dia=dia)
+    ctx = await _diario_context(session, error=error, mes=mes, dia=dia, orden=orden)
     return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx)
+
+
+@router.get("/resumen", response_class=HTMLResponse)
+async def resumen_cuentas_page(
+    request: Request, session: dict = Depends(require_admin), mes: str | None = None, dia: str | None = None
+):
+    mes_ctx = _mes(mes, dia)
+    filas = await _filas_libro_diario(mes_ctx)
+    resumen_cuentas = _resumen_cuentas(filas)
+    asientos_totales = len({f["nro_asiento"] for f in filas})
+    return templates.TemplateResponse(
+        request,
+        "dashboard/contabilidad_resumen.html",
+        {
+            "session": session,
+            "active": "contabilidad",
+            "resumen_cuentas": resumen_cuentas,
+            "asientos_totales": asientos_totales,
+            "mes": mes_ctx,
+            "filtro_dia": True,
+        },
+    )
 
 
 @router.get("/diario/{nro_asiento}/editar", response_class=HTMLResponse)

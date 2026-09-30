@@ -78,38 +78,13 @@
   </details>
 
   <div>
-    <h3 class="subsection-title">Cuentas {{ ("del " ~ mes.dia_nombre) if mes.dia else ("de " ~ mes.nombre) }} ({{ resumen_cuentas|length }})</h3>
-    {% if resumen_cuentas %}
-    <div class="table-wrap">
-      <table class="ledger">
-        <thead><tr><th>Cuenta</th><th class="num">N° de registros</th><th class="num">Total Debe</th><th class="num">Total Haber</th><th class="num">Saldo</th></tr></thead>
-        <tbody>
-          {% for r in resumen_cuentas %}
-          <tr class="line-row">
-            <td><span {{ color_cuenta(r.codigo) }}>{{ r.nombre }}</span> <span class="muted-sm mono">{{ r.codigo }}</span></td>
-            <td class="num">{{ r.registros }}</td>
-            <td class="num">{{ (r.debe|bs) if r.debe else "" }}</td>
-            <td class="num">{{ (r.haber|bs) if r.haber else "" }}</td>
-            <td class="num">{{ r.saldo|bs }}</td>
-          </tr>
-          {% endfor %}
-          <tr class="subtotal-row">
-            <td>Total</td>
-            <td class="num">{{ asientos|length }} asiento(s)</td>
-            <td class="num">{{ resumen_cuentas|sum(attribute="debe")|bs }}</td>
-            <td class="num">{{ resumen_cuentas|sum(attribute="haber")|bs }}</td>
-            <td></td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="page-head">
+      <h3 class="subsection-title">Asientos {{ ("del " ~ mes.dia_nombre) if mes.dia else ("de " ~ mes.nombre) }} ({{ asientos|length }})</h3>
+      <a href="?mes={{ mes.valor }}{{ '&dia=' ~ mes.dia if mes.dia else '' }}&orden={{ 'desc' if orden == 'asc' else 'asc' }}"
+        class="btn btn-outline btn-sm" title="Invertir el orden de los asientos">
+        ⇅ {{ "Ver más recientes primero" if orden == 'asc' else "Ver más antiguos primero" }}
+      </a>
     </div>
-    {% else %}
-    <p class="muted">No hay cuentas con movimientos {{ ("el " ~ mes.dia_nombre) if mes.dia else ("en " ~ mes.nombre) }}.</p>
-    {% endif %}
-  </div>
-
-  <div>
-    <h3 class="subsection-title">Asientos {{ ("del " ~ mes.dia_nombre) if mes.dia else ("de " ~ mes.nombre) }} ({{ asientos|length }})</h3>
     {% if asientos|length == 0 %}
     <p class="muted">No hay asientos {{ ("el " ~ mes.dia_nombre) if mes.dia else ("en " ~ mes.nombre) }}.</p>
     {% else %}

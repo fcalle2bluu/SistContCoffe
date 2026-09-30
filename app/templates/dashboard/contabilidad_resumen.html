@@ -1,0 +1,46 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Resumen de Cuentas — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8 report-shell">
+  <div class="page-head">
+    <div>
+      <h2 class="section-title">Resumen de Cuentas</h2>
+    <p class="section-subtitle">Total por cuenta del período, calculado a partir del Libro Diario.</p>
+    </div>
+    {% include "partials/_selector_mes.html" %}
+  </div>
+
+  {% include "partials/_contabilidad_nav.html" %}
+
+  <div>
+    <h3 class="subsection-title">Cuentas {{ ("del " ~ mes.dia_nombre) if mes.dia else ("de " ~ mes.nombre) }} ({{ resumen_cuentas|length }})</h3>
+    {% if resumen_cuentas %}
+    <div class="table-wrap">
+      <table class="ledger">
+        <thead><tr><th>Cuenta</th><th class="num">N° de registros</th><th class="num">Total Debe</th><th class="num">Total Haber</th><th class="num">Saldo</th></tr></thead>
+        <tbody>
+          {% for r in resumen_cuentas %}
+          <tr class="line-row">
+            <td><span {{ color_cuenta(r.codigo) }}>{{ r.nombre }}</span> <span class="muted-sm mono">{{ r.codigo }}</span></td>
+            <td class="num">{{ r.registros }}</td>
+            <td class="num">{{ (r.debe|bs) if r.debe else "" }}</td>
+            <td class="num">{{ (r.haber|bs) if r.haber else "" }}</td>
+            <td class="num">{{ r.saldo|bs }}</td>
+          </tr>
+          {% endfor %}
+          <tr class="subtotal-row">
+            <td>Total</td>
+            <td class="num">{{ asientos_totales }} asiento(s)</td>
+            <td class="num">{{ resumen_cuentas|sum(attribute="debe")|bs }}</td>
+            <td class="num">{{ resumen_cuentas|sum(attribute="haber")|bs }}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="muted">No hay cuentas con movimientos {{ ("el " ~ mes.dia_nombre) if mes.dia else ("en " ~ mes.nombre) }}.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

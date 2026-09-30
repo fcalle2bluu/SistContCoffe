@@ -1,4 +1,5 @@
 {% set extra = ("&cuenta=" ~ cuenta_filtro) if cuenta_filtro else "" %}
+{% set extra = extra ~ ("&orden=" ~ orden) if orden else extra %}
 <div class="month-picker" aria-label="Mes que se muestra">
   <a href="?mes={{ mes.anterior }}{{ extra }}" class="btn btn-outline btn-sm" title="Mes anterior">‹</a>
   <form method="get" class="month-picker-form">
