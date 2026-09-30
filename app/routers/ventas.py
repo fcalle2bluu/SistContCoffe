@@ -148,10 +148,16 @@ async def _efectivo_teorico_turno(turno_id: int, monto_inicial) -> float:
 
 TASA_IVA = 0.13
 TASA_IT = 0.03
+# Comisión que cobra Linkser (pasarela de las ventas POS/FAC) por cada
+# cobro con tarjeta, según el Libro Diario real del contador (1,8% del
+# total de la venta, consistente en junio y agosto 2026).
+TASA_COMISION_LINKSER = 0.018
 
 CUENTA_IT = "1160103"
 CUENTA_IT_POR_PAGAR = "1160104"
 CUENTA_IVA = "900006"
+CUENTA_LINKSER = "502030102"
+CUENTA_COMISION_LINKSER = "502030103"
 CUENTA_CREDITO_FISCAL = "1130203"  # CRÉDITO FISCAL — IVA de compras con factura
 
 
@@ -337,10 +343,17 @@ async def _registrar_reposicion_caja_en_diario(fecha, monto: float, motivo: str,
 async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
     """Al cerrar un turno, asienta las ventas con factura (EFEC/FAC, QR/FAC y
     POS/FAC) desglosando IT (3%) e IVA (13%) sobre el total, igual que se
-    calculaba a mano en el Excel. Las ventas QR/FAC y POS/FAC van directo
-    al Banco (no pasan por Linkser, según el contador). Las ventas POS sin
-    factura siguen sin tocarse: ese tratamiento lo sigue armando el
-    contador."""
+    calculaba a mano en el Excel. Las ventas QR/FAC van directo al Banco.
+    Las ventas POS/FAC sí pasan por Linkser (la pasarela de cobro con
+    tarjeta), que cobra una comisión del 1,8%: primero un asiento aparte
+    debita LINKSER (neto que liquida la pasarela) y COMISIÓN A LINKSER
+    (gasto), acreditando COMISIÓN A LINKSER (misma cuenta, se anula entre
+    sí — es como lo lleva el contador para trazar la comisión de cada
+    venta hasta que Linkser facture el total del mes) y VENTAS (neto);
+    después el asiento de IT/IVA usa VENTAS en vez de Banco como
+    contrapartida, porque el movimiento de caja real ya quedó asentado en
+    el asiento de Linkser. Las ventas POS sin factura siguen sin tocarse:
+    ese tratamiento lo sigue armando el contador."""
     filas = await pool().fetch(
         "SELECT op.tipo_pago, COALESCE(SUM(op.monto), 0) AS total FROM orden_pagos op "
         "JOIN ordenes o ON o.id = op.orden_id "
@@ -356,9 +369,11 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
     turno = await pool().fetchrow("SELECT responsable FROM turnos WHERE id = $1", turno_id)
     fecha = await _fecha_turno(turno_id)
 
+    cantidad_asientos = len(totales) + (1 if "POS/FAC" in totales else 0)
+
     async with pool().acquire() as conn:
         async with conn.transaction():
-            siguiente = await _siguiente_nro_asiento(conn, fecha, cantidad=len(totales))
+            siguiente = await _siguiente_nro_asiento(conn, fecha, cantidad=cantidad_asientos)
 
             async def linea(nro: int, codigo: str, debe: float, haber: float, glosa: str) -> None:
                 await conn.execute(
@@ -395,11 +410,20 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
 
             if "POS/FAC" in totales:
                 total = totales["POS/FAC"]
+                comision = round(total * TASA_COMISION_LINKSER, 2)
+                neto_linkser = round(total - comision, 2)
+                glosa = f"Ventas POS con factura del turno de {turno['responsable']} (turno #{turno_id})."
+                glosa_comision = f"Comisión de Linkser sobre ventas POS con factura del turno de {turno['responsable']} (turno #{turno_id})."
+                await linea(siguiente, CUENTA_LINKSER, neto_linkser, 0, glosa_comision)
+                await linea(siguiente, CUENTA_COMISION_LINKSER, comision, 0, glosa_comision)
+                await linea(siguiente, CUENTA_COMISION_LINKSER, 0, comision, glosa_comision)
+                await linea(siguiente, CUENTA_VENTAS, 0, neto_linkser, glosa_comision)
+                siguiente += 1
+
                 it = round(total * TASA_IT, 2)
                 iva = round(total * TASA_IVA, 2)
-                venta_neta = round(total - iva, 2)
-                glosa = f"Ventas POS con factura del turno de {turno['responsable']} (turno #{turno_id})."
-                await linea(siguiente, CUENTA_BANCO, total, 0, glosa)
+                venta_neta = round(total - it - iva, 2)
+                await linea(siguiente, CUENTA_VENTAS, round(total - it, 2), 0, glosa)
                 await linea(siguiente, CUENTA_IT, it, 0, glosa)
                 await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
                 await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
