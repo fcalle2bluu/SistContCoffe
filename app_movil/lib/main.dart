@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -750,6 +751,7 @@ class _CocinaTab extends StatefulWidget {
 
 class _CocinaTabState extends State<_CocinaTab> {
   Timer? _temporizador;
+  final AudioPlayer _reproductor = AudioPlayer();
   List<Map<String, dynamic>> _pedidos = [];
   Set<int> _vistos = {};
   bool _primeraCarga = true;
@@ -766,6 +768,7 @@ class _CocinaTabState extends State<_CocinaTab> {
   @override
   void dispose() {
     _temporizador?.cancel();
+    _reproductor.dispose();
     super.dispose();
   }
 
@@ -793,9 +796,10 @@ class _CocinaTabState extends State<_CocinaTab> {
   }
 
   void _alertar() {
-    for (final delay in [0, 260, 520]) {
-      Future.delayed(Duration(milliseconds: delay), () => SystemSound.play(SystemSoundType.alert));
-    }
+    // El SystemSound.play() de antes es apenas un "tick" del sistema, casi
+    // inaudible en cocina — se reemplaza por un audio propio (6 pitidos
+    // fuertes) a volumen máximo.
+    _reproductor.play(AssetSource('sounds/alerta_cocina.wav'), volume: 1.0);
     for (final delay in [0, 300, 600]) {
       Future.delayed(Duration(milliseconds: delay), () => HapticFeedback.vibrate());
     }
