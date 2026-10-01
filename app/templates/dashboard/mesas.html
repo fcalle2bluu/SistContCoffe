@@ -1,0 +1,35 @@
+{% extends "dashboard/_shell.html" %}
+{% block title %}Mesas — Café Yanaloma{% endblock %}
+{% block content %}
+<div class="stack-8">
+  <div>
+    <h2 class="section-title">Mesas</h2>
+    <p class="section-subtitle">Disponibilidad en vivo — solo para consultar, acá no se puede vender.</p>
+  </div>
+
+  {% include "partials/_mesa_grid_solo_lectura.html" %}
+</div>
+
+<script>
+(function () {
+  // Cuánto lleva pendiente cada mesa ocupada. Se recalcula solo en el
+  // cliente (sin pedir nada al servidor) y sobrevive a los swaps de htmx
+  // porque busca los tiles en el DOM en cada tick en vez de guardarlos.
+  function actualizarTemporizadoresMesas() {
+    document.querySelectorAll(".mesa-tile-timer[data-desde]").forEach(function (span) {
+      var desde = new Date(span.getAttribute("data-desde")).getTime();
+      var ms = Math.max(0, Date.now() - desde);
+      var totalSeg = Math.floor(ms / 1000);
+      var horas = Math.floor(totalSeg / 3600);
+      var minutos = Math.floor((totalSeg % 3600) / 60);
+      var segundos = totalSeg % 60;
+      if (horas > 0) span.textContent = horas + "h " + minutos + "m " + segundos + "s";
+      else if (minutos > 0) span.textContent = minutos + "m " + segundos + "s";
+      else span.textContent = segundos + "s";
+    });
+  }
+  actualizarTemporizadoresMesas();
+  setInterval(actualizarTemporizadoresMesas, 1000);
+})();
+</script>
+{% endblock %}

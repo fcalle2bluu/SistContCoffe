@@ -22,6 +22,7 @@ from app.routers import (
     dashboard_api,
     insumos,
     inventario_peps,
+    mesas,
     pos,
     productos,
     turnos,
@@ -65,6 +66,7 @@ async def _redirect_to(request: Request, exc: RedirectTo):
 
 app.include_router(auth.router)
 app.include_router(ventas.router)
+app.include_router(mesas.router)
 app.include_router(cocina.router)
 app.include_router(cocina.router_api)
 app.include_router(asistencia.router)

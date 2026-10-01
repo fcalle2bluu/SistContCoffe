@@ -1,0 +1,19 @@
+<div class="mesa-grid-box" id="mesa-grid-box" hx-get="/dashboard/mesas/grid" hx-trigger="every 5s"
+  hx-target="#mesa-grid-box" hx-swap="outerHTML">
+  <div class="mesa-grid">
+    {% for m in mesas %}
+    <div
+      class="mesa-tile{{ '' if m.es_mesa else ' mesa-etiqueta' }}{{ ' mesa-ocupada' if m.es_mesa and m.nombre in mesas_ocupadas else '' }}"
+      style="grid-column: {{ m.columna }} / span {{ m.ancho }}; grid-row: {{ m.fila }} / span {{ m.alto }};">
+      <span class="mesa-tile-nombre">{{ m.nombre }}</span>
+      {% if m.es_mesa and m.nombre in mesas_ocupadas_desde %}
+      <span class="mesa-tile-timer" data-desde="{{ mesas_ocupadas_desde[m.nombre] }}"></span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <p class="muted-sm mesa-grid-legend">
+    <span class="mesa-grid-legend-item"><span class="mesa-grid-legend-dot mesa-grid-legend-dot-libre"></span> Disponible</span>
+    <span class="mesa-grid-legend-item"><span class="mesa-grid-legend-dot mesa-grid-legend-dot-ocupada"></span> Con cuenta pendiente</span>
+  </p>
+</div>
