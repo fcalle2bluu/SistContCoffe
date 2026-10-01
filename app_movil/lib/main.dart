@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'api_client.dart';
 import 'turnos_tab.dart';
@@ -312,7 +313,12 @@ class _HomeShellState extends State<_HomeShell> {
         backgroundColor: const Color(0xFF141414),
         indicatorColor: _colorAcento.withValues(alpha: 0.25),
         selectedIndex: tabActual,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: (i) {
+          // En Cocina la pantalla no se apaga: si se apaga, la app deja de
+          // consultar pedidos y no puede sonar.
+          WakelockPlus.toggle(enable: i == 1);
+          setState(() => _tab = i);
+        },
         destinations: destinos,
       ),
     );
@@ -753,7 +759,10 @@ class _CocinaTabState extends State<_CocinaTab> {
   Timer? _temporizador;
   final AudioPlayer _reproductor = AudioPlayer();
   List<Map<String, dynamic>> _pedidos = [];
-  Set<int> _vistos = {};
+  /// Cantidad de productos que tenía cada pedido en la consulta anterior:
+  /// suena tanto si aparece un pedido nuevo como si a una mesa abierta le
+  /// agregan productos (antes eso no sonaba porque el id no cambiaba).
+  Map<int, double> _vistos = {};
   bool _primeraCarga = true;
   bool _cargando = true;
   bool _huboError = false;
@@ -761,6 +770,18 @@ class _CocinaTabState extends State<_CocinaTab> {
   @override
   void initState() {
     super.initState();
+    // Se reproduce como ALARMA (no como música): usa el volumen de alarma,
+    // suena aunque el celular esté en silencio/vibración y por el parlante.
+    _reproductor.setAudioContext(AudioContext(
+      android: const AudioContextAndroid(
+        usageType: AndroidUsageType.alarm,
+        contentType: AndroidContentType.sonification,
+        audioFocus: AndroidAudioFocus.gainTransient,
+        stayAwake: true,
+      ),
+      iOS: AudioContextIOS(category: AVAudioSessionCategory.playback),
+    ));
+    _reproductor.setReleaseMode(ReleaseMode.stop);
     _cargar();
     _temporizador = Timer.periodic(const Duration(seconds: 4), (_) => _cargar());
   }
@@ -782,12 +803,16 @@ class _CocinaTabState extends State<_CocinaTab> {
       });
       return;
     }
-    final idsActuales = pedidos.map((p) => p['id'] as int).toSet();
-    if (!_primeraCarga && idsActuales.difference(_vistos).isNotEmpty) {
+    final actuales = {
+      for (final p in pedidos)
+        p['id'] as int: (p['productos'] as List).fold<double>(0, (t, it) => t + ((it as Map)['cantidad'] as num).toDouble()),
+    };
+    final hayNuevo = actuales.entries.any((e) => !_vistos.containsKey(e.key) || e.value > _vistos[e.key]!);
+    if (!_primeraCarga && hayNuevo) {
       _alertar();
     }
     _primeraCarga = false;
-    _vistos = idsActuales;
+    _vistos = actuales;
     setState(() {
       _pedidos = pedidos;
       _cargando = false;
@@ -795,12 +820,15 @@ class _CocinaTabState extends State<_CocinaTab> {
     });
   }
 
-  void _alertar() {
-    // El SystemSound.play() de antes es apenas un "tick" del sistema, casi
-    // inaudible en cocina — se reemplaza por un audio propio (6 pitidos
-    // fuertes) a volumen máximo.
-    _reproductor.play(AssetSource('sounds/alerta_cocina.wav'), volume: 1.0);
-    for (final delay in [0, 300, 600]) {
+  Future<void> _alertar() async {
+    // Alarma propia de ~5 segundos (3 ráfagas de ding-dong) a volumen máximo.
+    try {
+      await _reproductor.stop();
+      await _reproductor.play(AssetSource('sounds/alerta_cocina.wav'), volume: 1.0);
+    } catch (_) {
+      SystemSound.play(SystemSoundType.alert);
+    }
+    for (final delay in [0, 600, 1200, 1800, 2400]) {
       Future.delayed(Duration(milliseconds: delay), () => HapticFeedback.vibrate());
     }
   }
@@ -832,6 +860,20 @@ class _CocinaTabState extends State<_CocinaTab> {
         ),
       );
     }
+    return Column(children: [
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: _alertar,
+          icon: const Icon(Icons.volume_up, color: _colorAcento, size: 18),
+          label: const Text('Probar sonido', style: TextStyle(color: _colorAcento)),
+        ),
+      ),
+      Expanded(child: _lista()),
+    ]);
+  }
+
+  Widget _lista() {
     return RefreshIndicator(
       onRefresh: _cargar,
       color: _colorAcento,
