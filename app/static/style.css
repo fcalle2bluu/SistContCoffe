@@ -642,6 +642,7 @@ a { color: inherit; }
 
 /* Cabecera de Contabilidad: título a la izquierda, selector de mes a la derecha */
 .page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.page-head-actions { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .month-picker { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .month-picker-form { margin: 0; }
 .day-picker { display: flex; align-items: center; gap: 4px; }

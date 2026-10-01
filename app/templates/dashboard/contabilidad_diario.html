@@ -7,7 +7,13 @@
       <h2 class="section-title">Libro Diario</h2>
     <p class="section-subtitle">Asientos contables de doble entrada — solo administración.</p>
     </div>
-    {% include "partials/_selector_mes.html" %}
+    <div class="page-head-actions">
+      {% include "partials/_selector_mes.html" %}
+      <a href="/dashboard/contabilidad/diario.pdf?mes={{ mes.valor }}{{ '&dia=' ~ mes.dia if mes.dia else '' }}"
+        class="btn btn-outline" title="Descargar en PDF el Libro Diario {{ ('del ' ~ mes.dia_nombre) if mes.dia else ('de ' ~ mes.nombre) }}">
+        ⬇ Descargar PDF
+      </a>
+    </div>
   </div>
 
   {% include "partials/_contabilidad_nav.html" %}

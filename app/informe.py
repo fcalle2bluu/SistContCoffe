@@ -471,12 +471,12 @@ def _seccion_contable(d: dict, ancho: float) -> list:
     return contenido
 
 
-def _pie_de_pagina(nombre_mes: str):
+def _pie_de_pagina(texto_izquierda: str):
     def dibujar(canvas, doc):
         canvas.saveState()
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(GRIS)
-        canvas.drawString(15 * mm, 9 * mm, f"Café Yanaloma — Informe mensual {nombre_mes}")
+        canvas.drawString(15 * mm, 9 * mm, texto_izquierda)
         canvas.drawRightString(A4[0] - 15 * mm, 9 * mm, f"Página {doc.page}")
         canvas.setStrokeColor(BORDE)
         canvas.line(15 * mm, 12 * mm, A4[0] - 15 * mm, 12 * mm)
@@ -501,9 +501,86 @@ async def generar_pdf(mes: str | None) -> tuple[bytes, str]:
         + _seccion_por_producto(d, ancho)
         + _seccion_contable(d, ancho)
     )
-    pie = _pie_de_pagina(d["mes"]["nombre"])
+    pie = _pie_de_pagina(f"Café Yanaloma — Informe mensual {d['mes']['nombre']}")
     doc.build(historia, onFirstPage=pie, onLaterPages=pie)
     return buffer.getvalue(), d["mes"]["valor"]
+
+
+def _seccion_diario_pdf(asientos: list[dict], ancho: float) -> list:
+    filas = [["N.º", "Fecha", "Cuenta Debe", "Cuenta Haber", "Debe", "Haber"]]
+    estilos = []
+    for a in asientos:
+        for i, l in enumerate(a["lineas"]):
+            debe, haber = float(l["debe"] or 0), float(l["haber"] or 0)
+            nombre = l["cuenta_nombre"] or l["codigo_cuenta"]
+            filas.append([
+                str(a["nro"]) if i == 0 else "",
+                f"{a['fecha']:%d/%m/%Y}" if i == 0 else "",
+                _cuenta(l["codigo_cuenta"], nombre) if debe > 0 else "",
+                _cuenta(l["codigo_cuenta"], nombre) if haber > 0 else "",
+                _bs(debe) if debe > 0 else "",
+                _bs(haber) if haber > 0 else "",
+            ])
+        filas.append(["", "", Paragraph(escape(a["glosa"] or ""), EST["glosa"]), "", _bs(a["total_debe"]), _bs(a["total_haber"])])
+        fin = len(filas) - 1
+        estilos += [
+            ("SPAN", (2, fin), (3, fin)),
+            ("LINEBELOW", (0, fin), (-1, fin), 0.8, TINTA),
+            ("FONTNAME", (4, fin), (5, fin), "Helvetica-Bold"),
+            ("BACKGROUND", (0, fin), (-1, fin), colors.HexColor("#fdf8ee")),
+        ]
+    if len(filas) == 1:
+        filas.append(["", "", "Sin asientos en este período.", "", "", ""])
+    return [_tabla(filas, [c * ancho for c in (0.07, 0.11, 0.28, 0.27, 0.135, 0.135)], alinear_derecha=(4, 5), estilos_extra=estilos)]
+
+
+async def generar_pdf_diario(mes: str | None, dia: str | None) -> tuple[bytes, str, str]:
+    """PDF del Libro Diario de un mes (o de un solo día, si se pide). Devuelve
+    el PDF, el período usado para el nombre del archivo y su nombre legible."""
+    mes_ctx = contabilidad._mes(mes, dia)
+    filas = await contabilidad._filas_libro_diario(mes_ctx, "asc")
+    asientos = contabilidad._agrupar_asientos(filas)
+    total_debe = sum(a["total_debe"] for a in asientos)
+    total_haber = sum(a["total_haber"] for a in asientos)
+    cuadrado = abs(total_debe - total_haber) < 0.01
+    periodo = mes_ctx["dia_nombre"] or mes_ctx["nombre"]
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=16 * mm, bottomMargin=18 * mm,
+        title=f"Libro Diario {periodo} — Café Yanaloma", author="Café Yanaloma",
+    )
+    ancho = doc.width
+
+    encabezado = [
+        Paragraph("Café Yanaloma", EST["subtitulo"]),
+        Spacer(1, 2 * mm),
+        Paragraph("Libro Diario", EST["titulo"]),
+        Paragraph(escape(periodo), ParagraphStyle("periodo_diario", parent=EST["titulo"], fontSize=18, leading=22, textColor=ACENTO)),
+        Spacer(1, 2 * mm),
+        Paragraph(f"Generado el {ahora_bolivia():%d/%m/%Y a las %H:%M} — {len(asientos)} asientos", EST["subtitulo"]),
+        Spacer(1, 8 * mm),
+    ]
+
+    resumen = _tabla(
+        [
+            ["Totales del período", ""],
+            ["N.º de asientos", _num(len(asientos))],
+            ["Total Debe", _bs(total_debe)],
+            ["Total Haber", _bs(total_haber)],
+            ["Cuadre", "Sí" if cuadrado else "No cuadra"],
+        ],
+        [ancho * 0.6, ancho * 0.4], alinear_derecha=(1,),
+        estilos_extra=[
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("BACKGROUND", (0, -1), (-1, -1), ACENTO_SUAVE if cuadrado else colors.HexColor("#fde2e1")),
+        ],
+    )
+
+    historia = encabezado + _seccion_diario_pdf(asientos, ancho) + [Spacer(1, 6 * mm), resumen]
+    pie = _pie_de_pagina(f"Café Yanaloma — Libro Diario {periodo}")
+    doc.build(historia, onFirstPage=pie, onLaterPages=pie)
+    return buffer.getvalue(), (mes_ctx["dia"] or mes_ctx["valor"]), periodo
 
 
 router = APIRouter()
@@ -517,4 +594,15 @@ async def descargar_informe(mes: str | None = None, session: dict = Depends(requ
         content=pdf,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="Informe-Yanaloma-{mes_usado}.pdf"'},
+    )
+
+
+@router.get("/dashboard/contabilidad/diario.pdf")
+async def descargar_diario_pdf(mes: str | None = None, dia: str | None = None, session: dict = Depends(require_admin)):
+    pdf, periodo_valor, periodo_nombre = await generar_pdf_diario(mes, dia)
+    await bitacora.registrar(session, "Descargó Libro Diario en PDF", periodo_nombre)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="Libro-Diario-Yanaloma-{periodo_valor}.pdf"'},
     )
