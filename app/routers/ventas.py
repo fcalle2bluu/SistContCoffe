@@ -258,37 +258,91 @@ async def _registrar_egreso_en_diario(
     Debe [cuenta de la categoría] (87%) + Debe Crédito Fiscal (13%) = el
     100% que sale por Haber. Sin factura, se asienta entero a su cuenta,
     sin separar IVA."""
-    cuenta_contrapartida = CUENTA_BANCO if tipo_pago in ("QR", "QR/FAC", "POS", "POS/FAC") else CUENTA_CAJA_CHICA
-
-    cuenta_debito = _cuenta_egreso_por_categoria(categoria)
-    glosa = f"Egreso de caja — {categoria + ': ' if categoria else ''}{motivo} (responsable: {responsable})."
+    lineas, glosa = _lineas_egreso(monto, tipo_pago, categoria, motivo, responsable, con_factura)
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
-            if con_factura:
-                credito_fiscal = round(monto * TASA_IVA, 2)
-                neto = round(monto - credito_fiscal, 2)
-                await conn.execute(
-                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                    "VALUES ($1, $2, $3, $4, 0, $5)",
-                    fecha, siguiente, cuenta_debito, neto, glosa,
-                )
-                await conn.execute(
-                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                    "VALUES ($1, $2, $3, $4, 0, $5)",
-                    fecha, siguiente, CUENTA_CREDITO_FISCAL, credito_fiscal, glosa,
-                )
-            else:
-                await conn.execute(
-                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                    "VALUES ($1, $2, $3, $4, 0, $5)",
-                    fecha, siguiente, cuenta_debito, monto, glosa,
-                )
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, cuenta_contrapartida, monto, glosa,
+            await _insertar_lineas(conn, fecha, siguiente, lineas, glosa)
+
+
+def _lineas_egreso(
+    monto: float, tipo_pago: str, categoria: str | None, motivo: str, responsable: str, con_factura: bool
+) -> tuple[list[tuple[str, float, float]], str]:
+    """Líneas (cuenta, debe, haber) y glosa del asiento de un egreso de caja."""
+    cuenta_contrapartida = CUENTA_BANCO if tipo_pago in ("QR", "QR/FAC", "POS", "POS/FAC") else CUENTA_CAJA_CHICA
+    cuenta_debito = _cuenta_egreso_por_categoria(categoria)
+    glosa = f"Egreso de caja — {categoria + ': ' if categoria else ''}{motivo} (responsable: {responsable})."
+    if con_factura:
+        credito_fiscal = round(monto * TASA_IVA, 2)
+        neto = round(monto - credito_fiscal, 2)
+        lineas = [(cuenta_debito, neto, 0), (CUENTA_CREDITO_FISCAL, credito_fiscal, 0)]
+    else:
+        lineas = [(cuenta_debito, monto, 0)]
+    lineas.append((cuenta_contrapartida, 0, monto))
+    return lineas, glosa
+
+
+async def _insertar_lineas(conn, fecha, nro: int, lineas, glosa: str) -> None:
+    for cuenta, debe, haber in lineas:
+        await conn.execute(
+            "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+            "VALUES ($1, $2, $3, $4, $5, $6)",
+            fecha, nro, cuenta, debe, haber, glosa,
+        )
+
+
+async def _nro_asiento_de_egreso(conn, movimiento) -> int | None:
+    """Busca el asiento que generó un egreso de caja. No hay una columna que
+    los una, así que se ubica por la fecha, la glosa exacta con la que se
+    asentó y el monto total (el más reciente si hubiera dos iguales)."""
+    _, glosa = _lineas_egreso(
+        float(movimiento["monto"]), movimiento["tipo_pago"], movimiento["categoria"],
+        movimiento["motivo"], movimiento["responsable"], movimiento["con_factura"],
+    )
+    return await conn.fetchval(
+        "SELECT nro_asiento FROM libro_diario WHERE fecha = $1 AND glosa = $2 "
+        "GROUP BY nro_asiento HAVING ROUND(SUM(haber), 2) = ROUND($3::numeric, 2) "
+        "ORDER BY nro_asiento DESC LIMIT 1",
+        _fecha_bolivia(movimiento["creado_en"]), glosa, movimiento["monto"],
+    )
+
+
+async def _actualizar_egreso_en_diario(anterior, nuevo) -> bool:
+    """Rehace el asiento de un egreso editado con los datos nuevos (monto,
+    motivo, categoría, método de pago, factura, fecha). Si la fecha no
+    cambió conserva su número de asiento; si cambió, lo mueve a su nueva
+    fecha. Si no encuentra el asiento original (p. ej. ya se había
+    corregido a mano), no toca nada y devuelve False."""
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("SELECT pg_advisory_xact_lock(hashtext('libro_diario_nro_asiento'))")
+            nro = await _nro_asiento_de_egreso(conn, anterior)
+            if nro is None:
+                return False
+            await conn.execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro)
+            fecha = _fecha_bolivia(nuevo["creado_en"])
+            lineas, glosa = _lineas_egreso(
+                float(nuevo["monto"]), nuevo["tipo_pago"], nuevo["categoria"],
+                nuevo["motivo"], nuevo["responsable"], nuevo["con_factura"],
             )
+            if fecha != _fecha_bolivia(anterior["creado_en"]):
+                nro = await _siguiente_nro_asiento(conn, fecha)
+            await _insertar_lineas(conn, fecha, nro, lineas, glosa)
+            return True
+
+
+async def _eliminar_egreso_del_diario(movimiento) -> bool:
+    """Borra el asiento de un egreso que se elimina (la plata no salió) y
+    renumera el Diario para cerrar el hueco."""
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("SELECT pg_advisory_xact_lock(hashtext('libro_diario_nro_asiento'))")
+            nro = await _nro_asiento_de_egreso(conn, movimiento)
+            if nro is None:
+                return False
+            await conn.execute("DELETE FROM libro_diario WHERE nro_asiento = $1", nro)
+            await _ordenar_diario(conn)
+            return True
 
 
 async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
@@ -1672,9 +1726,10 @@ async def editar_movimiento_caja(
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
 
     hora_dt = _parse_hora_local(hora) if session.get("role") == "admin" else None
-    await pool().execute(
+    anterior = await pool().fetchrow("SELECT * FROM movimientos_caja WHERE id = $1", movimiento_id)
+    nuevo = await pool().fetchrow(
         "UPDATE movimientos_caja SET monto = $1, motivo = $2, tipo_pago = $3, categoria = $4, con_factura = $5, "
-        "creado_en = COALESCE($6, creado_en) WHERE id = $7",
+        "creado_en = COALESCE($6, creado_en) WHERE id = $7 RETURNING *",
         monto_num,
         motivo,
         tipo_pago,
@@ -1683,10 +1738,15 @@ async def editar_movimiento_caja(
         hora_dt,
         movimiento_id,
     )
+    asiento_actualizado = (
+        anterior is not None and nuevo is not None and anterior["tipo"] == "egreso"
+        and await _actualizar_egreso_en_diario(anterior, nuevo)
+    )
     await bitacora.registrar(
         session, "Editó egreso de caja",
         f"Movimiento #{movimiento_id}: {categoria} — Bs {monto_num:.2f} — {motivo} "
-        f"(si ya estaba contabilizado en el Libro Diario, el asiento original no se ajusta solo — revísalo a mano).",
+        + ("(asiento del Libro Diario actualizado)." if asiento_actualizado
+           else "(no se encontró su asiento en el Libro Diario — revísalo a mano)."),
     )
     return RedirectResponse(next, status_code=303)
 
@@ -1695,9 +1755,11 @@ async def editar_movimiento_caja(
 async def eliminar_movimiento_caja(
     movimiento_id: int, session: dict = Depends(require_session), next: str = Form("/dashboard/ventas")
 ):
-    movimiento = await pool().fetchrow("SELECT tipo, motivo, monto FROM movimientos_caja WHERE id = $1", movimiento_id)
+    movimiento = await pool().fetchrow("SELECT * FROM movimientos_caja WHERE id = $1", movimiento_id)
     if movimiento:
         await pool().execute("DELETE FROM movimientos_caja WHERE id = $1", movimiento_id)
+        if movimiento["tipo"] == "egreso":
+            await _eliminar_egreso_del_diario(movimiento)
         accion = {
             "ingreso": "Eliminó ingreso a caja",
             "reposicion": "Eliminó reposición de caja",
