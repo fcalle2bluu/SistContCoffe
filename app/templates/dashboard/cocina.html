@@ -5,12 +5,12 @@
   <div class="cocina-header">
     <div>
       <h2 class="section-title">Cocina</h2>
-      <p class="section-subtitle">Pedidos en vivo — pagados y cuentas pendientes. Solo lectura.</p>
+      <p class="section-subtitle">Pedidos en vivo — pagados y cuentas pendientes. Suena solo con comida y pastelería (en negrita).</p>
     </div>
     <button type="button" id="btn-activar-sonido" class="btn btn-primary">🔔 Activar sonido</button>
   </div>
 
-  <div id="cocina-feed" hx-get="/dashboard/cocina/feed" hx-trigger="every 4s" hx-swap="innerHTML">
+  <div id="cocina-feed" hx-get="/dashboard/cocina/feed" hx-trigger="every 4s, refrescar" hx-swap="innerHTML">
     {% include "partials/_cocina_feed.html" %}
   </div>
 </div>
@@ -21,10 +21,20 @@
   var sonidoActivo = false;
   var vistos = null; // null = todavía no inicializado con la primera carga
 
-  function idsActuales() {
-    var ids = [];
+  // Cantidad de productos de cocina (comida/pastelería) de cada pedido: suena
+  // si aparece un pedido con algo de cocina o si a uno le agregan más.
+  function estadoActual() {
+    var estado = {};
     document.querySelectorAll("#cocina-feed [data-orden-id]").forEach(function (el) {
-      ids.push(el.getAttribute("data-orden-id"));
+      estado[el.getAttribute("data-orden-id")] = parseFloat(el.getAttribute("data-cocina")) || 0;
+    });
+    return estado;
+  }
+
+  function llamadosActuales() {
+    var ids = [];
+    document.querySelectorAll("#cocina-feed [data-llamado-id]").forEach(function (el) {
+      ids.push(el.getAttribute("data-llamado-id"));
     });
     return ids;
   }
@@ -74,14 +84,19 @@
 
   // La primera carga (la que ya viene renderizada en la página) no debe sonar
   // — solo alertamos cuando aparece un pedido nuevo en una actualización.
-  vistos = idsActuales();
+  vistos = estadoActual();
 
   document.body.addEventListener("htmx:afterSwap", function (evt) {
     if (evt.target.id !== "cocina-feed") return;
-    var actuales = idsActuales();
-    var hayNuevo = actuales.some(function (id) { return vistos.indexOf(id) === -1; });
+    var actuales = estadoActual();
+    var hayNuevo = Object.keys(actuales).some(function (id) {
+      return actuales[id] > (vistos[id] || 0);
+    });
     vistos = actuales;
-    if (hayNuevo) { pitido(); vibrar(); }
+    // Un llamado de la caja suena en cada actualización (cada 4 s) hasta que
+    // alguien aprieta "Ya voy".
+    var llamados = llamadosActuales();
+    if (hayNuevo || llamados.length) { pitido(); vibrar(); }
   });
 })();
 </script>

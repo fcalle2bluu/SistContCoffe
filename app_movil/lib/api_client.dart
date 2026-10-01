@@ -123,6 +123,29 @@ class ApiClient {
     }
   }
 
+  /// Llamados de la caja ("Llamar a cocina") que todavía nadie respondió.
+  static Future<List<Map<String, dynamic>>?> llamadosCocina(Sesion sesion) async {
+    try {
+      final resp = await http.get(Uri.parse('$baseUrl/api/cocina/llamados'), headers: {'Cookie': sesion.cookie});
+      if (resp.statusCode != 200) return null;
+      final datos = jsonDecode(resp.body);
+      if (datos is! List) return null;
+      return datos.cast<Map<String, dynamic>>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// "Ya voy": avisa a la caja que alguien vio el llamado y va para allá.
+  static Future<bool> marcarLlamadoVisto(Sesion sesion, int id) async {
+    try {
+      final resp = await http.post(Uri.parse('$baseUrl/api/cocina/llamados/$id/visto'), headers: {'Cookie': sesion.cookie});
+      return resp.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Trae la lista de turnos (Control de Turnos), solo para admins.
   static Future<List<Map<String, dynamic>>?> turnos(Sesion sesion) async {
     try {

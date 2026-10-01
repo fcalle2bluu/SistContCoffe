@@ -796,3 +796,36 @@ a { color: inherit; }
 @media (max-width: 900px) { .calendario { grid-template-columns: repeat(7, minmax(90px, 1fr)); overflow-x: auto; } }
 .lista-mes { max-height: 420px; overflow-y: auto; }
 .lista-mes thead th { position: sticky; top: 0; background: var(--surface-soft); z-index: 1; }
+
+/* Cocina: lo que hace sonar la alarma (comida/pastelería) en negrita; lo de barra más suave. */
+.cocina-items .item-barra { font-weight: 400; color: var(--muted); }
+.cocina-items .item-cocina { font-weight: 800; }
+
+/* Llamado de la caja en la pantalla de Cocina. */
+.llamado-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 16px 18px; margin-bottom: 14px; border-radius: 12px;
+  background: #fee2e2; border: 2px solid #dc2626; color: #7f1d1d; font-size: 1.15rem;
+  animation: llamar-pulso 1s ease-in-out infinite;
+}
+.llamado-banner span { display: block; font-size: 13px; opacity: .8; }
+
+/* "Llamar a cocina" (caja), en el menú lateral sobre "Cerrar sesión". */
+.llamar-cocina { padding: 10px 20px 14px; margin-top: auto; }
+.llamar-cocina + .sidebar-footer { margin-top: 0; }
+.llamar-btn {
+  width: 100%; background: #dc2626; color: #fff; border: none; border-radius: 10px;
+  padding: 13px 14px; font-size: 1rem; font-weight: 700; cursor: pointer;
+}
+.llamar-btn:hover { background: #b91c1c; }
+.llamar-estado {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; border-radius: 14px;
+  font-size: .9rem;
+}
+.llamar-esperando { background: #fff7ed; border: 2px solid var(--accent); color: #7c2d12; animation: llamar-pulso 1.2s ease-in-out infinite; }
+.llamar-visto { background: #ecfdf5; border: 2px solid #16a34a; color: #14532d; }
+.llamar-cancelar {
+  align-self: flex-end; margin-top: 4px; background: transparent; border: 1px solid currentColor;
+  color: inherit; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+@keyframes llamar-pulso { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }

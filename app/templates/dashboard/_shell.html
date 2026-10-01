@@ -30,6 +30,10 @@
       <a href="/dashboard/cocina" class="nav-link {{ 'active' if active == 'cocina' else '' }}">Cocina</a>
     </nav>
 
+    {% if active != 'cocina' %}
+    <div hx-get="/dashboard/cocina/llamado" hx-trigger="load" hx-swap="outerHTML"></div>
+    {% endif %}
+
     <div class="sidebar-footer">
       <span class="sidebar-user">{{ session.nombre }} · {{ session.role }}</span>
       <form method="post" action="/logout">

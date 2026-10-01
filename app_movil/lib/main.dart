@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'api_client.dart';
+import 'llamados.dart';
 import 'turnos_tab.dart';
 import 'update_checker.dart';
 
@@ -173,10 +173,15 @@ class _HomeShellState extends State<_HomeShell> {
   String? _version;
   InfoActualizacion? _actualizacionDisponible;
   Timer? _timerActualizacion;
+  late final VigilanteLlamados _llamados;
 
   @override
   void initState() {
     super.initState();
+    _llamados = VigilanteLlamados(sesion: widget.sesion, alCambiar: () {
+      if (mounted) setState(() {});
+    })
+      ..iniciar();
     _revisarActualizaciones();
     _timerActualizacion = Timer.periodic(const Duration(minutes: 2), (_) => _chequeoSilencioso());
     PackageInfo.fromPlatform().then((info) {
@@ -187,7 +192,17 @@ class _HomeShellState extends State<_HomeShell> {
   @override
   void dispose() {
     _timerActualizacion?.cancel();
+    _llamados.detener();
     super.dispose();
+  }
+
+  Future<void> _yaVoy(int id) async {
+    await _llamados.responder(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      backgroundColor: Color(0xFF15803D),
+      content: Text('Listo: la caja ya sabe que vas.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+    ));
   }
 
   /// Chequeo de fondo (sin diálogo) para que la esquina de arriba muestre
@@ -304,9 +319,20 @@ class _HomeShellState extends State<_HomeShell> {
         ],
       ),
       body: SafeArea(
-        child: IndexedStack(
-          index: tabActual,
-          children: paginas,
+        child: Column(
+          children: [
+            for (final l in _llamados.pendientes)
+              BannerLlamado(
+                llamadoPor: '${l['llamado_por']}',
+                onYaVoy: () => _yaVoy(l['id'] as int),
+              ),
+            Expanded(
+              child: IndexedStack(
+                index: tabActual,
+                children: paginas,
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: NavigationBar(
@@ -757,11 +783,11 @@ class _CocinaTab extends StatefulWidget {
 
 class _CocinaTabState extends State<_CocinaTab> {
   Timer? _temporizador;
-  final AudioPlayer _reproductor = AudioPlayer();
+  final AudioPlayer _reproductor = crearReproductorAlarma();
   List<Map<String, dynamic>> _pedidos = [];
-  /// Cantidad de productos que tenía cada pedido en la consulta anterior:
-  /// suena tanto si aparece un pedido nuevo como si a una mesa abierta le
-  /// agregan productos (antes eso no sonaba porque el id no cambiaba).
+  /// Cantidad de productos de COCINA (comida y pastelería; lo de barra no
+  /// suena) que tenía cada pedido en la consulta anterior: suena si aparece
+  /// un pedido con algo de cocina o si a una mesa le agregan más.
   Map<int, double> _vistos = {};
   bool _primeraCarga = true;
   bool _cargando = true;
@@ -770,18 +796,6 @@ class _CocinaTabState extends State<_CocinaTab> {
   @override
   void initState() {
     super.initState();
-    // Se reproduce como ALARMA (no como música): usa el volumen de alarma,
-    // suena aunque el celular esté en silencio/vibración y por el parlante.
-    _reproductor.setAudioContext(AudioContext(
-      android: const AudioContextAndroid(
-        usageType: AndroidUsageType.alarm,
-        contentType: AndroidContentType.sonification,
-        audioFocus: AndroidAudioFocus.gainTransient,
-        stayAwake: true,
-      ),
-      iOS: AudioContextIOS(category: AVAudioSessionCategory.playback),
-    ));
-    _reproductor.setReleaseMode(ReleaseMode.stop);
     _cargar();
     _temporizador = Timer.periodic(const Duration(seconds: 4), (_) => _cargar());
   }
@@ -805,9 +819,10 @@ class _CocinaTabState extends State<_CocinaTab> {
     }
     final actuales = {
       for (final p in pedidos)
-        p['id'] as int: (p['productos'] as List).fold<double>(0, (t, it) => t + ((it as Map)['cantidad'] as num).toDouble()),
+        p['id'] as int: (p['cant_cocina'] as num?)?.toDouble() ??
+            (p['productos'] as List).fold<double>(0, (t, it) => t + ((it as Map)['cantidad'] as num).toDouble()),
     };
-    final hayNuevo = actuales.entries.any((e) => !_vistos.containsKey(e.key) || e.value > _vistos[e.key]!);
+    final hayNuevo = actuales.entries.any((e) => e.value > (_vistos[e.key] ?? 0));
     if (!_primeraCarga && hayNuevo) {
       _alertar();
     }
@@ -820,18 +835,7 @@ class _CocinaTabState extends State<_CocinaTab> {
     });
   }
 
-  Future<void> _alertar() async {
-    // Alarma propia de ~5 segundos (3 ráfagas de ding-dong) a volumen máximo.
-    try {
-      await _reproductor.stop();
-      await _reproductor.play(AssetSource('sounds/alerta_cocina.wav'), volume: 1.0);
-    } catch (_) {
-      SystemSound.play(SystemSoundType.alert);
-    }
-    for (final delay in [0, 600, 1200, 1800, 2400]) {
-      Future.delayed(Duration(milliseconds: delay), () => HapticFeedback.vibrate());
-    }
-  }
+  Future<void> _alertar() => sonarAlarma(_reproductor, 'alerta_cocina.wav');
 
   String _formatearHora(String? iso) {
     if (iso == null) return '';
@@ -930,7 +934,9 @@ class _CocinaTabState extends State<_CocinaTab> {
                         ...productos.map((it) => Padding(
                               padding: const EdgeInsets.symmetric(vertical: 2),
                               child: Text('${_formatearCantidad(it['cantidad'])}× ${it['nombre']}',
-                                  style: const TextStyle(color: Colors.white70)),
+                                  style: it['cocina'] == false
+                                      ? const TextStyle(color: Colors.white38)
+                                      : const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                             )),
                       const SizedBox(height: 10),
                       Text(_formatearHora(p['hora'] as String?), style: const TextStyle(color: Colors.white38, fontSize: 12)),

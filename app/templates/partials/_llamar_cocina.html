@@ -1,0 +1,31 @@
+{# Botón flotante "Llamar a cocina" de la caja. Mientras espera respuesta se
+   consulta solo cada 3 s; cuando alguien aprieta "Ya voy" en la app muestra
+   quién viene y al minuto vuelve a ser el botón. #}
+{% if llamado is none %}
+<div id="llamar-cocina" class="llamar-cocina">
+  <button type="button" class="llamar-btn"
+          hx-post="/dashboard/cocina/llamar" hx-target="#llamar-cocina" hx-swap="outerHTML">
+    🔔 Llamar a cocina
+  </button>
+</div>
+{% elif llamado.visto_en is none %}
+<div id="llamar-cocina" class="llamar-cocina"
+     hx-get="/dashboard/cocina/llamado" hx-trigger="every 3s" hx-swap="outerHTML">
+  <div class="llamar-estado llamar-esperando">
+    <strong>🔔 Llamando a cocina…</strong>
+    <span>Sonando en la app. Esperando que alguien lo vea.</span>
+    <button type="button" class="llamar-cancelar"
+            hx-post="/dashboard/cocina/llamar/{{ llamado.id }}/cancelar" hx-target="#llamar-cocina" hx-swap="outerHTML">
+      Cancelar
+    </button>
+  </div>
+</div>
+{% else %}
+<div id="llamar-cocina" class="llamar-cocina"
+     hx-get="/dashboard/cocina/llamado" hx-trigger="every 5s" hx-swap="outerHTML">
+  <div class="llamar-estado llamar-visto">
+    <strong>✅ {{ llamado.visto_por }} lo vio</strong>
+    <span>Ya viene para la caja.</span>
+  </div>
+</div>
+{% endif %}

@@ -42,6 +42,7 @@ dependencies:
   open_filex: ^4.7.0
   audioplayers: ^6.1.0
   wakelock_plus: ^1.3.3
+  flutter_local_notifications: ^19.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -99,6 +100,7 @@ flutter:
   assets:
     - assets/icon/icon.png
     - assets/sounds/alerta_cocina.wav
+    - assets/sounds/llamado_caja.wav
 
 flutter_launcher_icons:
   android: true
