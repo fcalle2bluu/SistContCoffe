@@ -100,7 +100,7 @@
       <button type="button" class="btn btn-outline btn-sm" data-mover="1" title="Mes siguiente">›</button>
     </div>
     {% if session.role == 'admin' %}
-    <a href="/dashboard/informe.pdf" id="btn-informe" class="btn btn-primary" style="margin-left:auto;"
+    <a href="/dashboard/informe.pdf" id="btn-informe" class="btn btn-primary" style="margin-left:auto;" hx-boost="false"
       title="Gráficos, estadísticas y libros contables del mes en un PDF">📄 Descargar informe PDF del mes</a>
     {% endif %}
     <p class="muted-sm" id="dashboard-ayuda">Haz clic en cualquier barra o segmento de los gráficos para ver qué productos se vendieron ahí.</p>
