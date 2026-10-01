@@ -96,6 +96,19 @@ templates.env.filters["fechaiso"] = lambda iso: _a_hora_bolivia(iso).date().isof
 templates.env.filters["fechahora_bo"] = lambda iso: _a_hora_bolivia(iso).strftime("%d/%m/%Y")
 
 
+def formato_cantidad(valor) -> str:
+    """Entero si es un número redondo (lo normal: tazas, bolsas, unidades),
+    con 1 decimal si no (p. ej. medias porciones)."""
+    try:
+        num = float(valor)
+    except (TypeError, ValueError):
+        return str(valor)
+    return str(int(num)) if num == int(num) else f"{num:.1f}"
+
+
+templates.env.filters["cant"] = formato_cantidad
+
+
 def a_json(valor) -> Markup:
     """Serializa a JSON para incrustar en un <script>, escapando '</' para
     que no corte el tag si el valor trae texto con eso adentro."""

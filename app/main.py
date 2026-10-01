@@ -20,6 +20,7 @@ from app.routers import (
     cocina,
     contabilidad,
     dashboard_api,
+    estadisticas,
     insumos,
     inventario_peps,
     mesas,
@@ -80,5 +81,6 @@ app.include_router(bitacora.router)
 app.include_router(turnos.router)
 app.include_router(turnos_api.router)
 app.include_router(usuarios.router)
+app.include_router(estadisticas.router)
 app.include_router(dashboard_api.router)
 app.include_router(pos.router)
