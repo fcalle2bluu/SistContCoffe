@@ -32,10 +32,12 @@ def _secret() -> bytes:
     return os.environ["SESSION_SECRET"].encode()
 
 
-def _generar_token() -> str:
-    ts = str(int(time.time()))
-    firma = hmac.new(_secret(), ts.encode(), hashlib.sha256).hexdigest()[:16]
-    return f"{ts}.{firma}"
+def _token_fijo() -> str:
+    """Token del QR de asistencia IMPRESO: siempre el mismo (no vence), para
+    poder imprimirlo y pegarlo en el local. Igual hace falta iniciar sesión
+    con la cuenta propia para marcar."""
+    firma = hmac.new(_secret(), b"asistencia-qr-fijo", hashlib.sha256).hexdigest()[:16]
+    return f"fijo.{firma}"
 
 
 def _token_valido(token: str) -> bool:
@@ -43,6 +45,8 @@ def _token_valido(token: str) -> bool:
         ts_str, firma = token.split(".", 1)
     except ValueError:
         return False
+    if ts_str == "fijo":
+        return hmac.compare_digest(token, _token_fijo())
     esperado = hmac.new(_secret(), ts_str.encode(), hashlib.sha256).hexdigest()[:16]
     if not hmac.compare_digest(firma, esperado):
         return False
@@ -350,17 +354,55 @@ async def agregar_asistencia_manual(
     return RedirectResponse(f"/dashboard/asistencia?dia={fecha}", status_code=303)
 
 
+def _url_qr(request: Request) -> str:
+    return f"{request.base_url}api/asistencia/marcar?token={_token_fijo()}"
+
+
 @router.get("/dashboard/asistencia/qr.png")
 async def asistencia_qr(request: Request, session: dict = Depends(require_admin)):
-    token = _generar_token()
-    url = f"{request.base_url}api/asistencia/marcar?token={token}"
-    img = qrcode.make(url, box_size=10, border=2)
+    img = qrcode.make(_url_qr(request), box_size=10, border=2)
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
+    return Response(content=buffer.getvalue(), media_type="image/png")
+
+
+@router.get("/dashboard/asistencia/qr-imprimir.png")
+async def asistencia_qr_imprimir(request: Request, session: dict = Depends(require_admin)):
+    """El mismo QR fijo, en grande y con título, listo para imprimir."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    qr = qrcode.make(_url_qr(request), box_size=24, border=2).convert("RGB")
+    ancho = qr.width + 160
+    lienzo = Image.new("RGB", (ancho, qr.height + 420), "white")
+    dibujo = ImageDraw.Draw(lienzo)
+
+    def fuente(tamano):
+        # Vera viene con reportlab (ya instalado) y tiene acentos; la letra
+        # por defecto de Pillow no muestra la "é" de "Café".
+        import reportlab
+        ruta = os.path.join(os.path.dirname(reportlab.__file__), "fonts", "VeraBd.ttf")
+        try:
+            return ImageFont.truetype(ruta, tamano)
+        except OSError:
+            return ImageFont.load_default()
+
+    def centrado(y, texto, tamano):
+        f = fuente(tamano)
+        w = dibujo.textlength(texto, font=f)
+        dibujo.text(((ancho - w) / 2, y), texto, fill="black", font=f)
+
+    centrado(50, "Café Yanaloma", 64)
+    centrado(140, "ASISTENCIA", 84)
+    lienzo.paste(qr, (80, 260))
+    centrado(qr.height + 290, "Escanea con la app o en Mi Asistencia", 40)
+    centrado(qr.height + 345, "para marcar tu entrada y tu salida", 40)
+    buffer = io.BytesIO()
+    lienzo.save(buffer, format="PNG", dpi=(300, 300))
+    await bitacora.registrar(session, "Descargó QR de asistencia para imprimir", "")
     return Response(
         content=buffer.getvalue(),
         media_type="image/png",
-        headers={"Cache-Control": "no-store"},
+        headers={"Content-Disposition": 'attachment; filename="QR-Asistencia-Yanaloma.png"'},
     )
 
 

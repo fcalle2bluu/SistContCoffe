@@ -24,7 +24,8 @@
     <div class="stack-6">
       <div class="card qr-card">
         <img id="asistencia-qr" src="/dashboard/asistencia/qr.png" alt="Código QR de asistencia" width="240" height="240" />
-        <p class="muted-sm">El personal escanea este código con el celular. Se renueva solo cada pocos segundos.</p>
+        <p class="muted-sm">El personal escanea este código con el celular. Es siempre el mismo, así que se puede imprimir y pegar en el local.</p>
+        <a href="/dashboard/asistencia/qr-imprimir.png" class="btn btn-primary" hx-boost="false" download>⬇ Descargar QR para imprimir</a>
       </div>
 
       <div id="asistencia-marcas">
@@ -217,14 +218,6 @@
       var d = document.querySelector(".todas-marcas");
       if (d && d.open !== todasAbierta) d.open = todasAbierta;
     });
-  })();
-
-  (function () {
-    var img = document.getElementById("asistencia-qr");
-    if (!img) return;
-    setInterval(function () {
-      img.src = "/dashboard/asistencia/qr.png?t=" + Date.now();
-    }, 20000);
   })();
 
   (function () {
