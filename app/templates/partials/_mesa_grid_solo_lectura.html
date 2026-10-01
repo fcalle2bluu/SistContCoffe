@@ -9,19 +9,23 @@
   hx-target="#mesa-grid-box" hx-swap="outerHTML">
   <div class="mesa-grid">
     {% for m in mesas %}
+    {% set h = historial.get(m.nombre) or [] %}
     <div
       class="mesa-tile{{ '' if m.es_mesa else ' mesa-etiqueta' }}{{ ' mesa-ocupada' if m.es_mesa and m.nombre in mesas_ocupadas else '' }}"
-      style="grid-column: {{ m.columna }} / span {{ m.ancho }}; grid-row: {{ m.fila }} / span {{ m.alto }};">
+      style="grid-column: {{ m.columna }} / span {{ m.ancho }}; grid-row: {{ m.fila }} / span {{ m.alto }};"
+      role="button" tabindex="0" data-mesa-nombre="{{ m.nombre }}" data-historial='{{ h|tojson }}'>
       <span class="mesa-tile-icono">{{ (iconos_zona[m.nombre] if not m.es_mesa else icono_mesa)|safe }}</span>
       <span class="mesa-tile-nombre">{{ m.nombre }}</span>
       {% if m.es_mesa and m.nombre in mesas_ocupadas_desde %}
       <span class="mesa-tile-timer" data-desde="{{ mesas_ocupadas_desde[m.nombre] }}"></span>
       {% endif %}
+      {% if h %}<span class="mesa-tile-badge">{{ h|length }}</span>{% endif %}
     </div>
     {% endfor %}
   </div>
   <p class="muted-sm mesa-grid-legend">
     <span class="mesa-grid-legend-item"><span class="mesa-grid-legend-dot mesa-grid-legend-dot-libre"></span> Disponible</span>
     <span class="mesa-grid-legend-item"><span class="mesa-grid-legend-dot mesa-grid-legend-dot-ocupada"></span> Con cuenta pendiente</span>
+    <span class="mesa-grid-legend-item">Toca una mesa o zona para ver sus ventas de hoy</span>
   </p>
 </div>

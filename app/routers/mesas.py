@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 from app.db import pool
 from app.deps import require_session
 from app.templating import templates
+from app.tz import BOLIVIA_TZ, hoy_bolivia
 
 router = APIRouter(prefix="/dashboard/mesas")
 
@@ -48,6 +49,28 @@ def _mesas_ocupadas_info(ordenes_abiertas) -> dict[str, str]:
     return {mesa: dt.isoformat() for mesa, dt in desde.items()}
 
 
+async def _historial_dia() -> dict[str, list[dict]]:
+    """Ventas (cobradas o todavía pendientes) de hoy, por mesa — para el
+    historial del día que se ve al tocar una mesa."""
+    hoy = hoy_bolivia()
+    desde = datetime.combine(hoy, time.min, BOLIVIA_TZ)
+    hasta = datetime.combine(hoy + timedelta(days=1), time.min, BOLIVIA_TZ)
+    filas = await pool().fetch(
+        "SELECT mesa, estado, total, creado_en FROM ordenes "
+        "WHERE creado_en >= $1 AND creado_en < $2 AND estado IN ('cobrada', 'abierta') "
+        "ORDER BY creado_en",
+        desde, hasta,
+    )
+    historial: dict[str, list[dict]] = {}
+    for f in filas:
+        historial.setdefault(f["mesa"], []).append({
+            "hora": f["creado_en"].astimezone(BOLIVIA_TZ).strftime("%H:%M"),
+            "total": float(f["total"]),
+            "pendiente": f["estado"] == "abierta",
+        })
+    return historial
+
+
 async def _contexto_mesas() -> dict:
     mesas = _mesas_con_layout(
         await pool().fetch(
@@ -57,10 +80,12 @@ async def _contexto_mesas() -> dict:
     )
     ordenes_abiertas = await pool().fetch("SELECT mesa, creado_en FROM ordenes WHERE estado = 'abierta'")
     mesas_ocupadas_desde = _mesas_ocupadas_info(ordenes_abiertas)
+    historial = await _historial_dia()
     return {
         "mesas": mesas,
         "mesas_ocupadas": list(mesas_ocupadas_desde.keys()),
         "mesas_ocupadas_desde": mesas_ocupadas_desde,
+        "historial": historial,
     }
 
 

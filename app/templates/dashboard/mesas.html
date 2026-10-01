@@ -31,5 +31,64 @@
   actualizarTemporizadoresMesas();
   setInterval(actualizarTemporizadoresMesas, 1000);
 })();
+
+(function () {
+  // Historial de ventas de hoy por mesa: se abre en un modal armado en JS
+  // (no en el HTML que htmx reemplaza cada 5s), así el listener de clic
+  // delegado en el body sigue funcionando después de cada refresco.
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  function cerrarModal() {
+    var m = document.getElementById("mesa-historial-modal");
+    if (m) m.remove();
+  }
+
+  function abrirModal(nombre, historial) {
+    cerrarModal();
+    var filasHtml = historial.length
+      ? historial.map(function (h) {
+          var estado = h.pendiente
+            ? '<span class="badge-warning">Pendiente</span>'
+            : '<span class="badge-success">Cobrada</span>';
+          return (
+            '<div class="mesa-historial-fila">' +
+            '<span>' + esc(h.hora) + '</span>' +
+            '<span>Bs ' + Number(h.total).toFixed(2) + '</span>' +
+            '<span>' + estado + '</span>' +
+            '</div>'
+          );
+        }).join("")
+      : '<p class="muted-sm">Todavía no hay ventas hoy en esta mesa.</p>';
+
+    var overlay = document.createElement("div");
+    overlay.id = "mesa-historial-modal";
+    overlay.className = "mesa-historial-overlay";
+    overlay.innerHTML =
+      '<div class="mesa-historial-box">' +
+      '<div class="mesa-historial-head">' +
+      '<h3>Ventas de hoy — Mesa ' + esc(nombre) + '</h3>' +
+      '<button type="button" class="mesa-historial-cerrar" aria-label="Cerrar">&times;</button>' +
+      '</div>' +
+      '<div class="mesa-historial-lista">' + filasHtml + '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay || e.target.classList.contains("mesa-historial-cerrar")) cerrarModal();
+    });
+  }
+
+  document.body.addEventListener("click", function (e) {
+    var tile = e.target.closest(".mesa-tile[data-mesa-nombre]");
+    if (!tile) return;
+    var historial = [];
+    try { historial = JSON.parse(tile.getAttribute("data-historial") || "[]"); } catch (err) {}
+    abrirModal(tile.getAttribute("data-mesa-nombre"), historial);
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrarModal(); });
+})();
 </script>
 {% endblock %}
