@@ -47,8 +47,9 @@
     if (m) m.remove();
   }
 
-  function abrirModal(nombre, historial) {
+  function abrirModal(nombre, esMesa, historial) {
     cerrarModal();
+    var titulo = esMesa ? "Mesa " + esc(nombre) : esc(nombre);
     var filasHtml = historial.length
       ? historial.map(function (h) {
           var estado = h.pendiente
@@ -70,7 +71,7 @@
     overlay.innerHTML =
       '<div class="mesa-historial-box">' +
       '<div class="mesa-historial-head">' +
-      '<h3>Ventas de hoy — Mesa ' + esc(nombre) + '</h3>' +
+      '<h3>Ventas de hoy — ' + titulo + '</h3>' +
       '<button type="button" class="mesa-historial-cerrar" aria-label="Cerrar">&times;</button>' +
       '</div>' +
       '<div class="mesa-historial-lista">' + filasHtml + '</div>' +
@@ -86,7 +87,7 @@
     if (!tile) return;
     var historial = [];
     try { historial = JSON.parse(tile.getAttribute("data-historial") || "[]"); } catch (err) {}
-    abrirModal(tile.getAttribute("data-mesa-nombre"), historial);
+    abrirModal(tile.getAttribute("data-mesa-nombre"), !tile.classList.contains("mesa-etiqueta"), historial);
   });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrarModal(); });
 })();
