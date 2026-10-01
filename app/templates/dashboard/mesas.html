@@ -51,15 +51,35 @@
     cerrarModal();
     var titulo = esMesa ? "Mesa " + esc(nombre) : esc(nombre);
     var filasHtml = historial.length
-      ? historial.map(function (h) {
+      ? historial.map(function (h, i) {
           var estado = h.pendiente
             ? '<span class="badge-warning">Pendiente</span>'
             : '<span class="badge-success">Cobrada</span>';
+          var itemsHtml = (h.items && h.items.length)
+            ? h.items.map(function (it) {
+                return (
+                  '<div class="mesa-historial-item">' +
+                  '<span>' + Number(it.cantidad) + '× ' + esc(it.nombre) + '</span>' +
+                  '<span>Bs ' + (Number(it.cantidad) * Number(it.precio)).toFixed(2) + '</span>' +
+                  '</div>'
+                );
+              }).join("")
+            : '<p class="muted-sm" style="margin:4px 0 0;">Sin ítems registrados.</p>';
+          var extra = [];
+          if (h.tipo_pago) extra.push("Pago: " + esc(h.tipo_pago));
+          if (h.responsable) extra.push(esc(h.responsable));
           return (
-            '<div class="mesa-historial-fila">' +
+            '<div class="mesa-historial-venta">' +
+            '<button type="button" class="mesa-historial-fila" data-venta-toggle="' + i + '">' +
             '<span>' + esc(h.hora) + '</span>' +
             '<span>Bs ' + Number(h.total).toFixed(2) + '</span>' +
             '<span>' + estado + '</span>' +
+            '<span class="mesa-historial-chevron">&#9662;</span>' +
+            '</button>' +
+            '<div class="mesa-historial-detalle oculto" id="venta-detalle-' + i + '">' +
+            (extra.length ? '<p class="muted-sm" style="margin:0 0 6px;">' + extra.join(" · ") + '</p>' : "") +
+            itemsHtml +
+            '</div>' +
             '</div>'
           );
         }).join("")
@@ -78,7 +98,15 @@
       '</div>';
     document.body.appendChild(overlay);
     overlay.addEventListener("click", function (e) {
-      if (e.target === overlay || e.target.classList.contains("mesa-historial-cerrar")) cerrarModal();
+      if (e.target === overlay || e.target.classList.contains("mesa-historial-cerrar")) {
+        cerrarModal();
+        return;
+      }
+      var boton = e.target.closest("[data-venta-toggle]");
+      if (!boton) return;
+      var detalle = document.getElementById("venta-detalle-" + boton.getAttribute("data-venta-toggle"));
+      if (detalle) detalle.classList.toggle("oculto");
+      boton.classList.toggle("abierto", detalle && !detalle.classList.contains("oculto"));
     });
   }
 

@@ -508,12 +508,19 @@ a { color: inherit; }
   background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted);
   padding: 0 4px;
 }
-.mesa-historial-lista { padding: 10px 18px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.mesa-historial-lista { padding: 10px 18px 18px; overflow-y: auto; display: flex; flex-direction: column; }
+.mesa-historial-venta { border-bottom: 1px solid var(--border); }
+.mesa-historial-venta:last-child { border-bottom: none; }
 .mesa-historial-fila {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+  padding: 10px 0; font-size: 14px; background: none; border: none; cursor: pointer;
+  color: inherit; font-family: inherit; text-align: left;
 }
-.mesa-historial-fila:last-child { border-bottom: none; }
+.mesa-historial-fila:hover { color: var(--accent); }
+.mesa-historial-chevron { font-size: 11px; color: var(--muted); transition: transform 0.15s; margin-left: auto; }
+.mesa-historial-fila.abierto .mesa-historial-chevron { transform: rotate(180deg); }
+.mesa-historial-detalle { padding: 0 0 12px 4px; display: flex; flex-direction: column; gap: 4px; }
+.mesa-historial-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; color: var(--muted); }
 
 .pos-descuento-popup {
   border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface-soft);

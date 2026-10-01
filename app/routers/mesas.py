@@ -50,23 +50,40 @@ def _mesas_ocupadas_info(ordenes_abiertas) -> dict[str, str]:
 
 
 async def _historial_dia() -> dict[str, list[dict]]:
-    """Ventas (cobradas o todavía pendientes) de hoy, por mesa — para el
-    historial del día que se ve al tocar una mesa."""
+    """Ventas (cobradas o todavía pendientes) de hoy, por mesa, con sus
+    ítems — para el historial del día que se ve al tocar una mesa."""
     hoy = hoy_bolivia()
     desde = datetime.combine(hoy, time.min, BOLIVIA_TZ)
     hasta = datetime.combine(hoy + timedelta(days=1), time.min, BOLIVIA_TZ)
-    filas = await pool().fetch(
-        "SELECT mesa, estado, total, creado_en FROM ordenes "
+    ordenes = await pool().fetch(
+        "SELECT id, mesa, estado, total, tipo_pago, responsable, creado_en FROM ordenes "
         "WHERE creado_en >= $1 AND creado_en < $2 AND estado IN ('cobrada', 'abierta') "
         "ORDER BY creado_en",
         desde, hasta,
     )
+    items_por_orden: dict[int, list[dict]] = {}
+    if ordenes:
+        filas_items = await pool().fetch(
+            "SELECT orden_id, producto_nombre, cantidad, precio_unitario FROM orden_items "
+            "WHERE orden_id = ANY($1::int[]) ORDER BY id",
+            [o["id"] for o in ordenes],
+        )
+        for f in filas_items:
+            items_por_orden.setdefault(f["orden_id"], []).append({
+                "nombre": f["producto_nombre"],
+                "cantidad": float(f["cantidad"]),
+                "precio": float(f["precio_unitario"]),
+            })
+
     historial: dict[str, list[dict]] = {}
-    for f in filas:
-        historial.setdefault(f["mesa"], []).append({
-            "hora": f["creado_en"].astimezone(BOLIVIA_TZ).strftime("%H:%M"),
-            "total": float(f["total"]),
-            "pendiente": f["estado"] == "abierta",
+    for o in ordenes:
+        historial.setdefault(o["mesa"], []).append({
+            "hora": o["creado_en"].astimezone(BOLIVIA_TZ).strftime("%H:%M"),
+            "total": float(o["total"]),
+            "pendiente": o["estado"] == "abierta",
+            "tipo_pago": o["tipo_pago"],
+            "responsable": o["responsable"],
+            "items": items_por_orden.get(o["id"], []),
         })
     return historial
 
