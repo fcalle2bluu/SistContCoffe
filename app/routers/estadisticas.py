@@ -126,7 +126,6 @@ async def estadisticas_page(request: Request, session: dict = Depends(require_ad
             "mes": m,
             "dias_mes": dias_mes,
             "categorias": categorias,
-            "categorias_totales": [{"nombre": c["nombre"], "total": c["total"]} for c in categorias],
             "total_mes": sum(c["total"] for c in categorias),
             "por_dia": _ventas_por_dia(filas, m["inicio"], m["fin"]),
             "por_hora": _ventas_por_hora(filas, m["inicio"], m["fin"]),

@@ -554,6 +554,10 @@ a { color: inherit; }
 @media (min-width: 900px) { .charts-grid { grid-template-columns: repeat(2, 1fr); } }
 .chart-wrap { position: relative; height: 280px; margin-top: 12px; cursor: default; }
 
+.cat-detalle { margin-top: 10px; display: grid; grid-template-columns: 1fr; gap: 16px; }
+.cat-detalle .table-wrap { max-height: 360px; overflow-y: auto; }
+@media (min-width: 900px) { .cat-detalle { grid-template-columns: minmax(220px, 320px) 1fr; align-items: start; } }
+
 .dashboard-toolbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
