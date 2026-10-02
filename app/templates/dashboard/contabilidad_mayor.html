@@ -80,7 +80,7 @@
         </tr>
         {% for m in cta.movimientos %}
         <tr class="line-row">
-          <td class="mono nowrap"><a href="/dashboard/contabilidad/diario/{{ m.nro_asiento }}/editar" class="link-muted">{{ m.nro_asiento }}</a></td>
+          <td class="mono nowrap"><a href="/dashboard/contabilidad/diario/{{ m.nro_asiento }}/editar" class="link-muted">{{ m.numero_mes }}</a></td>
           <td class="mono nowrap">{{ m.fecha|fecha }}</td>
           <td class="indent">{{ m.glosa }}</td>
           <td class="num">{{ (m.debe|bs) if m.debe and m.debe > 0 else "" }}</td>

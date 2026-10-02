@@ -365,7 +365,7 @@
           {% for a in asientos_turno %}
           {% for l in a.lineas %}
           <tr class="line-row">
-            <td>{{ a.nro if loop.first else "" }}</td>
+            <td>{{ a.numero_mes if loop.first else "" }}</td>
             <td>{{ (a.fecha|fecha) if loop.first else "" }}</td>
             <td>{{ (l.cuenta_nombre or l.codigo_cuenta) if l.debe and l.debe > 0 else "" }}</td>
             <td>{{ (l.cuenta_nombre or l.codigo_cuenta) if l.haber and l.haber > 0 else "" }}</td>

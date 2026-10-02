@@ -67,6 +67,20 @@ def _parse_lineas(cuenta: list[str], lado: list[str], monto: list[str]) -> list[
     return lineas
 
 
+# Número de cada asiento DENTRO DE SU MES (1, 2, 3… y vuelve a 1 cada mes),
+# que es el que se muestra en el Diario, el Mayor y los PDF. `nro_asiento`
+# sigue siendo el número interno único (para editar/eliminar); como el Diario
+# está siempre ordenado por fecha, el orden dentro del mes es el mismo.
+NUMERO_MES_SQL = """
+    LEFT JOIN (
+        SELECT nro_asiento, ROW_NUMBER() OVER (
+            PARTITION BY date_trunc('month', MIN(fecha)) ORDER BY nro_asiento
+        ) AS numero_mes
+        FROM libro_diario GROUP BY nro_asiento
+    ) nm ON nm.nro_asiento = ld.nro_asiento
+"""
+
+
 async def _filas_libro_diario(mes_ctx: dict, orden: str = "desc") -> list:
     """Líneas del Libro Diario del período (mes o día) que se está viendo.
     `orden` controla si se ve de más reciente a más antiguo ("desc", lo de
@@ -75,10 +89,11 @@ async def _filas_libro_diario(mes_ctx: dict, orden: str = "desc") -> list:
     orden_sql = "ASC" if orden == "asc" else "DESC"
     return await pool().fetch(
         f"""
-        SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
+        SELECT ld.fecha, ld.nro_asiento, nm.numero_mes, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
                ld.debe, ld.haber, ld.glosa
         FROM libro_diario ld
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+        {NUMERO_MES_SQL}
         WHERE ld.fecha >= $1 AND ld.fecha < $2
         ORDER BY ld.fecha {orden_sql}, ld.nro_asiento {orden_sql}, ld.debe = 0, ld.id
         """,
@@ -89,21 +104,20 @@ async def _filas_libro_diario(mes_ctx: dict, orden: str = "desc") -> list:
 def _agrupar_asientos(filas) -> list[dict]:
     """Agrupa las líneas del Libro Diario por asiento. `nro` es el número
     real (único en toda la tabla — el que identifica al asiento para
-    editarlo o eliminarlo). `numero_mes` es solo para mostrar: la posición
-    del asiento dentro del período que se está viendo (1, 2, 3…), para que
-    cada mes vuelva a empezar en 1 en vez de seguir la numeración global de
-    `nro`. No cambia nada del guardado ni de cómo se edita/elimina."""
+    editarlo o eliminarlo). `numero_mes` es solo para mostrar: el número del
+    asiento dentro de SU mes (ver NUMERO_MES_SQL), así cada mes empieza en
+    1 aunque se esté viendo un solo día. Las filas tienen que traer la
+    columna `numero_mes`."""
     asientos: dict[int, dict] = {}
     for f in filas:
         a = asientos.setdefault(
-            f["nro_asiento"], {"nro": f["nro_asiento"], "fecha": f["fecha"], "glosa": f["glosa"], "lineas": []}
+            f["nro_asiento"],
+            {"nro": f["nro_asiento"], "numero_mes": f["numero_mes"], "fecha": f["fecha"], "glosa": f["glosa"], "lineas": []},
         )
         a["lineas"].append(f)
     for a in asientos.values():
         a["total_debe"] = sum(l["debe"] or 0 for l in a["lineas"])
         a["total_haber"] = sum(l["haber"] or 0 for l in a["lineas"])
-    for numero_mes, nro in enumerate(sorted(asientos), start=1):
-        asientos[nro]["numero_mes"] = numero_mes
     return list(asientos.values())
 
 
@@ -575,9 +589,10 @@ async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
         args.append(cuenta)
     filas = await pool().fetch(
         f"""
-        SELECT ld.id, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.fecha, ld.glosa, ld.debe, ld.haber
+        SELECT ld.id, ld.nro_asiento, nm.numero_mes, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.fecha, ld.glosa, ld.debe, ld.haber
         FROM libro_diario ld
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+        {NUMERO_MES_SQL}
         {condicion}
         ORDER BY cc.nombre, ld.fecha, ld.id
         """,
@@ -628,6 +643,7 @@ async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
         actual["movimientos"].append(
             {
                 "nro_asiento": f["nro_asiento"],
+                "numero_mes": f["numero_mes"],
                 "fecha": f["fecha"],
                 "glosa": f["glosa"],
                 "contrapartida": _contrapartida(f),

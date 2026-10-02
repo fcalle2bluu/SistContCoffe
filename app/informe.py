@@ -123,9 +123,10 @@ async def _datos(mes: str) -> dict:
     )
 
     filas_diario = await pool().fetch(
-        """
-        SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa
+        f"""
+        SELECT ld.fecha, ld.nro_asiento, nm.numero_mes, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa
         FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
+        {contabilidad.NUMERO_MES_SQL}
         WHERE ld.fecha >= $1 AND ld.fecha < $2
         ORDER BY ld.nro_asiento, ld.debe = 0, ld.id
         """,
@@ -427,7 +428,7 @@ def _seccion_contable(d: dict, ancho: float) -> list:
         for m in cta["movimientos"]:
             contra = " + ".join(c["nombre"] for c in m["contrapartida"]) or "—"
             filas.append([
-                str(m["nro_asiento"]), f"{m['fecha']:%d/%m/%Y}", Paragraph(escape(m["glosa"] or ""), EST["glosa"]), _p(contra),
+                str(m["numero_mes"]), f"{m['fecha']:%d/%m/%Y}", Paragraph(escape(m["glosa"] or ""), EST["glosa"]), _p(contra),
                 _bs(m["debe"]) if m["debe"] and m["debe"] > 0 else "",
                 _bs(m["haber"]) if m["haber"] and m["haber"] > 0 else "",
                 _bs(m["saldo"]),

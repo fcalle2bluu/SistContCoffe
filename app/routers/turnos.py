@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
-from app.routers.contabilidad import _agrupar_asientos
+from app.routers.contabilidad import NUMERO_MES_SQL, _agrupar_asientos
 from app.routers.ventas import DENOMINACIONES, TIPOS_PAGO, _calcular_descuento, _efectivo_teorico_turno
 from app.templating import templates
 
@@ -100,8 +100,9 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
     # identifican por ese texto. Los egresos/ingresos de caja no quedan
     # ligados a un turno en su glosa, así que no aparecen acá.
     filas_diario = await pool().fetch(
-        "SELECT ld.fecha, ld.nro_asiento, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa "
+        "SELECT ld.fecha, ld.nro_asiento, nm.numero_mes, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa "
         "FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta "
+        + NUMERO_MES_SQL +
         "WHERE ld.glosa LIKE '%turno #' || $1 || ').' "
         "ORDER BY ld.nro_asiento, ld.id",
         str(turno_id),
