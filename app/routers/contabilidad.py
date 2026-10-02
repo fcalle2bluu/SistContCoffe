@@ -582,6 +582,9 @@ async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_adm
 
 
 async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
+    """Movimientos del Libro Mayor por cuenta. En cada cuenta va primero el
+    asiento de apertura ("Por inicio del mes…", saldo del mes anterior), así
+    el saldo corrido arranca desde ahí; después el resto por fecha y número."""
     condicion = "WHERE ld.fecha >= $1 AND ld.fecha < $2"
     args = [mes_ctx["desde"], mes_ctx["hasta"]]
     if cuenta:
@@ -594,7 +597,8 @@ async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         {NUMERO_MES_SQL}
         {condicion}
-        ORDER BY cc.nombre, ld.fecha, ld.id
+        ORDER BY cc.nombre, ld.codigo_cuenta, ld.fecha,
+                 ld.glosa ILIKE 'Por inicio del mes%' DESC, ld.nro_asiento, ld.id
         """,
         *args,
     )
