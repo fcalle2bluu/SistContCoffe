@@ -370,12 +370,12 @@ a { color: inherit; }
 .cta.cta-chica { color: var(--cta-chica); background: var(--cta-chica-soft); }
 .cta.cta-mn { color: var(--cta-mn); background: var(--cta-mn-soft); }
 .cta.cta-banco { color: var(--cta-banco); background: var(--cta-banco-soft); }
-.ledger .group-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); border-left: 5px solid var(--cta-chica); }
-.ledger .group-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); border-left: 5px solid var(--cta-mn); }
-.ledger .group-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); border-left: 5px solid var(--cta-banco); }
-.ledger .subtotal-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); }
-.ledger .subtotal-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); }
-.ledger .subtotal-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); }
+.ledger .group-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); border-left: 5px solid var(--cta-chica); border-top: 1.5px solid var(--cta-chica); border-bottom: 1.5px solid var(--cta-chica); }
+.ledger .group-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); border-left: 5px solid var(--cta-mn); border-top: 1.5px solid var(--cta-mn); border-bottom: 1.5px solid var(--cta-mn); }
+.ledger .group-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); border-left: 5px solid var(--cta-banco); border-top: 1.5px solid var(--cta-banco); border-bottom: 1.5px solid var(--cta-banco); }
+.ledger .subtotal-row.cta-chica td { background: var(--cta-chica-soft); color: var(--cta-chica); border-top: 1.5px solid var(--cta-chica); border-bottom: 1.5px solid var(--cta-chica); }
+.ledger .subtotal-row.cta-mn td { background: var(--cta-mn-soft); color: var(--cta-mn); border-top: 1.5px solid var(--cta-mn); border-bottom: 1.5px solid var(--cta-mn); }
+.ledger .subtotal-row.cta-banco td { background: var(--cta-banco-soft); color: var(--cta-banco); border-top: 1.5px solid var(--cta-banco); border-bottom: 1.5px solid var(--cta-banco); }
 /* Resto de las cuentas: rojo, naranja, ámbar, turquesa, rosa, café y gris pizarra. */
 .cta-p0 { --c: #b91c1c; --cs: #fee2e2; }
 .cta-p1 { --c: #c2410c; --cs: #ffedd5; }
@@ -385,8 +385,8 @@ a { color: inherit; }
 .cta-p5 { --c: #7c4a1e; --cs: #f3e5d6; }
 .cta-p6 { --c: #334155; --cs: #e2e8f0; }
 .cta[class*="cta-p"] { color: var(--c); background: var(--cs); }
-.ledger .group-row[class*="cta-p"] td { background: var(--cs); color: var(--c); border-left: 5px solid var(--c); }
-.ledger .subtotal-row[class*="cta-p"] td { background: var(--cs); color: var(--c); }
+.ledger .group-row[class*="cta-p"] td { background: var(--cs); color: var(--c); border-left: 5px solid var(--c); border-top: 1.5px solid var(--c); border-bottom: 1.5px solid var(--c); }
+.ledger .subtotal-row[class*="cta-p"] td { background: var(--cs); color: var(--c); border-top: 1.5px solid var(--c); border-bottom: 1.5px solid var(--c); }
 
 .pos-form { padding: 16px; }
 .pos-layout { display: flex; flex-direction: column; gap: 20px; }

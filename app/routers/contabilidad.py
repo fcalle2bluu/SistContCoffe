@@ -87,6 +87,12 @@ async def _filas_libro_diario(mes_ctx: dict, orden: str = "desc") -> list:
 
 
 def _agrupar_asientos(filas) -> list[dict]:
+    """Agrupa las líneas del Libro Diario por asiento. `nro` es el número
+    real (único en toda la tabla — el que identifica al asiento para
+    editarlo o eliminarlo). `numero_mes` es solo para mostrar: la posición
+    del asiento dentro del período que se está viendo (1, 2, 3…), para que
+    cada mes vuelva a empezar en 1 en vez de seguir la numeración global de
+    `nro`. No cambia nada del guardado ni de cómo se edita/elimina."""
     asientos: dict[int, dict] = {}
     for f in filas:
         a = asientos.setdefault(
@@ -96,6 +102,8 @@ def _agrupar_asientos(filas) -> list[dict]:
     for a in asientos.values():
         a["total_debe"] = sum(l["debe"] or 0 for l in a["lineas"])
         a["total_haber"] = sum(l["haber"] or 0 for l in a["lineas"])
+    for numero_mes, nro in enumerate(sorted(asientos), start=1):
+        asientos[nro]["numero_mes"] = numero_mes
     return list(asientos.values())
 
 
@@ -257,6 +265,7 @@ async def _diario_context(
         "form_fecha": fecha or mes_ctx["dia"] or (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
         "form_glosa": glosa,
         "editando_nro": editando_nro,
+        "editando_numero_mes": next((a["numero_mes"] for a in asientos if a["nro"] == editando_nro), editando_nro),
         "mes": mes_ctx,
         "filtro_dia": True,
         "orden": orden,

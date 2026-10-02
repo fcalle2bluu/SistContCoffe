@@ -393,7 +393,7 @@ def _seccion_contable(d: dict, ancho: float) -> list:
             debe, haber = float(l["debe"] or 0), float(l["haber"] or 0)
             nombre = l["cuenta_nombre"] or l["codigo_cuenta"]
             filas.append([
-                str(a["nro"]) if i == 0 else "",
+                str(a["numero_mes"]) if i == 0 else "",
                 f"{a['fecha']:%d/%m/%Y}" if i == 0 else "",
                 _cuenta(l["codigo_cuenta"], nombre) if debe > 0 else "",
                 _cuenta(l["codigo_cuenta"], nombre) if haber > 0 else "",
@@ -514,7 +514,7 @@ def _seccion_diario_pdf(asientos: list[dict], ancho: float) -> list:
             debe, haber = float(l["debe"] or 0), float(l["haber"] or 0)
             nombre = l["cuenta_nombre"] or l["codigo_cuenta"]
             filas.append([
-                str(a["nro"]) if i == 0 else "",
+                str(a["numero_mes"]) if i == 0 else "",
                 f"{a['fecha']:%d/%m/%Y}" if i == 0 else "",
                 _cuenta(l["codigo_cuenta"], nombre) if debe > 0 else "",
                 _cuenta(l["codigo_cuenta"], nombre) if haber > 0 else "",
