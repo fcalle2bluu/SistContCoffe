@@ -347,30 +347,33 @@ async def _eliminar_egreso_del_diario(movimiento) -> bool:
 
 
 async def _registrar_ingreso_caja_en_diario(fecha, monto: float, tipo_pago: str, motivo: str, responsable: str) -> None:
-    """Asienta un ingreso a caja en el Libro Diario apenas se registra: Debe
-    Caja Chica / Haber Caja Moneda Nacional si es en efectivo, o Haber Banco
-    Bisa si es por QR (así lo pidió el contador). Solo se asienta para
-    EFECTIVO y QR, mismo criterio que egresos y ventas."""
+    """Asienta un ingreso a caja en el Libro Diario apenas se registra. Un
+    "ingreso a caja" es plata que SALE de la caja del turno (Caja Chica) y
+    se guarda en Caja Moneda Nacional (o se deposita al Banco si es por QR)
+    — por eso el arqueo del turno la resta. Debe Caja Moneda Nacional (o
+    Banco Bisa) / Haber Caja Chica, como lo pidió el contador. Solo se
+    asienta para EFECTIVO y QR. Lo inverso (sacar del resguardo para darle
+    fondo a la caja) es la reposición de caja."""
     if tipo_pago == "EFECTIVO":
-        cuenta_contrapartida = CUENTA_CAJA_EFECTIVO
+        cuenta_destino, nombre_destino = CUENTA_CAJA_EFECTIVO, "Caja Moneda Nacional"
     elif tipo_pago == "QR":
-        cuenta_contrapartida = CUENTA_BANCO
+        cuenta_destino, nombre_destino = CUENTA_BANCO, "Banco"
     else:
         return
 
-    glosa = f"Ingreso a caja chica — {motivo} (responsable: {responsable})."
+    glosa = f"Ingreso a {nombre_destino} desde Caja Chica — {motivo} (responsable: {responsable})."
     async with pool().acquire() as conn:
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
+                fecha, siguiente, cuenta_destino, monto, glosa,
             )
             await conn.execute(
                 "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
                 "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, cuenta_contrapartida, monto, glosa,
+                fecha, siguiente, CUENTA_CAJA_CHICA, monto, glosa,
             )
 
 
