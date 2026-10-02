@@ -29,6 +29,11 @@
           <label class="field-label">Fecha</label>
           <input name="fecha" type="date" value="{{ form_fecha }}" required class="input input-w44" />
         </div>
+        <label class="check-apertura" title="Saldo del mes anterior: va el día 1 y queda como primer asiento del mes y de cada cuenta en el Mayor">
+          <input type="checkbox" name="es_apertura" value="1" {{ "checked" if form_es_apertura }}
+            onchange="if (this.checked) { var f = this.form.fecha; if (f.value) f.value = f.value.slice(0, 8) + '01'; }" />
+          <span><strong>Es apertura</strong><small>Saldo del mes anterior: va primero del mes (día 1)</small></span>
+        </label>
       </div>
 
       <div class="order-row">
@@ -112,7 +117,7 @@
           </tr>
           {% endfor %}
           <tr class="subtotal-row">
-            <td colspan="4" class="glosa">{{ a.glosa }}</td>
+            <td colspan="4" class="glosa">{% if a.es_apertura %}<span class="tag-apertura">Apertura</span> {% endif %}{{ a.glosa }}</td>
             <td class="num">{{ a.total_debe|bs }}</td>
             <td class="num">{{ a.total_haber|bs }}</td>
             <td class="text-right">

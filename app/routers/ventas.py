@@ -50,8 +50,9 @@ async def _ordenar_diario(conn) -> None:
     """Renumbera todo el Libro Diario 1, 2, 3… sin huecos, ordenado por la
     fecha de la transacción y, dentro del mismo día, por el número que ya
     tenía cada asiento (orden en que se registró) — salvo los asientos de
-    apertura ("Por inicio del mes…", saldos del mes anterior), que van
-    siempre primero en su día para quedar como los primeros del mes. Cierra los huecos que
+    apertura (marcados con "Es apertura": saldos del mes anterior), que van
+    siempre primero en su día (el 1.º del mes) para quedar como los
+    primeros del mes. Cierra los huecos que
     deja eliminar un asiento y corrige los que hayan quedado fuera de orden.
     Usa un lock para que dos registros simultáneos no se crucen al
     renumerar."""
@@ -61,7 +62,7 @@ async def _ordenar_diario(conn) -> None:
         UPDATE libro_diario ld SET nro_asiento = o.nuevo
         FROM (
             SELECT nro_asiento, ROW_NUMBER() OVER (
-                ORDER BY MIN(fecha), BOOL_OR(glosa ILIKE 'Por inicio del mes%') DESC, nro_asiento
+                ORDER BY MIN(fecha), BOOL_OR(es_apertura) DESC, nro_asiento
             ) AS nuevo
             FROM libro_diario GROUP BY nro_asiento
         ) o

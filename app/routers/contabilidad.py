@@ -90,7 +90,7 @@ async def _filas_libro_diario(mes_ctx: dict, orden: str = "desc") -> list:
     return await pool().fetch(
         f"""
         SELECT ld.fecha, ld.nro_asiento, nm.numero_mes, ld.codigo_cuenta, cc.nombre AS cuenta_nombre,
-               ld.debe, ld.haber, ld.glosa
+               ld.debe, ld.haber, ld.glosa, ld.es_apertura
         FROM libro_diario ld
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         {NUMERO_MES_SQL}
@@ -112,7 +112,8 @@ def _agrupar_asientos(filas) -> list[dict]:
     for f in filas:
         a = asientos.setdefault(
             f["nro_asiento"],
-            {"nro": f["nro_asiento"], "numero_mes": f["numero_mes"], "fecha": f["fecha"], "glosa": f["glosa"], "lineas": []},
+            {"nro": f["nro_asiento"], "numero_mes": f["numero_mes"], "fecha": f["fecha"], "glosa": f["glosa"],
+             "es_apertura": f.get("es_apertura") or False, "lineas": []},
         )
         a["lineas"].append(f)
     for a in asientos.values():
@@ -257,6 +258,7 @@ async def _diario_context(
     mes: str | None = None,
     dia: str | None = None,
     orden: str | None = None,
+    es_apertura: bool = False,
 ) -> dict:
     mes_ctx = _mes(mes, dia)
     orden = "asc" if orden == "asc" else "desc"
@@ -278,6 +280,7 @@ async def _diario_context(
         "hoy": hoy_bolivia().isoformat(),
         "form_fecha": fecha or mes_ctx["dia"] or (hoy_bolivia() if mes_ctx["es_actual"] else mes_ctx["inicio"]).isoformat(),
         "form_glosa": glosa,
+        "form_es_apertura": es_apertura,
         "editando_nro": editando_nro,
         "editando_numero_mes": next((a["numero_mes"] for a in asientos if a["nro"] == editando_nro), editando_nro),
         "mes": mes_ctx,
@@ -325,7 +328,7 @@ async def resumen_cuentas_page(
 async def editar_asiento_form(request: Request, nro_asiento: int, session: dict = Depends(require_admin)):
     filas = await pool().fetch(
         """
-        SELECT ld.fecha, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa
+        SELECT ld.fecha, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa, ld.es_apertura
         FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         WHERE ld.nro_asiento = $1
         ORDER BY ld.debe = 0, ld.id
@@ -349,6 +352,7 @@ async def editar_asiento_form(request: Request, nro_asiento: int, session: dict 
         glosa=filas[0]["glosa"],
         editando_nro=nro_asiento,
         mes=_mes_de(filas[0]["fecha"]),
+        es_apertura=any(f["es_apertura"] for f in filas),
     )
     return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx)
 
@@ -444,6 +448,36 @@ async def pegar_lineas_asiento(
     )
 
 
+def _fecha_asiento(fecha: str, apertura: bool) -> date:
+    """Un asiento de apertura (saldo del mes anterior) siempre va el día 1
+    de su mes, así queda primero en el Diario y en el Mayor."""
+    fecha_date = date.fromisoformat(fecha)
+    return fecha_date.replace(day=1) if apertura else fecha_date
+
+
+async def _insertar_asiento(conn, fecha: date, nro: int, lineas: list[dict], glosa: str, apertura: bool) -> int:
+    """Inserta las líneas del asiento y, si es de apertura, renumera el
+    Diario para que quede primero en su mes. Devuelve su número final."""
+    primer_id = None
+    for l in lineas:
+        id_linea = await conn.fetchval(
+            """
+            INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa, es_apertura)
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+            """,
+            fecha,
+            nro,
+            l["codigo_cuenta"],
+            l["monto"] if l["lado"] == "DEBE" else 0,
+            l["monto"] if l["lado"] == "HABER" else 0,
+            glosa,
+            apertura,
+        )
+        primer_id = primer_id or id_linea
+    await _ordenar_diario(conn)
+    return await conn.fetchval("SELECT nro_asiento FROM libro_diario WHERE id = $1", primer_id)
+
+
 @router.post("/diario", response_class=HTMLResponse)
 async def crear_asiento(
     request: Request,
@@ -453,64 +487,11 @@ async def crear_asiento(
     cuenta: list[str] = Form([]),
     lado: list[str] = Form([]),
     monto: list[str] = Form([]),
+    es_apertura: str = Form(""),
 ):
     lineas = _parse_lineas(cuenta, lado, monto)
     glosa = glosa.strip()
-    total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
-    total_haber = sum(l["monto"] for l in lineas if l["lado"] == "HABER")
-
-    error = None
-    if not fecha:
-        error = "Indica la fecha del asiento."
-    elif not glosa:
-        error = "Indica la glosa (descripción) del asiento."
-    elif len(lineas) < 2:
-        error = "Un asiento necesita al menos una línea de debe y una de haber."
-    elif abs(total_debe - total_haber) > 0.01:
-        error = f"El asiento no cuadra: debe {total_debe:.2f} vs haber {total_haber:.2f}."
-
-    if error:
-        cuentas_map = {c["codigo"]: c["nombre"] for c in await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")}
-        for l in lineas:
-            l["nombre"] = cuentas_map.get(l["codigo_cuenta"], l["codigo_cuenta"])
-        ctx = await _diario_context(session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, mes=fecha[:7])
-        return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx, status_code=400)
-
-    fecha_date = date.fromisoformat(fecha)
-
-    async with pool().acquire() as conn:
-        async with conn.transaction():
-            siguiente = await _siguiente_nro_asiento(conn, fecha_date)
-            for l in lineas:
-                await conn.execute(
-                    """
-                    INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    """,
-                    fecha_date,
-                    siguiente,
-                    l["codigo_cuenta"],
-                    l["monto"] if l["lado"] == "DEBE" else 0,
-                    l["monto"] if l["lado"] == "HABER" else 0,
-                    glosa,
-                )
-    await bitacora.registrar(session, "Registró asiento contable", f"Asiento #{siguiente}: {glosa}")
-    return RedirectResponse(f"/dashboard/contabilidad/diario?mes={_mes_de(fecha_date)}", status_code=303)
-
-
-@router.post("/diario/{nro_asiento}/editar", response_class=HTMLResponse)
-async def editar_asiento(
-    request: Request,
-    nro_asiento: int,
-    session: dict = Depends(require_admin),
-    fecha: str = Form(""),
-    glosa: str = Form(""),
-    cuenta: list[str] = Form([]),
-    lado: list[str] = Form([]),
-    monto: list[str] = Form([]),
-):
-    lineas = _parse_lineas(cuenta, lado, monto)
-    glosa = glosa.strip()
+    apertura = bool(es_apertura)
     total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
     total_haber = sum(l["monto"] for l in lineas if l["lado"] == "HABER")
 
@@ -529,11 +510,61 @@ async def editar_asiento(
         for l in lineas:
             l["nombre"] = cuentas_map.get(l["codigo_cuenta"], l["codigo_cuenta"])
         ctx = await _diario_context(
-            session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, editando_nro=nro_asiento, mes=fecha[:7]
+            session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, mes=fecha[:7], es_apertura=apertura
         )
         return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx, status_code=400)
 
-    fecha_date = date.fromisoformat(fecha)
+    fecha_date = _fecha_asiento(fecha, apertura)
+
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            siguiente = await _siguiente_nro_asiento(conn, fecha_date)
+            nro = await _insertar_asiento(conn, fecha_date, siguiente, lineas, glosa, apertura)
+    await bitacora.registrar(
+        session, "Registró asiento contable", f"Asiento #{nro}{' (apertura)' if apertura else ''}: {glosa}"
+    )
+    return RedirectResponse(f"/dashboard/contabilidad/diario?mes={_mes_de(fecha_date)}", status_code=303)
+
+
+@router.post("/diario/{nro_asiento}/editar", response_class=HTMLResponse)
+async def editar_asiento(
+    request: Request,
+    nro_asiento: int,
+    session: dict = Depends(require_admin),
+    fecha: str = Form(""),
+    glosa: str = Form(""),
+    cuenta: list[str] = Form([]),
+    lado: list[str] = Form([]),
+    monto: list[str] = Form([]),
+    es_apertura: str = Form(""),
+):
+    lineas = _parse_lineas(cuenta, lado, monto)
+    glosa = glosa.strip()
+    apertura = bool(es_apertura)
+    total_debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
+    total_haber = sum(l["monto"] for l in lineas if l["lado"] == "HABER")
+
+    error = None
+    if not fecha:
+        error = "Indica la fecha del asiento."
+    elif not glosa:
+        error = "Indica la glosa (descripción) del asiento."
+    elif len(lineas) < 2:
+        error = "Un asiento necesita al menos una línea de debe y una de haber."
+    elif abs(total_debe - total_haber) > 0.01:
+        error = f"El asiento no cuadra: debe {total_debe:.2f} vs haber {total_haber:.2f}."
+
+    if error:
+        cuentas_map = {c["codigo"]: c["nombre"] for c in await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")}
+        for l in lineas:
+            l["nombre"] = cuentas_map.get(l["codigo_cuenta"], l["codigo_cuenta"])
+        ctx = await _diario_context(
+            session, error=error, lineas=lineas, fecha=fecha, glosa=glosa, editando_nro=nro_asiento, mes=fecha[:7],
+            es_apertura=apertura,
+        )
+        return templates.TemplateResponse(request, "dashboard/contabilidad_diario.html", ctx, status_code=400)
+
+    fecha_date = _fecha_asiento(fecha, apertura)
 
     async with pool().acquire() as conn:
         async with conn.transaction():
@@ -549,19 +580,7 @@ async def editar_asiento(
                 # fecha nueva (_siguiente_nro_asiento cierra el hueco que
                 # dejó en su fecha vieja).
                 nuevo_nro = await _siguiente_nro_asiento(conn, fecha_date)
-            for l in lineas:
-                await conn.execute(
-                    """
-                    INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    """,
-                    fecha_date,
-                    nuevo_nro,
-                    l["codigo_cuenta"],
-                    l["monto"] if l["lado"] == "DEBE" else 0,
-                    l["monto"] if l["lado"] == "HABER" else 0,
-                    glosa,
-                )
+            nuevo_nro = await _insertar_asiento(conn, fecha_date, nuevo_nro, lineas, glosa, apertura)
     detalle_numero = f"Asiento #{nro_asiento}" if nuevo_nro == nro_asiento else f"Asiento #{nro_asiento} (reordenado a #{nuevo_nro})"
     await bitacora.registrar(session, "Editó asiento contable", f"{detalle_numero}: {glosa}")
     return RedirectResponse(f"/dashboard/contabilidad/diario?mes={_mes_de(fecha_date)}", status_code=303)
@@ -583,7 +602,7 @@ async def eliminar_asiento(nro_asiento: int, session: dict = Depends(require_adm
 
 async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
     """Movimientos del Libro Mayor por cuenta. En cada cuenta va primero el
-    asiento de apertura ("Por inicio del mes…", saldo del mes anterior), así
+    asiento de apertura (marcado "Es apertura", saldo del mes anterior), así
     el saldo corrido arranca desde ahí; después el resto por fecha y número."""
     condicion = "WHERE ld.fecha >= $1 AND ld.fecha < $2"
     args = [mes_ctx["desde"], mes_ctx["hasta"]]
@@ -598,7 +617,7 @@ async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
         {NUMERO_MES_SQL}
         {condicion}
         ORDER BY cc.nombre, ld.codigo_cuenta, ld.fecha,
-                 ld.glosa ILIKE 'Por inicio del mes%' DESC, ld.nro_asiento, ld.id
+                 ld.es_apertura DESC, ld.nro_asiento, ld.id
         """,
         *args,
     )

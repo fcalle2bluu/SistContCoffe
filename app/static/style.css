@@ -829,3 +829,17 @@ a { color: inherit; }
   color: inherit; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer;
 }
 @keyframes llamar-pulso { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+
+/* Casilla "Es apertura" del formulario de asiento y su etiqueta en el Diario. */
+.check-apertura {
+  display: flex; align-items: center; gap: 10px; align-self: flex-end;
+  padding: 8px 14px; border: 2px solid var(--accent); border-radius: 10px;
+  background: var(--accent-soft); cursor: pointer;
+}
+.check-apertura input { width: 20px; height: 20px; accent-color: var(--accent); }
+.check-apertura span { display: flex; flex-direction: column; line-height: 1.2; }
+.check-apertura small { font-size: 11px; color: var(--muted); }
+.tag-apertura {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; margin-right: 4px;
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase;
+}
