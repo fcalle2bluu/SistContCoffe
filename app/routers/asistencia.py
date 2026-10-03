@@ -185,55 +185,103 @@ def _horas_esperadas(hora_inicio: dtime, hora_fin: dtime) -> float:
     return round((fin - inicio).total_seconds() / 3600, 2)
 
 
-def _atrasos_y_excesos(
-    jornadas_mes: list[dict], usuarios: list, horarios: dict[int, dict[int, tuple]], inicio_mes: date, hoy: date
+def _cuadricula_asistencia(
+    jornadas_mes: list[dict], usuarios: list, horarios: dict[int, dict[int, tuple]], inicio_mes: date,
+    fin_mes: date, hoy: date,
 ) -> list[dict]:
-    """Para cada persona con horario asignado, compara día por día (desde el
-    inicio del mes hasta AYER, sin contar hoy) contra el horario que le
-    toca ese día de la semana. Si marcó entrada después de la hora que le
-    tocaba, la diferencia se suma como horas de atraso. Si trabajó más
-    horas de las que le tocaban ese día (jornada ya cerrada), la
-    diferencia se suma como horas de exceso. Quien no tiene horario
-    asignado no aparece: no se le puede exigir nada."""
+    """Cuadrícula del mes: una fila por persona, una celda por día,
+    comparando el horario que le tocaba contra lo que marcó. Reemplaza al
+    gráfico de barras de atrasos/excesos — con un atraso mucho más grande
+    que el resto, la escala compartida dejaba casi invisibles las
+    diferencias chicas; acá cada día se mira aparte, sin escala que
+    aplastar nada. Estado de cada celda:
+    - "libre": no le tocaba venir ese día de la semana.
+    - "futuro": el día todavía no pasó (incluye hoy, si todavía no marcó).
+    - "ausente": le tocaba venir, el día ya pasó y no marcó entrada.
+    - "a_tiempo" / "atraso" / "exceso" / "atraso_exceso": marcó, comparado
+      contra lo que le tocaba (atraso = entró tarde; exceso = trabajó de
+      más, solo una vez cerrada la jornada).
+    - "en_curso": hoy, todavía con la jornada abierta.
+    - "sin_horario": la persona no tiene horario cargado — se muestra lo
+      que marcó ese día, sin poder juzgarlo contra nada."""
     por_usuario_dia = {(j["usuario_id"], j["fecha"]): j for j in jornadas_mes}
-    resultado = []
+    dias_mes = []
+    d = inicio_mes
+    while d < fin_mes:
+        dias_mes.append(d)
+        d += timedelta(days=1)
+
+    filas = []
     for u in usuarios:
         horario_usuario = horarios.get(u["id"])
-        if not horario_usuario:
-            continue
-        horas_atraso = 0.0
-        horas_exceso = 0.0
-        dias_atraso = 0
-        dias_exceso = 0
-        d = inicio_mes
-        while d < hoy and d.month == inicio_mes.month:
-            rango = horario_usuario.get(d.weekday())
-            if rango:
-                hora_inicio_esperada, hora_fin_esperada = rango
-                esperado = _horas_esperadas(hora_inicio_esperada, hora_fin_esperada)
-                jornada = por_usuario_dia.get((u["id"], d.isoformat()))
+        celdas = []
+        for dia in dias_mes:
+            celda = {"numero": dia.day, "es_hoy": dia == hoy}
+            rango = horario_usuario.get(dia.weekday()) if horario_usuario else None
+
+            if horario_usuario is None:
+                celda["estado"] = "sin_horario"
+                jornada = por_usuario_dia.get((u["id"], dia.isoformat()))
                 if jornada is not None and jornada["entrada"] is not None:
-                    entrada_local = jornada["entrada"].astimezone(_TZ_BOLIVIA).time()
-                    if entrada_local > hora_inicio_esperada:
+                    celda["entrada"] = f'{jornada["entrada"].astimezone(_TZ_BOLIVIA):%H:%M}'
+                    if jornada["salida"] is not None:
+                        celda["salida"] = f'{jornada["salida"].astimezone(_TZ_BOLIVIA):%H:%M}'
+                    celda["detalle"] = f'Marcó {celda["entrada"]} — sin horario asignado para comparar.'
+                else:
+                    celda["detalle"] = "Sin horario asignado."
+            elif not rango:
+                celda["estado"] = "libre"
+                celda["detalle"] = "Día libre."
+            elif dia >= hoy:
+                celda["estado"] = "futuro"
+                hora_inicio_esperada, hora_fin_esperada = rango
+                celda["esperado"] = f"{hora_inicio_esperada:%H:%M}–{hora_fin_esperada:%H:%M}"
+                celda["detalle"] = f'Le toca {celda["esperado"]}.' if dia > hoy else f'Hoy le toca {celda["esperado"]} — todavía no marca entrada.'
+            else:
+                hora_inicio_esperada, hora_fin_esperada = rango
+                celda["esperado"] = f"{hora_inicio_esperada:%H:%M}–{hora_fin_esperada:%H:%M}"
+                jornada = por_usuario_dia.get((u["id"], dia.isoformat()))
+                if jornada is None or jornada["entrada"] is None:
+                    celda["estado"] = "ausente"
+                    celda["detalle"] = f'No marcó entrada — le tocaba {celda["esperado"]}.'
+                else:
+                    entrada_local = jornada["entrada"].astimezone(_TZ_BOLIVIA)
+                    celda["entrada"] = f"{entrada_local:%H:%M}"
+                    atraso_min = 0
+                    if entrada_local.time() > hora_inicio_esperada:
                         esperada_dt = datetime.combine(date(2000, 1, 1), hora_inicio_esperada)
-                        real_dt = datetime.combine(date(2000, 1, 1), entrada_local)
-                        horas_atraso += (real_dt - esperada_dt).total_seconds() / 3600
-                        dias_atraso += 1
+                        real_dt = datetime.combine(date(2000, 1, 1), entrada_local.time())
+                        atraso_min = round((real_dt - esperada_dt).total_seconds() / 60)
+                    exceso_min = 0
+                    if jornada["salida"] is not None:
+                        celda["salida"] = f'{jornada["salida"].astimezone(_TZ_BOLIVIA):%H:%M}'
                     if jornada["segundos"] is not None:
-                        trabajado = jornada["segundos"] / 3600
-                        if trabajado > esperado:
-                            horas_exceso += trabajado - esperado
-                            dias_exceso += 1
-            d += timedelta(days=1)
-        resultado.append({
-            "nombre": u["nombre"],
-            "horas_atraso": round(horas_atraso, 2),
-            "horas_exceso": round(horas_exceso, 2),
-            "dias_atraso": dias_atraso,
-            "dias_exceso": dias_exceso,
-        })
-    resultado.sort(key=lambda p: p["horas_atraso"] + p["horas_exceso"], reverse=True)
-    return resultado
+                        esperado_h = _horas_esperadas(hora_inicio_esperada, hora_fin_esperada)
+                        trabajado_h = jornada["segundos"] / 3600
+                        if trabajado_h > esperado_h:
+                            exceso_min = round((trabajado_h - esperado_h) * 60)
+                    celda["atraso_min"] = atraso_min
+                    celda["exceso_min"] = exceso_min
+                    partes = [f'Entró {celda["entrada"]} (le tocaba {celda["esperado"]})']
+                    if atraso_min > 0 and exceso_min > 0:
+                        celda["estado"] = "atraso_exceso"
+                        partes.append(f"{atraso_min} min tarde, {exceso_min} min de más")
+                    elif atraso_min > 0:
+                        celda["estado"] = "atraso"
+                        partes.append(f"{atraso_min} min tarde")
+                    elif exceso_min > 0:
+                        celda["estado"] = "exceso"
+                        partes.append(f"{exceso_min} min de más")
+                    elif jornada["abierto"]:
+                        celda["estado"] = "en_curso"
+                        partes.append("turno en curso")
+                    else:
+                        celda["estado"] = "a_tiempo"
+                        partes.append("a tiempo")
+                    celda["detalle"] = " — ".join(partes) + "."
+            celdas.append(celda)
+        filas.append({"usuario_id": u["id"], "nombre": u["nombre"], "celdas": celdas})
+    return filas
 
 
 def _calendario(inicio_mes: date, fin_mes: date, jornadas: list[dict]) -> list[list[dict | None]]:
@@ -283,12 +331,27 @@ async def asistencia_page(
     marcas_mes = await _marcas(inicio_mes, fin_mes)
     jornadas_mes, _ = _jornadas(marcas_mes)
     usuarios = await pool().fetch("SELECT id, nombre FROM usuarios WHERE nombre IS NOT NULL AND nombre <> '' ORDER BY nombre")
+    # Para la cuadrícula de asistencia: personal de mostrador real, sin la
+    # cuenta genérica compartida "Cajero de Turno" (username "cajero") ni
+    # las cuentas de administración, que no marcan asistencia.
+    usuarios_cuadricula = await pool().fetch(
+        "SELECT id, nombre FROM usuarios WHERE role = 'cajero' AND username <> 'cajero' "
+        "AND nombre IS NOT NULL AND nombre <> '' ORDER BY nombre"
+    )
     horarios = await _horarios_por_usuario()
+    dias_mes_cab = []
+    d = inicio_mes
+    while d < fin_mes:
+        dias_mes_cab.append({"numero": d.day, "letra": "LMXJVSD"[d.weekday()], "es_hoy": d == hoy_bolivia()})
+        d += timedelta(days=1)
     ctx.update({
         "session": session,
         "active": "asistencia",
         "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
-        "atrasos_excesos": _atrasos_y_excesos(jornadas_mes, usuarios, horarios, inicio_mes, hoy_bolivia()),
+        "cuadricula_asistencia": _cuadricula_asistencia(
+            jornadas_mes, usuarios_cuadricula, horarios, inicio_mes, fin_mes, hoy_bolivia()
+        ),
+        "dias_mes_cab": dias_mes_cab,
         "calendario": _calendario(inicio_mes, fin_mes, jornadas_mes),
         "mes_anterior": (inicio_mes - timedelta(days=1)).replace(day=1).isoformat(),
         "mes_siguiente": fin_mes.isoformat() if fin_mes <= hoy_bolivia() else None,

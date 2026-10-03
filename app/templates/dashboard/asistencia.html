@@ -186,18 +186,59 @@
     </div>
   </div>
 
-  <div id="asistencia-atrasos-excesos">
-    <h3 class="subsection-title">Atrasos y excesos de {{ mes_nombre }}</h3>
-    {% if atrasos_excesos|length == 0 %}
-    <p class="muted">Nadie tiene un horario asignado todavía — no hay nada que comparar.</p>
+  <div id="asistencia-cuadricula">
+    <h3 class="subsection-title">Asistencia de {{ mes_nombre }}</h3>
+    {% if cuadricula_asistencia|length == 0 %}
+    <p class="muted">No hay personal de mostrador para mostrar acá todavía.</p>
     {% else %}
     <p class="muted-sm">
-      <strong>Atraso</strong> (rojo): horas de más entre la hora en que le tocaba entrar y la hora en que marcó entrada.
-      <strong>Exceso</strong> (ámbar): horas trabajadas de más sobre lo que le tocaba ese día, ya con la jornada cerrada.
-      Ordenado de mayor a menor diferencia total, para ver primero a quién conviene revisar.
+      Un casillero por día: compara el horario que le tocaba contra lo que marcó.
+      <strong>T</strong> = llegó tarde · <strong>+</strong> = trabajó de más · <strong>T+</strong> = las dos cosas ·
+      <strong>✕</strong> = no marcó entrada ese día · <strong>✓</strong> = a tiempo.
     </p>
-    <div class="chart-wrap" style="height: {{ 60 + atrasos_excesos|length * 56 }}px;">
-      <canvas id="chartAtrasosExcesos"></canvas>
+    <div class="asist-leyenda">
+      <span class="asist-leyenda-item"><span class="asist-celda asist-a-tiempo">✓</span> A tiempo</span>
+      <span class="asist-leyenda-item"><span class="asist-celda asist-atraso">T</span> Atraso</span>
+      <span class="asist-leyenda-item"><span class="asist-celda asist-exceso">+</span> Exceso</span>
+      <span class="asist-leyenda-item"><span class="asist-celda asist-atraso-exceso">T+</span> Atraso y exceso</span>
+      <span class="asist-leyenda-item"><span class="asist-celda asist-ausente">✕</span> No marcó</span>
+      <span class="asist-leyenda-item"><span class="asist-celda asist-libre"></span> Día libre</span>
+      <span class="asist-leyenda-item"><span class="asist-celda asist-sin-horario">·</span> Sin horario cargado</span>
+    </div>
+    <div class="table-wrap">
+      <table class="asist-tabla">
+        <thead>
+          <tr>
+            <th class="asist-col-nombre">Persona</th>
+            {% for d in dias_mes_cab %}
+            <th class="asist-col-dia{{ ' asist-hoy' if d.es_hoy else '' }}">
+              <span class="asist-dia-letra">{{ d.letra }}</span><span class="asist-dia-numero">{{ d.numero }}</span>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for fila in cuadricula_asistencia %}
+          <tr>
+            <td class="asist-col-nombre">{{ fila.nombre }}</td>
+            {% for c in fila.celdas %}
+            <td class="asist-col-dia{{ ' asist-hoy' if c.es_hoy else '' }}">
+              <span class="asist-celda asist-{{ c.estado|replace('_', '-') }}" title="{{ fila.nombre }} {{ c.numero }}/{{ mes_nombre }} — {{ c.detalle or '' }}">
+                {%- if c.estado == 'a_tiempo' -%}✓
+                {%- elif c.estado == 'atraso' -%}T
+                {%- elif c.estado == 'exceso' -%}+
+                {%- elif c.estado == 'atraso_exceso' -%}T+
+                {%- elif c.estado == 'ausente' -%}✕
+                {%- elif c.estado == 'en_curso' -%}…
+                {%- elif c.estado == 'sin_horario' and c.entrada -%}•
+                {%- endif -%}
+              </span>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% endif %}
   </div>
@@ -241,90 +282,5 @@
     setInterval(actualizarVivos, 1000);
   })();
 
-  (function () {
-    var canvas = document.getElementById("chartAtrasosExcesos");
-    if (!canvas) return;
-    var datos = {{ atrasos_excesos|tojson }};
-
-    // "1.5" horas se lee mucho más rápido como "1h 30m" que como un decimal.
-    function formatoHoras(h) {
-      var minutos = Math.round((h || 0) * 60);
-      if (minutos <= 0) return "0 min";
-      var horas = Math.floor(minutos / 60);
-      var resto = minutos % 60;
-      if (horas === 0) return resto + " min";
-      return horas + "h" + (resto ? " " + resto + "m" : "");
-    }
-
-    var maxValor = Math.max(1, Math.max.apply(null, datos.map(function (p) {
-      return Math.max(p.horas_atraso, p.horas_exceso);
-    })));
-    var tinta = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#101828";
-
-    // El valor de cada barra se escribe al final de la barra (nunca adentro:
-    // con tan poca diferencia entre personas, varias barras son demasiado
-    // angostas para que el texto entre). Así se lee el dato exacto aunque la
-    // barra sea casi invisible al lado de la más larga.
-    var etiquetasAlFinal = {
-      id: "etiquetasAlFinal",
-      afterDatasetsDraw: function (chart) {
-        var ctx = chart.ctx;
-        ctx.save();
-        ctx.font = "600 11px Inter, sans-serif";
-        ctx.fillStyle = tinta;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        chart.data.datasets.forEach(function (dataset, i) {
-          var meta = chart.getDatasetMeta(i);
-          meta.data.forEach(function (barra, j) {
-            var valor = dataset.data[j];
-            if (!valor) return;
-            ctx.fillText(formatoHoras(valor), barra.x + 6, barra.y);
-          });
-        });
-        ctx.restore();
-      },
-    };
-
-    new Chart(canvas, {
-      type: "bar",
-      data: {
-        labels: datos.map(function (p) { return p.nombre; }),
-        datasets: [
-          { label: "Atraso", data: datos.map(function (p) { return p.horas_atraso; }), backgroundColor: "#b91c1c", borderRadius: 6, maxBarThickness: 20 },
-          { label: "Exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6, maxBarThickness: 20 },
-        ],
-      },
-      options: {
-        indexAxis: "y",
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        layout: { padding: { right: 54 } },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: function (ctx) {
-                var p = datos[ctx.dataIndex];
-                var dias = ctx.datasetIndex === 0 ? p.dias_atraso : p.dias_exceso;
-                var texto = ctx.dataset.label + ": " + formatoHoras(ctx.parsed.x);
-                if (dias) texto += " — en " + dias + (dias === 1 ? " día" : " días");
-                return texto;
-              },
-            },
-          },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            suggestedMax: maxValor * 1.3,
-            title: { display: true, text: "Tiempo (horas y minutos)" },
-            ticks: { callback: function (v) { return formatoHoras(v); } },
-          },
-        },
-      },
-      plugins: [etiquetasAlFinal],
-    });
-  })();
 </script>
 {% endblock %}

@@ -605,6 +605,35 @@ a { color: inherit; }
 @media (min-width: 900px) { .charts-grid { grid-template-columns: repeat(2, 1fr); } }
 .chart-wrap { position: relative; height: 280px; margin-top: 12px; cursor: default; }
 
+/* Cuadrícula de asistencia: una fila por persona, una celda por día. */
+.asist-leyenda { display: flex; flex-wrap: wrap; gap: 14px; margin: 10px 0 4px; }
+.asist-leyenda-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.asist-tabla { border-collapse: separate; border-spacing: 4px; }
+.asist-col-nombre {
+  position: sticky; left: 0; z-index: 1; background: var(--surface);
+  text-align: left; padding: 4px 10px 4px 0; font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.asist-tabla thead .asist-col-nombre { background: var(--surface); color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.asist-col-dia { text-align: center; padding: 2px; }
+.asist-tabla thead .asist-col-dia { color: var(--muted); font-size: 10.5px; font-weight: 600; }
+.asist-dia-letra { display: block; font-size: 9px; text-transform: uppercase; color: var(--muted-soft, var(--muted)); }
+.asist-dia-numero { display: block; }
+.asist-col-dia.asist-hoy { background: var(--accent-soft); border-radius: 6px; }
+.asist-celda {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px; font-size: 10px; font-weight: 800;
+  color: #ffffff; cursor: default; font-variant-numeric: tabular-nums;
+}
+.asist-a-tiempo { background: #15803d; }
+.asist-atraso { background: #b91c1c; }
+.asist-exceso { background: #d97706; }
+.asist-atraso-exceso { background: linear-gradient(135deg, #b91c1c 0 50%, #d97706 50% 100%); font-size: 8px; }
+.asist-ausente { background: #52525b; }
+.asist-en-curso { background: #2563eb; }
+.asist-libre { background: var(--surface-soft); border: 1px dashed var(--border); }
+.asist-futuro { background: transparent; border: 1px dashed var(--border); }
+.asist-sin-horario { background: var(--surface-soft); color: var(--muted); border: 1px solid var(--border); }
+
 .cat-detalle { margin-top: 10px; display: grid; grid-template-columns: 1fr; gap: 16px; }
 .cat-detalle .table-wrap { max-height: 360px; overflow-y: auto; }
 @media (min-width: 900px) { .cat-detalle { grid-template-columns: minmax(220px, 320px) 1fr; align-items: start; } }
