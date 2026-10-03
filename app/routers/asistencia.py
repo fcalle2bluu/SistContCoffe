@@ -203,6 +203,8 @@ def _atrasos_y_excesos(
             continue
         horas_atraso = 0.0
         horas_exceso = 0.0
+        dias_atraso = 0
+        dias_exceso = 0
         d = inicio_mes
         while d < hoy and d.month == inicio_mes.month:
             rango = horario_usuario.get(d.weekday())
@@ -216,12 +218,21 @@ def _atrasos_y_excesos(
                         esperada_dt = datetime.combine(date(2000, 1, 1), hora_inicio_esperada)
                         real_dt = datetime.combine(date(2000, 1, 1), entrada_local)
                         horas_atraso += (real_dt - esperada_dt).total_seconds() / 3600
+                        dias_atraso += 1
                     if jornada["segundos"] is not None:
                         trabajado = jornada["segundos"] / 3600
                         if trabajado > esperado:
                             horas_exceso += trabajado - esperado
+                            dias_exceso += 1
             d += timedelta(days=1)
-        resultado.append({"nombre": u["nombre"], "horas_atraso": round(horas_atraso, 1), "horas_exceso": round(horas_exceso, 1)})
+        resultado.append({
+            "nombre": u["nombre"],
+            "horas_atraso": round(horas_atraso, 2),
+            "horas_exceso": round(horas_exceso, 2),
+            "dias_atraso": dias_atraso,
+            "dias_exceso": dias_exceso,
+        })
+    resultado.sort(key=lambda p: p["horas_atraso"] + p["horas_exceso"], reverse=True)
     return resultado
 
 

@@ -192,10 +192,11 @@
     <p class="muted">Nadie tiene un horario asignado todavía — no hay nada que comparar.</p>
     {% else %}
     <p class="muted-sm">
-      Atraso: horas de más entre la hora en que le tocaba entrar y la hora en que marcó entrada.
-      Exceso: horas trabajadas de más sobre lo que le tocaba ese día, ya con la jornada cerrada.
+      <strong>Atraso</strong> (rojo): horas de más entre la hora en que le tocaba entrar y la hora en que marcó entrada.
+      <strong>Exceso</strong> (ámbar): horas trabajadas de más sobre lo que le tocaba ese día, ya con la jornada cerrada.
+      Ordenado de mayor a menor diferencia total, para ver primero a quién conviene revisar.
     </p>
-    <div class="chart-wrap">
+    <div class="chart-wrap" style="height: {{ 60 + atrasos_excesos|length * 56 }}px;">
       <canvas id="chartAtrasosExcesos"></canvas>
     </div>
     {% endif %}
@@ -244,13 +245,54 @@
     var canvas = document.getElementById("chartAtrasosExcesos");
     if (!canvas) return;
     var datos = {{ atrasos_excesos|tojson }};
+
+    // "1.5" horas se lee mucho más rápido como "1h 30m" que como un decimal.
+    function formatoHoras(h) {
+      var minutos = Math.round((h || 0) * 60);
+      if (minutos <= 0) return "0 min";
+      var horas = Math.floor(minutos / 60);
+      var resto = minutos % 60;
+      if (horas === 0) return resto + " min";
+      return horas + "h" + (resto ? " " + resto + "m" : "");
+    }
+
+    var maxValor = Math.max(1, Math.max.apply(null, datos.map(function (p) {
+      return Math.max(p.horas_atraso, p.horas_exceso);
+    })));
+    var tinta = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#101828";
+
+    // El valor de cada barra se escribe al final de la barra (nunca adentro:
+    // con tan poca diferencia entre personas, varias barras son demasiado
+    // angostas para que el texto entre). Así se lee el dato exacto aunque la
+    // barra sea casi invisible al lado de la más larga.
+    var etiquetasAlFinal = {
+      id: "etiquetasAlFinal",
+      afterDatasetsDraw: function (chart) {
+        var ctx = chart.ctx;
+        ctx.save();
+        ctx.font = "600 11px Inter, sans-serif";
+        ctx.fillStyle = tinta;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        chart.data.datasets.forEach(function (dataset, i) {
+          var meta = chart.getDatasetMeta(i);
+          meta.data.forEach(function (barra, j) {
+            var valor = dataset.data[j];
+            if (!valor) return;
+            ctx.fillText(formatoHoras(valor), barra.x + 6, barra.y);
+          });
+        });
+        ctx.restore();
+      },
+    };
+
     new Chart(canvas, {
       type: "bar",
       data: {
         labels: datos.map(function (p) { return p.nombre; }),
         datasets: [
-          { label: "Atraso", data: datos.map(function (p) { return p.horas_atraso; }), backgroundColor: "#dc2626", borderRadius: 6 },
-          { label: "Horas de exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6 },
+          { label: "Atraso", data: datos.map(function (p) { return p.horas_atraso; }), backgroundColor: "#b91c1c", borderRadius: 6, maxBarThickness: 20 },
+          { label: "Exceso", data: datos.map(function (p) { return p.horas_exceso; }), backgroundColor: "#d97706", borderRadius: 6, maxBarThickness: 20 },
         ],
       },
       options: {
@@ -258,10 +300,30 @@
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
+        layout: { padding: { right: 54 } },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var p = datos[ctx.dataIndex];
+                var dias = ctx.datasetIndex === 0 ? p.dias_atraso : p.dias_exceso;
+                var texto = ctx.dataset.label + ": " + formatoHoras(ctx.parsed.x);
+                if (dias) texto += " — en " + dias + (dias === 1 ? " día" : " días");
+                return texto;
+              },
+            },
+          },
+        },
         scales: {
-          x: { beginAtZero: true, title: { display: true, text: "Horas" } },
+          x: {
+            beginAtZero: true,
+            suggestedMax: maxValor * 1.3,
+            title: { display: true, text: "Tiempo (horas y minutos)" },
+            ticks: { callback: function (v) { return formatoHoras(v); } },
+          },
         },
       },
+      plugins: [etiquetasAlFinal],
     });
   })();
 </script>
