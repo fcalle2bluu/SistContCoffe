@@ -250,7 +250,7 @@
                         <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
                         <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
                         <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
-                        <input name="factura_numero" placeholder="N° factura" inputmode="numeric" value="{{ o.factura_numero or '' }}" class="input input-w24" />
+                        <input name="factura_numero" data-opcional placeholder="N° factura" inputmode="numeric" value="{{ o.factura_numero or '' }}" class="input input-w24" />
                       </span>
                       <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                     </form>
@@ -526,7 +526,7 @@
     function actualizar() {
       var requiere = TIPOS_FACTURADOS_CAMBIO.indexOf(select.value) !== -1;
       campos.classList.toggle("oculto", !requiere);
-      campos.querySelectorAll("input").forEach(function (input) {
+      campos.querySelectorAll("input:not([data-opcional])").forEach(function (input) {
         if (requiere) input.setAttribute("required", "required");
         else input.removeAttribute("required");
       });

@@ -488,7 +488,7 @@
             </div>
             <div>
               <label class="field-label">N° factura</label>
-              <input name="factura_numero" inputmode="numeric" class="input input-w28" />
+              <input name="factura_numero" data-opcional inputmode="numeric" class="input input-w28" />
             </div>
           </div>
 
@@ -537,7 +537,7 @@
                   <input name="factura_nit" placeholder="NIT" class="input input-w24" />
                   <input name="factura_celular" placeholder="Celular" class="input input-w24" />
                   <input name="factura_nombre" placeholder="Nombre / Razón social" class="input input-w36" />
-                  <input name="factura_numero" placeholder="N° factura" inputmode="numeric" class="input input-w24" />
+                  <input name="factura_numero" data-opcional placeholder="N° factura" inputmode="numeric" class="input input-w24" />
                 </span>
                 <button type="submit" class="btn btn-primary btn-sm">Confirmar</button>
                 <a href="/dashboard/ventas" class="btn btn-outline btn-sm">Cancelar</a>
@@ -616,7 +616,7 @@
                   <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
                   <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
                   <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
-                  <input name="factura_numero" placeholder="N° factura" inputmode="numeric" value="{{ o.factura_numero or '' }}" class="input input-w24" />
+                  <input name="factura_numero" data-opcional placeholder="N° factura" inputmode="numeric" value="{{ o.factura_numero or '' }}" class="input input-w24" />
                 </span>
                 <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                 <a href="/dashboard/ventas#ventas-cobradas" class="btn btn-outline btn-sm">Cancelar</a>
@@ -1197,7 +1197,7 @@
         return TIPOS_FACTURADOS.indexOf(s.value) !== -1;
       });
       camposFactura.classList.toggle("oculto", !requiereFactura);
-      camposFactura.querySelectorAll("input").forEach(function (input) {
+      camposFactura.querySelectorAll("input:not([data-opcional])").forEach(function (input) {
         if (requiereFactura) input.setAttribute("required", "required");
         else input.removeAttribute("required");
       });
@@ -1236,7 +1236,7 @@
         return TIPOS_FACTURADOS_PENDIENTE.indexOf(s.value) !== -1;
       });
       camposFacturaPendiente.classList.toggle("oculto", !requiere);
-      camposFacturaPendiente.querySelectorAll("input").forEach(function (input) {
+      camposFacturaPendiente.querySelectorAll("input:not([data-opcional])").forEach(function (input) {
         if (requiere) input.setAttribute("required", "required");
         else input.removeAttribute("required");
       });
@@ -1268,7 +1268,7 @@
     function actualizarFacturaCambio() {
       var requiere = TIPOS_FACTURADOS_CAMBIO.indexOf(selectCambio.value) !== -1;
       camposCambio.classList.toggle("oculto", !requiere);
-      camposCambio.querySelectorAll("input").forEach(function (input) {
+      camposCambio.querySelectorAll("input:not([data-opcional])").forEach(function (input) {
         if (requiere) input.setAttribute("required", "required");
         else input.removeAttribute("required");
       });
