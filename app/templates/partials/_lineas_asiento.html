@@ -2,11 +2,20 @@
   {% if lineas %}
   <div class="table-wrap">
     <table class="ledger">
-      <thead><tr><th>Cuenta</th><th class="num">Debe</th><th class="num">Haber</th><th></th></tr></thead>
+      <thead><tr><th class="col-mover" title="Arrastra ⠿ o usa ▲▼ para cambiar el orden"></th><th>Cuenta</th><th class="num">Debe</th><th class="num">Haber</th><th></th></tr></thead>
       <tbody>
         {% for l in lineas %}
-        <tr class="line-row">
-          <td><span {{ color_cuenta(l.codigo_cuenta) }}>{{ l.nombre }}</span></td>
+        <tr class="line-row linea-movible">
+          <td class="col-mover">
+            <span class="agarre-linea" title="Arrastrar para mover arriba o abajo">⠿</span>
+            <button type="button" class="flecha-linea" data-mover="-1" title="Subir" {{ "disabled" if loop.first }}>▲</button>
+            <button type="button" class="flecha-linea" data-mover="1" title="Bajar" {{ "disabled" if loop.last }}>▼</button>
+          </td>
+          <td>
+            <input type="hidden" name="cuenta" value="{{ l.codigo_cuenta }}" />
+            <input type="hidden" name="lado" value="{{ l.lado }}" />
+            <span {{ color_cuenta(l.codigo_cuenta) }}>{{ l.nombre }}</span>
+          </td>
           <td class="num">
             {% if l.lado == "DEBE" %}
             <input type="number" step="0.01" min="0.01" value="{{ '%.2f'|format(l.monto) }}" name="monto"
@@ -33,6 +42,7 @@
         </tr>
         {% endfor %}
         <tr class="subtotal-row">
+          <td></td>
           <td>Total{% if total_debe == total_haber %} — Cuadrado{% endif %}</td>
           <td class="num">{{ total_debe|bs }}</td>
           <td class="num">{{ total_haber|bs }}</td>
@@ -43,10 +53,12 @@
   </div>
   {% endif %}
 
-  {% for l in lineas %}
-  <input type="hidden" name="cuenta" value="{{ l.codigo_cuenta }}" />
-  <input type="hidden" name="lado" value="{{ l.lado }}" />
-  {% endfor %}
+  {# Vuelve a dibujar las líneas en el orden nuevo después de moverlas (sin
+     agregar la cuenta que esté elegida arriba). #}
+  <button type="button" id="reordenar-lineas" hidden
+    hx-post="/dashboard/contabilidad/diario/linea" hx-include="closest form"
+    hx-vals='{"cuenta_selector": "", "monto_selector": ""}'
+    hx-target="#lineas-asiento" hx-swap="outerHTML"></button>
 
   {% if advertencias %}
   <div class="error-box">

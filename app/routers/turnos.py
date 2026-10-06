@@ -104,7 +104,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
         "FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta "
         + NUMERO_MES_SQL +
         "WHERE ld.glosa LIKE '%turno #' || $1 || ').' "
-        "ORDER BY ld.nro_asiento, ld.id",
+        "ORDER BY ld.nro_asiento, COALESCE(ld.orden_linea, 0), ld.debe = 0, ld.id",
         str(turno_id),
     )
     asientos_turno = _agrupar_asientos(filas_diario)

@@ -128,7 +128,7 @@ async def _datos(mes: str) -> dict:
         FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         {contabilidad.NUMERO_MES_SQL}
         WHERE ld.fecha >= $1 AND ld.fecha < $2
-        ORDER BY ld.nro_asiento, ld.debe = 0, ld.id
+        ORDER BY ld.nro_asiento, COALESCE(ld.orden_linea, 0), ld.debe = 0, ld.id
         """,
         mes_ctx["inicio"], mes_ctx["fin"],
     )

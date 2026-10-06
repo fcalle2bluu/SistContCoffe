@@ -95,7 +95,7 @@ async def _filas_libro_diario(mes_ctx: dict, orden: str = "desc") -> list:
         LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         {NUMERO_MES_SQL}
         WHERE ld.fecha >= $1 AND ld.fecha < $2
-        ORDER BY ld.fecha {orden_sql}, ld.nro_asiento {orden_sql}, ld.debe = 0, ld.id
+        ORDER BY ld.fecha {orden_sql}, ld.nro_asiento {orden_sql}, COALESCE(ld.orden_linea, 0), ld.debe = 0, ld.id
         """,
         mes_ctx["desde"], mes_ctx["hasta"],
     )
@@ -331,7 +331,7 @@ async def editar_asiento_form(request: Request, nro_asiento: int, session: dict 
         SELECT ld.fecha, ld.codigo_cuenta, cc.nombre AS cuenta_nombre, ld.debe, ld.haber, ld.glosa, ld.es_apertura
         FROM libro_diario ld LEFT JOIN cuentas_contables cc ON cc.codigo = ld.codigo_cuenta
         WHERE ld.nro_asiento = $1
-        ORDER BY ld.debe = 0, ld.id
+        ORDER BY COALESCE(ld.orden_linea, 0), ld.debe = 0, ld.id
         """,
         nro_asiento,
     )
@@ -456,14 +456,16 @@ def _fecha_asiento(fecha: str, apertura: bool) -> date:
 
 
 async def _insertar_asiento(conn, fecha: date, nro: int, lineas: list[dict], glosa: str, apertura: bool) -> int:
-    """Inserta las líneas del asiento y, si es de apertura, renumera el
-    Diario para que quede primero en su mes. Devuelve su número final."""
+    """Inserta las líneas del asiento en el orden en que quedaron en el
+    formulario (se pueden arrastrar arriba/abajo; `orden_linea` guarda ese
+    orden) y, si es de apertura, renumera el Diario para que quede primero
+    en su mes. Devuelve su número final."""
     primer_id = None
-    for l in lineas:
+    for posicion, l in enumerate(lineas, start=1):
         id_linea = await conn.fetchval(
             """
-            INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa, es_apertura)
-            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+            INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa, es_apertura, orden_linea)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
             """,
             fecha,
             nro,
@@ -472,6 +474,7 @@ async def _insertar_asiento(conn, fecha: date, nro: int, lineas: list[dict], glo
             l["monto"] if l["lado"] == "HABER" else 0,
             glosa,
             apertura,
+            posicion,
         )
         primer_id = primer_id or id_linea
     await _ordenar_diario(conn)

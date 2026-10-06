@@ -156,11 +156,64 @@
       el.blur();
     }
   });
+  var reordenando = false;
   document.body.addEventListener("htmx:afterSwap", function (e) {
     if (e.target && e.target.id === "lineas-asiento") {
+      if (reordenando) { reordenando = false; return; }
       var sel = document.querySelector('select[name="cuenta_selector"]');
       if (sel) sel.focus();
     }
+  });
+
+  // Mover líneas del asiento: arrastrando el agarre ⠿ o con ▲▼. El orden de
+  // las filas es el orden en que se envían y se guardan.
+  function guardarOrden() {
+    reordenando = true;
+    var btn = document.getElementById("reordenar-lineas");
+    if (btn) btn.click();
+  }
+  document.addEventListener("click", function (e) {
+    var flecha = e.target.closest(".flecha-linea");
+    if (!flecha) return;
+    var fila = flecha.closest("tr");
+    if (flecha.dataset.mover === "-1") {
+      var antes = fila.previousElementSibling;
+      if (antes && antes.classList.contains("linea-movible")) fila.parentNode.insertBefore(fila, antes);
+    } else {
+      var despues = fila.nextElementSibling;
+      if (despues && despues.classList.contains("linea-movible")) fila.parentNode.insertBefore(despues, fila);
+    }
+    guardarOrden();
+  });
+  var arrastrada = null;
+  document.addEventListener("mousedown", function (e) {
+    var agarre = e.target.closest(".agarre-linea");
+    if (agarre) agarre.closest("tr").setAttribute("draggable", "true");
+  });
+  document.addEventListener("dragstart", function (e) {
+    var fila = e.target.closest && e.target.closest("tr.linea-movible");
+    if (!fila || fila.getAttribute("draggable") !== "true") return;
+    arrastrada = fila;
+    fila.classList.add("arrastrando");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", "");
+  });
+  document.addEventListener("dragover", function (e) {
+    if (!arrastrada) return;
+    var fila = e.target.closest && e.target.closest("tr.linea-movible");
+    if (!fila || fila === arrastrada || fila.parentNode !== arrastrada.parentNode) return;
+    e.preventDefault();
+    var caja = fila.getBoundingClientRect();
+    var abajo = e.clientY > caja.top + caja.height / 2;
+    fila.parentNode.insertBefore(arrastrada, abajo ? fila.nextElementSibling : fila);
+  });
+  document.addEventListener("drop", function (e) { if (arrastrada) e.preventDefault(); });
+  document.addEventListener("dragend", function () {
+    if (!arrastrada) return;
+    arrastrada.classList.remove("arrastrando");
+    arrastrada.removeAttribute("draggable");
+    arrastrada = null;
+    guardarOrden();
   });
 })();
 </script>

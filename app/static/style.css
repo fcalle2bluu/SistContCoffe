@@ -872,3 +872,15 @@ a { color: inherit; }
   display: inline-block; padding: 1px 8px; border-radius: 999px; margin-right: 4px;
   background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase;
 }
+
+/* Mover líneas de un asiento (agarre ⠿ y flechas ▲▼). */
+.col-mover { width: 1%; white-space: nowrap; }
+.agarre-linea { cursor: grab; font-size: 22px; font-weight: 700; color: #57534e; padding: 0 6px; user-select: none; vertical-align: middle; }
+.agarre-linea:active { cursor: grabbing; }
+.flecha-linea {
+  border: 1px solid var(--border, #d6d3d1); background: transparent; border-radius: 6px;
+  font-size: 10px; line-height: 1; padding: 3px 5px; cursor: pointer; color: var(--muted);
+}
+.flecha-linea:hover:not([disabled]) { background: var(--accent-soft); color: var(--accent-strong); }
+.flecha-linea[disabled] { opacity: .3; cursor: default; }
+tr.arrastrando { opacity: .45; outline: 2px dashed var(--accent); }
