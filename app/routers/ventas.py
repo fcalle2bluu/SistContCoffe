@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -162,6 +163,54 @@ CUENTA_COMISION_LINKSER = "502030103"
 CUENTA_CREDITO_FISCAL = "1130203"  # CRÉDITO FISCAL — IVA de compras con factura
 
 
+@asynccontextmanager
+async def _conexion(conn=None):
+    """Usa la conexión (y transacción) que ya trae quien llama, o abre una
+    propia — así los asientos del cierre de un turno se pueden rehacer
+    dentro de una sola transacción (ver _rehacer_asientos_ventas_turno)."""
+    if conn is not None:
+        yield conn
+        return
+    async with pool().acquire() as propia:
+        async with propia.transaction():
+            yield propia
+
+
+async def _rehacer_asientos_ventas_turno(turno_id: int) -> int:
+    """Rehace los asientos de ventas de un turno YA CERRADO cuando se corrige
+    una venta después del cierre (p. ej. en Control de Turnos se cambia el
+    método de pago a uno con factura): borra los asientos de ventas de ese
+    turno ("Ventas … (turno #N)." / "(cierre de caja, turno #N).") y los
+    vuelve a generar igual que al cerrar, con los datos actuales. Devuelve
+    cuántos asientos quedaron."""
+    async with pool().acquire() as conn:
+        async with conn.transaction():
+            await conn.execute("SELECT pg_advisory_xact_lock(hashtext('libro_diario_nro_asiento'))")
+            await conn.execute(
+                "DELETE FROM libro_diario WHERE glosa LIKE 'Ventas %' "
+                "AND (glosa LIKE '%(turno #' || $1 || ').' OR glosa LIKE '%, turno #' || $1 || ').')",
+                str(turno_id),
+            )
+            await _ordenar_diario(conn)
+            await _registrar_ventas_efectivo_en_diario(turno_id, conn)
+            await _registrar_ventas_qr_en_diario(turno_id, conn)
+            await _registrar_ventas_facturadas_en_diario(turno_id, conn)
+            return await conn.fetchval(
+                "SELECT COUNT(DISTINCT nro_asiento) FROM libro_diario WHERE glosa LIKE 'Ventas %' "
+                "AND (glosa LIKE '%(turno #' || $1 || ').' OR glosa LIKE '%, turno #' || $1 || ').')",
+                str(turno_id),
+            )
+
+
+async def _turno_cerrado_de_orden(orden_id: int) -> int | None:
+    """El turno de una venta, solo si ese turno ya está cerrado (sus ventas
+    ya se asentaron al cerrarlo)."""
+    return await pool().fetchval(
+        "SELECT t.id FROM ordenes o JOIN turnos t ON t.id = o.turno_id WHERE o.id = $1 AND t.estado <> 'abierto'",
+        orden_id,
+    )
+
+
 async def _fecha_turno(turno_id: int):
     """Fecha contable de los asientos que genera el cierre de un turno: el
     día en que se ABRIÓ el turno (cuando se hicieron las ventas), no el día
@@ -171,7 +220,7 @@ async def _fecha_turno(turno_id: int):
     return _fecha_bolivia(abierto_en) if abierto_en else hoy_bolivia()
 
 
-async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
+async def _registrar_ventas_efectivo_en_diario(turno_id: int, conn=None) -> None:
     """Al cerrar un turno, asienta en el Libro Diario el total de ventas en
     efectivo SIN factura de ese turno (Debe Caja Chica, Haber Ventas): la
     plata entra a la caja del turno y ahí se queda hasta que se retira con
@@ -194,22 +243,21 @@ async def _registrar_ventas_efectivo_en_diario(turno_id: int) -> None:
     glosa = f"Ventas en efectivo del turno de {turno['responsable']} (cierre de caja, turno #{turno_id})."
     fecha = await _fecha_turno(turno_id)
 
-    async with pool().acquire() as conn:
-        async with conn.transaction():
-            siguiente = await _siguiente_nro_asiento(conn, fecha)
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_CAJA_CHICA, float(total), glosa,
-            )
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
-            )
+    async with _conexion(conn) as conn:
+        siguiente = await _siguiente_nro_asiento(conn, fecha)
+        await conn.execute(
+            "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+            "VALUES ($1, $2, $3, $4, 0, $5)",
+            fecha, siguiente, CUENTA_CAJA_CHICA, float(total), glosa,
+        )
+        await conn.execute(
+            "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+            "VALUES ($1, $2, $3, 0, $4, $5)",
+            fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
+        )
 
 
-async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
+async def _registrar_ventas_qr_en_diario(turno_id: int, conn=None) -> None:
     """Al cerrar un turno, asienta en el Libro Diario el total de ventas por
     QR SIN factura de ese turno (Debe Banco, Haber Ventas). QR/FAC no pasa
     por aquí: se registra en _registrar_ventas_facturadas_en_diario."""
@@ -226,19 +274,18 @@ async def _registrar_ventas_qr_en_diario(turno_id: int) -> None:
     glosa = f"Ventas por QR del turno de {turno['responsable']} (cierre de caja, turno #{turno_id})."
     fecha = await _fecha_turno(turno_id)
 
-    async with pool().acquire() as conn:
-        async with conn.transaction():
-            siguiente = await _siguiente_nro_asiento(conn, fecha)
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, $4, 0, $5)",
-                fecha, siguiente, CUENTA_BANCO, float(total), glosa,
-            )
-            await conn.execute(
-                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                "VALUES ($1, $2, $3, 0, $4, $5)",
-                fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
-            )
+    async with _conexion(conn) as conn:
+        siguiente = await _siguiente_nro_asiento(conn, fecha)
+        await conn.execute(
+            "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+            "VALUES ($1, $2, $3, $4, 0, $5)",
+            fecha, siguiente, CUENTA_BANCO, float(total), glosa,
+        )
+        await conn.execute(
+            "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+            "VALUES ($1, $2, $3, 0, $4, $5)",
+            fecha, siguiente, CUENTA_VENTAS, float(total), glosa,
+        )
 
 
 async def _registrar_egreso_en_diario(
@@ -398,7 +445,7 @@ async def _registrar_reposicion_caja_en_diario(fecha, monto: float, motivo: str,
             )
 
 
-async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
+async def _registrar_ventas_facturadas_en_diario(turno_id: int, conn=None) -> None:
     """Al cerrar un turno, asienta las ventas con factura (EFEC/FAC, QR/FAC y
     POS/FAC) desglosando IT (3%) e IVA (13%) sobre el total, igual que se
     calculaba a mano en el Excel. Las ventas QR/FAC van directo al Banco.
@@ -427,47 +474,46 @@ async def _registrar_ventas_facturadas_en_diario(turno_id: int) -> None:
 
     cantidad_asientos = len(totales)
 
-    async with pool().acquire() as conn:
-        async with conn.transaction():
-            siguiente = await _siguiente_nro_asiento(conn, fecha, cantidad=cantidad_asientos)
+    async with _conexion(conn) as conn:
+        siguiente = await _siguiente_nro_asiento(conn, fecha, cantidad=cantidad_asientos)
 
-            async def linea(nro: int, codigo: str, debe: float, haber: float, glosa: str) -> None:
-                await conn.execute(
-                    "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
-                    "VALUES ($1, $2, $3, $4, $5, $6)",
-                    fecha, nro, codigo, debe, haber, glosa,
-                )
+        async def linea(nro: int, codigo: str, debe: float, haber: float, glosa: str) -> None:
+            await conn.execute(
+                "INSERT INTO libro_diario (fecha, nro_asiento, codigo_cuenta, debe, haber, glosa) "
+                "VALUES ($1, $2, $3, $4, $5, $6)",
+                fecha, nro, codigo, debe, haber, glosa,
+            )
 
-            if "EFEC/FAC" in totales:
-                total = totales["EFEC/FAC"]
-                it = round(total * TASA_IT, 2)
-                iva = round(total * TASA_IVA, 2)
-                venta_neta = round(total - iva, 2)
-                glosa = f"Ventas en efectivo con factura del turno de {turno['responsable']} (turno #{turno_id})."
-                await linea(siguiente, CUENTA_CAJA_CHICA, total, 0, glosa)
-                await linea(siguiente, CUENTA_IT, it, 0, glosa)
-                await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
-                await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
-                await linea(siguiente, CUENTA_VENTAS, 0, venta_neta, glosa)
-                siguiente += 1
+        if "EFEC/FAC" in totales:
+            total = totales["EFEC/FAC"]
+            it = round(total * TASA_IT, 2)
+            iva = round(total * TASA_IVA, 2)
+            venta_neta = round(total - iva, 2)
+            glosa = f"Ventas en efectivo con factura del turno de {turno['responsable']} (turno #{turno_id})."
+            await linea(siguiente, CUENTA_CAJA_CHICA, total, 0, glosa)
+            await linea(siguiente, CUENTA_IT, it, 0, glosa)
+            await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
+            await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
+            await linea(siguiente, CUENTA_VENTAS, 0, venta_neta, glosa)
+            siguiente += 1
 
-            if "QR/FAC" in totales:
-                total = totales["QR/FAC"]
-                it = round(total * TASA_IT, 2)
-                iva = round(total * TASA_IVA, 2)
-                venta_neta = round(total - iva, 2)
-                glosa = f"Ventas QR con factura del turno de {turno['responsable']} (turno #{turno_id})."
-                await linea(siguiente, CUENTA_BANCO, total, 0, glosa)
-                await linea(siguiente, CUENTA_IT, it, 0, glosa)
-                await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
-                await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
-                await linea(siguiente, CUENTA_VENTAS, 0, venta_neta, glosa)
-                siguiente += 1
+        if "QR/FAC" in totales:
+            total = totales["QR/FAC"]
+            it = round(total * TASA_IT, 2)
+            iva = round(total * TASA_IVA, 2)
+            venta_neta = round(total - iva, 2)
+            glosa = f"Ventas QR con factura del turno de {turno['responsable']} (turno #{turno_id})."
+            await linea(siguiente, CUENTA_BANCO, total, 0, glosa)
+            await linea(siguiente, CUENTA_IT, it, 0, glosa)
+            await linea(siguiente, CUENTA_IT_POR_PAGAR, 0, it, glosa)
+            await linea(siguiente, CUENTA_IVA, 0, iva, glosa)
+            await linea(siguiente, CUENTA_VENTAS, 0, venta_neta, glosa)
+            siguiente += 1
 
-            if "POS/FAC" in totales:
-                for codigo, debe, haber in _lineas_pos_fac(totales["POS/FAC"]):
-                    await linea(siguiente, codigo, debe, haber,
-                                f"Ventas POS con factura del turno de {turno['responsable']} (turno #{turno_id}).")
+        if "POS/FAC" in totales:
+            for codigo, debe, haber in _lineas_pos_fac(totales["POS/FAC"]):
+                await linea(siguiente, codigo, debe, haber,
+                            f"Ventas POS con factura del turno de {turno['responsable']} (turno #{turno_id}).")
 
 
 def _lineas_pos_fac(total: float) -> list[tuple[str, float, float]]:
@@ -1012,6 +1058,9 @@ async def aplicar_descuento_orden(
             )
             await conn.execute("UPDATE ordenes SET total = $1 WHERE id = $2", nuevo_precio_num, orden_id)
 
+    turno_cerrado_id = await _turno_cerrado_de_orden(orden_id)
+    if turno_cerrado_id:
+        await _rehacer_asientos_ventas_turno(turno_cerrado_id)
     await bitacora.registrar(
         session,
         "Aplicó descuento a venta",
@@ -1088,7 +1137,10 @@ async def cambiar_metodo_pago_orden(
         if factura_numero:
             detalle += f", factura N° {factura_numero}"
     if orden["turno_estado"] != "abierto":
-        detalle += " (turno ya cerrado: si ya estaba contabilizado en el Libro Diario, revísalo a mano)."
+        turno_id = await _turno_cerrado_de_orden(orden_id)
+        if turno_id:
+            await _rehacer_asientos_ventas_turno(turno_id)
+            detalle += f" (turno #{turno_id} ya cerrado: se rehicieron sus asientos de ventas en el Libro Diario)."
     await bitacora.registrar(session, "Cambió método de pago de venta", detalle)
     return RedirectResponse(next, status_code=303)
 
@@ -1319,7 +1371,10 @@ async def cancelar_orden(orden_id: int, session: dict = Depends(require_session)
 async def eliminar_orden(orden_id: int, session: dict = Depends(require_session)):
     orden = await pool().fetchrow("SELECT mesa, total, tipo_pago FROM ordenes WHERE id = $1", orden_id)
     if orden:
+        turno_cerrado_id = await _turno_cerrado_de_orden(orden_id)
         await pool().execute("DELETE FROM ordenes WHERE id = $1", orden_id)
+        if turno_cerrado_id:
+            await _rehacer_asientos_ventas_turno(turno_cerrado_id)
         await bitacora.registrar(
             session, "Eliminó venta", f"Orden #{orden_id}, mesa {orden['mesa']}, Bs {orden['total']:.2f}"
         )
