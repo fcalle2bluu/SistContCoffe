@@ -214,7 +214,7 @@
               {{ o.tipo_pago or "—" }}
               {% if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') %}
               <span class="muted-sm normal-case">
-                NIT {{ o.factura_nit or "—" }} · {{ o.factura_celular or "—" }} · {{ o.factura_nombre or "—" }}
+                NIT {{ o.factura_nit or "—" }} · {{ o.factura_celular or "—" }} · {{ o.factura_nombre or "—" }}{% if o.factura_numero %} · Factura N° {{ o.factura_numero }}{% endif %}
               </span>
               {% endif %}
             </td>
@@ -250,6 +250,7 @@
                         <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
                         <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
                         <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
+                        <input name="factura_numero" placeholder="N° factura" inputmode="numeric" value="{{ o.factura_numero or '' }}" class="input input-w24" />
                       </span>
                       <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                     </form>

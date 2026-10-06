@@ -40,7 +40,7 @@
         <thead>
           <tr>
             <th>Fecha</th><th>Hora</th><th>Mesa</th><th>Pago</th><th class="num">Total</th>
-            <th>NIT</th><th>Nombre / razón social</th><th>Celular</th><th>Responsable</th><th>SIAT</th>
+            <th>N° factura</th><th>NIT</th><th>Nombre / razón social</th><th>Celular</th><th>Responsable</th><th>SIAT</th>
           </tr>
         </thead>
         <tbody>
@@ -51,6 +51,7 @@
             <td>{{ f.mesa }}</td>
             <td>{{ f.tipo_pago }}</td>
             <td class="num">{{ f.total|bs }}</td>
+            <td class="mono">{{ f.factura_numero or "—" }}</td>
             <td>{{ f.factura_nit or "—" }}</td>
             <td>{{ f.factura_nombre or "—" }}</td>
             <td>{{ f.factura_celular or "—" }}</td>
@@ -79,7 +80,7 @@
         <thead>
           <tr>
             <th>Hora</th><th>Mesa</th><th>Pago</th><th class="num">Total</th>
-            <th>NIT</th><th>Nombre / razón social</th><th>Celular</th><th>Responsable</th><th>SIAT</th>
+            <th>N° factura</th><th>NIT</th><th>Nombre / razón social</th><th>Celular</th><th>Responsable</th><th>SIAT</th>
           </tr>
         </thead>
         <tbody>
@@ -89,6 +90,7 @@
             <td>{{ f.mesa }}</td>
             <td>{{ f.tipo_pago }}</td>
             <td class="num">{{ f.total|bs }}</td>
+            <td class="mono">{{ f.factura_numero or "—" }}</td>
             <td>{{ f.factura_nit or "—" }}</td>
             <td>{{ f.factura_nombre or "—" }}</td>
             <td>{{ f.factura_celular or "—" }}</td>

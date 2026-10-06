@@ -486,6 +486,10 @@
               <label class="field-label">Nombre / Razón social</label>
               <input name="factura_nombre" class="input" />
             </div>
+            <div>
+              <label class="field-label">N° factura</label>
+              <input name="factura_numero" inputmode="numeric" class="input input-w28" />
+            </div>
           </div>
 
           <div class="order-actions">
@@ -533,6 +537,7 @@
                   <input name="factura_nit" placeholder="NIT" class="input input-w24" />
                   <input name="factura_celular" placeholder="Celular" class="input input-w24" />
                   <input name="factura_nombre" placeholder="Nombre / Razón social" class="input input-w36" />
+                  <input name="factura_numero" placeholder="N° factura" inputmode="numeric" class="input input-w24" />
                 </span>
                 <button type="submit" class="btn btn-primary btn-sm">Confirmar</button>
                 <a href="/dashboard/ventas" class="btn btn-outline btn-sm">Cancelar</a>
@@ -611,6 +616,7 @@
                   <input name="factura_nit" placeholder="NIT" value="{{ o.factura_nit or '' }}" class="input input-w24" />
                   <input name="factura_celular" placeholder="Celular" value="{{ o.factura_celular or '' }}" class="input input-w24" />
                   <input name="factura_nombre" placeholder="Nombre / Razón social" value="{{ o.factura_nombre or '' }}" class="input input-w36" />
+                  <input name="factura_numero" placeholder="N° factura" inputmode="numeric" value="{{ o.factura_numero or '' }}" class="input input-w24" />
                 </span>
                 <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                 <a href="/dashboard/ventas#ventas-cobradas" class="btn btn-outline btn-sm">Cancelar</a>
@@ -669,7 +675,7 @@
               {% endif %}
               {% if o.tipo_pago in ('EFEC/FAC', 'QR/FAC', 'POS/FAC') %}
               <span class="muted-sm normal-case">
-                NIT {{ o.factura_nit or "—" }} · {{ o.factura_celular or "—" }} · {{ o.factura_nombre or "—" }}
+                NIT {{ o.factura_nit or "—" }} · {{ o.factura_celular or "—" }} · {{ o.factura_nombre or "—" }}{% if o.factura_numero %} · Factura N° {{ o.factura_numero }}{% endif %}
               </span>
               <br />
               {% if o.siat_registrado %}

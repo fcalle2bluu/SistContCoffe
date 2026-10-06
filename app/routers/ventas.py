@@ -648,7 +648,7 @@ async def _ventas_context(
     if turno:
         ordenes_cobradas = await pool().fetch(
             "SELECT id, mesa, total, tipo_pago, responsable, cobrado_en, "
-            "factura_nit, factura_celular, factura_nombre, siat_registrado FROM ordenes "
+            "factura_nit, factura_celular, factura_nombre, factura_numero, siat_registrado FROM ordenes "
             "WHERE turno_id = $1 AND estado = 'cobrada' ORDER BY cobrado_en DESC",
             turno["id"],
         )
@@ -826,6 +826,7 @@ async def crear_orden(
     factura_nit: str = Form(""),
     factura_celular: str = Form(""),
     factura_nombre: str = Form(""),
+    factura_numero: str = Form(""),
     observacion: str = Form(""),
     cart_producto_id: list[str] = Form([]),
     cart_cantidad: list[str] = Form([]),
@@ -867,8 +868,8 @@ async def crear_orden(
             orden_id = await conn.fetchval(
                 """
                 INSERT INTO ordenes (turno_id, mesa, estado, tipo_pago, monto_pagado, responsable, observacion,
-                                      total, cobrado_en, factura_nit, factura_celular, factura_nombre)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id
+                                      total, cobrado_en, factura_nit, factura_celular, factura_nombre, factura_numero)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id
                 """,
                 int(turno_id),
                 mesa,
@@ -882,6 +883,7 @@ async def crear_orden(
                 factura_nit.strip() or None,
                 factura_celular.strip() or None,
                 factura_nombre.strip() or None,
+                factura_numero.strip() or None,
             )
             for it in cart:
                 await conn.execute(
@@ -924,6 +926,7 @@ async def cobrar_orden_pendiente(
     factura_nit: str = Form(""),
     factura_celular: str = Form(""),
     factura_nombre: str = Form(""),
+    factura_numero: str = Form(""),
 ):
     orden = await pool().fetchrow("SELECT total FROM ordenes WHERE id = $1 AND estado = 'abierta'", orden_id)
     if not orden:
@@ -943,7 +946,7 @@ async def cobrar_orden_pendiente(
         async with conn.transaction():
             await conn.execute(
                 "UPDATE ordenes SET estado = 'cobrada', tipo_pago = $1, monto_pagado = $2, cobrado_en = now(), "
-                "factura_nit = $3, factura_celular = $4, factura_nombre = $5 "
+                "factura_nit = $3, factura_celular = $4, factura_nombre = $5, factura_numero = $7 "
                 "WHERE id = $6 AND estado = 'abierta'",
                 tipo_pago_final,
                 monto_pagado_final,
@@ -951,6 +954,7 @@ async def cobrar_orden_pendiente(
                 factura_celular.strip() or None,
                 factura_nombre.strip() or None,
                 orden_id,
+                factura_numero.strip() or None,
             )
             for pago_tipo, pago_monto in pagos:
                 await conn.execute(
@@ -1026,12 +1030,14 @@ async def cambiar_metodo_pago_orden(
     factura_nit: str = Form(""),
     factura_celular: str = Form(""),
     factura_nombre: str = Form(""),
+    factura_numero: str = Form(""),
     next: str = Form("/dashboard/ventas"),
 ):
     tipo_pago = tipo_pago.strip()
     factura_nit = factura_nit.strip()
     factura_celular = factura_celular.strip()
     factura_nombre = factura_nombre.strip()
+    factura_numero = factura_numero.strip()
 
     orden = await pool().fetchrow(
         "SELECT o.total, o.mesa, t.estado AS turno_estado FROM ordenes o "
@@ -1058,13 +1064,14 @@ async def cambiar_metodo_pago_orden(
     async with pool().acquire() as conn:
         async with conn.transaction():
             await conn.execute(
-                "UPDATE ordenes SET tipo_pago = $1, factura_nit = $2, factura_celular = $3, factura_nombre = $4 "
-                "WHERE id = $5",
+                "UPDATE ordenes SET tipo_pago = $1, factura_nit = $2, factura_celular = $3, factura_nombre = $4, "
+                "factura_numero = $6 WHERE id = $5",
                 tipo_pago,
                 factura_nit or None,
                 factura_celular or None,
                 factura_nombre or None,
                 orden_id,
+                (factura_numero or None) if tipo_pago in TIPOS_FACTURADOS else None,
             )
             await conn.execute("DELETE FROM orden_pagos WHERE orden_id = $1", orden_id)
             await conn.execute(
@@ -1078,6 +1085,8 @@ async def cambiar_metodo_pago_orden(
     detalle = f"Orden #{orden_id} (mesa {orden['mesa']}) → {tipo_pago}"
     if tipo_pago in TIPOS_FACTURADOS:
         detalle += f", factura a nombre de {factura_nombre} (NIT {factura_nit})"
+        if factura_numero:
+            detalle += f", factura N° {factura_numero}"
     if orden["turno_estado"] != "abierto":
         detalle += " (turno ya cerrado: si ya estaba contabilizado en el Libro Diario, revísalo a mano)."
     await bitacora.registrar(session, "Cambió método de pago de venta", detalle)
@@ -1321,7 +1330,7 @@ async def eliminar_orden(orden_id: int, session: dict = Depends(require_session)
 async def ticket_orden(request: Request, orden_id: int, session: dict = Depends(require_session)):
     orden = await pool().fetchrow(
         "SELECT id, mesa, total, tipo_pago, responsable, creado_en, cobrado_en, "
-        "factura_nit, factura_celular, factura_nombre FROM ordenes WHERE id = $1",
+        "factura_nit, factura_celular, factura_nombre, factura_numero FROM ordenes WHERE id = $1",
         orden_id,
     )
     if not orden:

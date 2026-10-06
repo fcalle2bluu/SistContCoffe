@@ -966,7 +966,7 @@ async def facturas_page(
 
     columnas = (
         "id, mesa, total, tipo_pago, responsable, cobrado_en, "
-        "factura_nit, factura_celular, factura_nombre, siat_registrado"
+        "factura_nit, factura_celular, factura_nombre, factura_numero, siat_registrado"
     )
     facturas_hoy = [] if not (mes_ctx["desde"] <= hoy < mes_ctx["hasta"]) else await pool().fetch(
         f"""

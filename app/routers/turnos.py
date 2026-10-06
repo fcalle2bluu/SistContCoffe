@@ -45,7 +45,7 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
 
     ordenes = await pool().fetch(
         "SELECT id, mesa, estado, total, tipo_pago, responsable, creado_en, cobrado_en, observacion, "
-        "factura_nit, factura_celular, factura_nombre FROM ordenes "
+        "factura_nit, factura_celular, factura_nombre, factura_numero FROM ordenes "
         "WHERE turno_id = $1 ORDER BY creado_en",
         turno_id,
     )
