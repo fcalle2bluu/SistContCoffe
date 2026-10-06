@@ -1,3 +1,4 @@
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, time, timedelta, timezone
 
@@ -311,6 +312,16 @@ async def _registrar_egreso_en_diario(
         async with conn.transaction():
             siguiente = await _siguiente_nro_asiento(conn, fecha)
             await _insertar_lineas(conn, fecha, siguiente, lineas, glosa)
+
+
+def _egreso_con_factura(casilla: str, tipo_pago: str, motivo: str) -> bool:
+    """Un egreso va con factura (separa Crédito Fiscal) aunque no se tilde la
+    casilla, si se pagó con un método "/FAC" o si el detalle dice que hay
+    factura — pasaba que se cargaban compras con factura sin tildar y se
+    perdía el crédito fiscal. Un "Recibo" no cuenta: no da crédito fiscal."""
+    if casilla in ("1", "si", "on", "true") or tipo_pago in TIPOS_FACTURADOS:
+        return True
+    return bool(re.search(r"\bfactura\b", motivo, re.I)) and not re.search(r"\bsin\s+factura\b", motivo, re.I)
 
 
 def _lineas_egreso(
@@ -1608,7 +1619,7 @@ async def registrar_movimiento_caja(
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
     categoria = categoria.strip()
-    con_factura_bool = con_factura in ("1", "si", "on", "true")
+    con_factura_bool = _egreso_con_factura(con_factura, tipo_pago, motivo)
     try:
         monto_num = float(monto)
     except ValueError:
@@ -1786,7 +1797,7 @@ async def editar_movimiento_caja(
     motivo = motivo.strip()
     tipo_pago = tipo_pago.strip()
     categoria = categoria.strip()
-    con_factura_bool = con_factura in ("1", "si", "on", "true")
+    con_factura_bool = _egreso_con_factura(con_factura, tipo_pago, motivo)
     try:
         monto_num = float(monto)
     except ValueError:
