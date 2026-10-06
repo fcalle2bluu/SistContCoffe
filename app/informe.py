@@ -433,7 +433,8 @@ def _seccion_contable(d: dict, ancho: float) -> list:
                 _bs(m["haber"]) if m["haber"] and m["haber"] > 0 else "",
                 _bs(m["saldo"]),
             ])
-        filas.append(["", "", f"Saldo final — {cta['nombre']}", "", "", "", _bs(cta["saldo_final"])])
+        filas.append(["", "", f"Totales y saldo final — {cta['nombre']}", "",
+                      _bs(cta["total_debe"]), _bs(cta["total_haber"]), _bs(cta["saldo_final"])])
         t = Table(filas, colWidths=[c * ancho for c in (0.06, 0.1, 0.32, 0.18, 0.11, 0.11, 0.12)], repeatRows=2)
         t.setStyle(TableStyle([
             ("SPAN", (0, 0), (-1, 0)),
@@ -442,7 +443,7 @@ def _seccion_contable(d: dict, ancho: float) -> list:
             ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"), ("TEXTCOLOR", (0, 1), (-1, 1), GRIS),
             ("BACKGROUND", (0, 1), (-1, 1), FONDO_CABECERA),
             ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("SPAN", (2, -1), (5, -1)), ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("SPAN", (2, -1), (3, -1)), ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
             ("BACKGROUND", (0, -1), (-1, -1), ACENTO_SUAVE),
             ("LINEBELOW", (0, 0), (-1, -1), 0.4, BORDE), ("BOX", (0, 0), (-1, -1), 0.8, TINTA),
             ("ALIGN", (4, 1), (6, -1), "RIGHT"), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),

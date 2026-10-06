@@ -89,7 +89,9 @@
         </tr>
         {% endfor %}
         <tr {{ color_cuenta(cta.codigo, "subtotal-row") }}>
-          <td colspan="5">Saldo final — {{ cta.nombre }}</td>
+          <td colspan="3">Totales y saldo final — {{ cta.nombre }}</td>
+          <td class="num">{{ cta.total_debe|bs }}</td>
+          <td class="num">{{ cta.total_haber|bs }}</td>
           <td class="num">{{ cta.saldo_final|bs }}</td>
         </tr>
         {% endfor %}

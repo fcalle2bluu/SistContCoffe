@@ -660,9 +660,13 @@ async def _cuentas_mayor(cuenta: str | None, mes_ctx: dict):
                 "nombre": f["cuenta_nombre"] or f["codigo_cuenta"],
                 "movimientos": [],
                 "saldo_final": 0.0,
+                "total_debe": 0.0,
+                "total_haber": 0.0,
             }
             saldo = 0.0
         saldo += float(f["debe"]) - float(f["haber"])
+        actual["total_debe"] += float(f["debe"])
+        actual["total_haber"] += float(f["haber"])
         actual["movimientos"].append(
             {
                 "nro_asiento": f["nro_asiento"],
