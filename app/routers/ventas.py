@@ -984,6 +984,12 @@ async def cobrar_orden_pendiente(
     if not error and any(t in TIPOS_FACTURADOS for t, _ in pagos):
         if not factura_nit.strip() or not factura_celular.strip() or not factura_nombre.strip():
             error = "Para facturar, completa NIT, celular y nombre."
+    # La venta pasa al turno que la cobra (donde entra la plata), aunque la
+    # cuenta se haya abierto en un turno anterior que ya cerró: así aparece
+    # en sus ventas, en su arqueo y en sus asientos al cerrarlo.
+    turno_actual = await pool().fetchval("SELECT id FROM turnos WHERE estado = 'abierto' ORDER BY id DESC LIMIT 1")
+    if not error and turno_actual is None:
+        error = "No hay un turno abierto: abre un turno para cobrar esta cuenta."
     if error:
         ctx = await _ventas_context(session, error=error)
         return templates.TemplateResponse(request, "dashboard/ventas.html", ctx, status_code=400)
@@ -992,7 +998,7 @@ async def cobrar_orden_pendiente(
         async with conn.transaction():
             await conn.execute(
                 "UPDATE ordenes SET estado = 'cobrada', tipo_pago = $1, monto_pagado = $2, cobrado_en = now(), "
-                "factura_nit = $3, factura_celular = $4, factura_nombre = $5, factura_numero = $7 "
+                "factura_nit = $3, factura_celular = $4, factura_nombre = $5, factura_numero = $7, turno_id = $8 "
                 "WHERE id = $6 AND estado = 'abierta'",
                 tipo_pago_final,
                 monto_pagado_final,
@@ -1001,6 +1007,7 @@ async def cobrar_orden_pendiente(
                 factura_nombre.strip() or None,
                 orden_id,
                 factura_numero.strip() or None,
+                turno_actual,
             )
             for pago_tipo, pago_monto in pagos:
                 await conn.execute(
