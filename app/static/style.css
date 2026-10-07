@@ -909,3 +909,6 @@ tr.arrastrando { opacity: .45; outline: 2px dashed var(--accent); }
 .asist-muestra { display: inline-block; width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 3px; }
 .asist-muestra.asist-f-ok { background: #bbf7d0; } .asist-muestra.asist-f-falta { background: #fecaca; }
 .asist-muestra.asist-f-ausente { background: #d4d4d8; } .asist-muestra.asist-f-curso { background: #bfdbfe; }
+
+/* Dentro del modal de productos la tabla se ajusta al ancho (sin barra horizontal). */
+.modal-box .data-table { min-width: 0; }

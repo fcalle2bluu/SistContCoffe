@@ -1293,11 +1293,21 @@ async def editar_items_orden(
     agregado = round(cantidad_num * float(producto["precio_venta"]), 2)
     async with pool().acquire() as conn:
         async with conn.transaction():
-            await conn.execute(
-                "INSERT INTO orden_items (orden_id, producto_id, producto_nombre, cantidad, precio_unitario) "
-                "VALUES ($1, $2, $3, $4, $5)",
-                orden_id, producto["id"], producto["nombre"], cantidad_num, float(producto["precio_venta"]),
+            # Si el producto ya está en el pedido (al mismo precio), se suma a
+            # esa línea en vez de repetirlo en otra.
+            existente = await conn.fetchval(
+                "SELECT id FROM orden_items WHERE orden_id = $1 AND producto_id = $2 AND precio_unitario = $3 "
+                "ORDER BY id LIMIT 1",
+                orden_id, producto["id"], float(producto["precio_venta"]),
             )
+            if existente:
+                await conn.execute("UPDATE orden_items SET cantidad = cantidad + $1 WHERE id = $2", cantidad_num, existente)
+            else:
+                await conn.execute(
+                    "INSERT INTO orden_items (orden_id, producto_id, producto_nombre, cantidad, precio_unitario) "
+                    "VALUES ($1, $2, $3, $4, $5)",
+                    orden_id, producto["id"], producto["nombre"], cantidad_num, float(producto["precio_venta"]),
+                )
             await _recalcular_total_orden(conn, orden_id)
 
     await bitacora.registrar(
