@@ -187,7 +187,7 @@ def _horas_esperadas(hora_inicio: dtime, hora_fin: dtime) -> float:
 
 def _cuadricula_asistencia(
     jornadas_mes: list[dict], usuarios: list, horarios: dict[int, dict[int, tuple]], inicio_mes: date,
-    fin_mes: date, hoy: date,
+    fin_mes: date, hoy: date, inicio_registros: date | None = None,
 ) -> list[dict]:
     """Cuadrícula del mes: una fila por persona, una celda por día,
     comparando el horario que le tocaba contra lo que marcó. Reemplaza al
@@ -229,6 +229,11 @@ def _cuadricula_asistencia(
                     celda["detalle"] = f'Marcó {celda["entrada"]} — sin horario asignado para comparar.'
                 else:
                     celda["detalle"] = "Sin horario asignado."
+            elif inicio_registros is None or dia < inicio_registros:
+                # Antes de que se empezara a marcar asistencia en el sistema
+                # no hay datos: no se cuenta como falta.
+                celda["estado"] = "sin_datos"
+                celda["detalle"] = "Todavía no se registraba asistencia en el sistema."
             elif not rango:
                 celda["estado"] = "libre"
                 celda["detalle"] = "Día libre."
@@ -243,6 +248,7 @@ def _cuadricula_asistencia(
                 jornada = por_usuario_dia.get((u["id"], dia.isoformat()))
                 if jornada is None or jornada["entrada"] is None:
                     celda["estado"] = "ausente"
+                    celda["falta_min"] = round(_horas_esperadas(hora_inicio_esperada, hora_fin_esperada) * 60)
                     celda["detalle"] = f'No marcó entrada — le tocaba {celda["esperado"]}.'
                 else:
                     entrada_local = jornada["entrada"].astimezone(_TZ_BOLIVIA)
@@ -253,8 +259,20 @@ def _cuadricula_asistencia(
                         real_dt = datetime.combine(date(2000, 1, 1), entrada_local.time())
                         atraso_min = round((real_dt - esperada_dt).total_seconds() / 60)
                     exceso_min = 0
+                    salida_temprana_min = 0
                     if jornada["salida"] is not None:
-                        celda["salida"] = f'{jornada["salida"].astimezone(_TZ_BOLIVIA):%H:%M}'
+                        salida_local = jornada["salida"].astimezone(_TZ_BOLIVIA)
+                        celda["salida"] = f"{salida_local:%H:%M}"
+                        if salida_local.time() < hora_fin_esperada:
+                            fin_dt = datetime.combine(date(2000, 1, 1), hora_fin_esperada)
+                            real_dt = datetime.combine(date(2000, 1, 1), salida_local.time())
+                            salida_temprana_min = round((fin_dt - real_dt).total_seconds() / 60)
+                    elif jornada["auto"]:
+                        celda["sin_salida"] = True
+                    # Minutos que le faltan a esa franja, como en el reporte del
+                    # reloj: lo que llegó tarde + lo que se fue antes de hora.
+                    celda["falta_min"] = atraso_min + salida_temprana_min
+                    celda["salida_temprana_min"] = salida_temprana_min
                     if jornada["segundos"] is not None:
                         esperado_h = _horas_esperadas(hora_inicio_esperada, hora_fin_esperada)
                         trabajado_h = jornada["segundos"] / 3600
@@ -263,6 +281,8 @@ def _cuadricula_asistencia(
                     celda["atraso_min"] = atraso_min
                     celda["exceso_min"] = exceso_min
                     partes = [f'Entró {celda["entrada"]} (le tocaba {celda["esperado"]})']
+                    if salida_temprana_min > 0:
+                        partes.append(f"salió {salida_temprana_min} min antes")
                     if atraso_min > 0 and exceso_min > 0:
                         celda["estado"] = "atraso_exceso"
                         partes.append(f"{atraso_min} min tarde, {exceso_min} min de más")
@@ -280,7 +300,12 @@ def _cuadricula_asistencia(
                         partes.append("a tiempo")
                     celda["detalle"] = " — ".join(partes) + "."
             celdas.append(celda)
-        filas.append({"usuario_id": u["id"], "nombre": u["nombre"], "celdas": celdas})
+        filas.append({
+            "usuario_id": u["id"],
+            "nombre": u["nombre"],
+            "celdas": celdas,
+            "total_falta_min": sum(c.get("falta_min") or 0 for c in celdas),
+        })
     return filas
 
 
@@ -339,6 +364,8 @@ async def asistencia_page(
         "AND nombre IS NOT NULL AND nombre <> '' ORDER BY nombre"
     )
     horarios = await _horarios_por_usuario()
+    primera_marca = await pool().fetchval("SELECT MIN(marcado_en) FROM asistencias")
+    inicio_registros = primera_marca.astimezone(_TZ_BOLIVIA).date() if primera_marca else None
     dias_mes_cab = []
     d = inicio_mes
     while d < fin_mes:
@@ -349,7 +376,7 @@ async def asistencia_page(
         "active": "asistencia",
         "jornadas_dia": sorted(jornadas_dia, key=lambda j: j["nombre"]),
         "cuadricula_asistencia": _cuadricula_asistencia(
-            jornadas_mes, usuarios_cuadricula, horarios, inicio_mes, fin_mes, hoy_bolivia()
+            jornadas_mes, usuarios_cuadricula, horarios, inicio_mes, fin_mes, hoy_bolivia(), inicio_registros
         ),
         "dias_mes_cab": dias_mes_cab,
         "calendario": _calendario(inicio_mes, fin_mes, jornadas_mes),

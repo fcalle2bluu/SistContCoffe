@@ -192,29 +192,28 @@
     <p class="muted">No hay personal de mostrador para mostrar acá todavía.</p>
     {% else %}
     <p class="muted-sm">
-      Un casillero por día: compara el horario que le tocaba contra lo que marcó.
-      <strong>T</strong> = llegó tarde · <strong>+</strong> = trabajó de más · <strong>T+</strong> = las dos cosas ·
-      <strong>✕</strong> = no marcó entrada ese día · <strong>✓</strong> = a tiempo.
+      Como el reporte del reloj: cada casillero muestra la <strong>entrada</strong> y la <strong>salida</strong> de ese día,
+      y abajo <strong>cuántos minutos le faltaron</strong> (lo que llegó tarde + lo que se fue antes de su hora).
+      Pasa el mouse por un casillero para ver el detalle.
     </p>
     <div class="asist-leyenda">
-      <span class="asist-leyenda-item"><span class="asist-celda asist-a-tiempo">✓</span> A tiempo</span>
-      <span class="asist-leyenda-item"><span class="asist-celda asist-atraso">T</span> Atraso</span>
-      <span class="asist-leyenda-item"><span class="asist-celda asist-exceso">+</span> Exceso</span>
-      <span class="asist-leyenda-item"><span class="asist-celda asist-atraso-exceso">T+</span> Atraso y exceso</span>
-      <span class="asist-leyenda-item"><span class="asist-celda asist-ausente">✕</span> No marcó</span>
-      <span class="asist-leyenda-item"><span class="asist-celda asist-libre"></span> Día libre</span>
-      <span class="asist-leyenda-item"><span class="asist-celda asist-sin-horario">·</span> Sin horario cargado</span>
+      <span class="asist-leyenda-item"><span class="asist-muestra asist-f-ok"></span> Completo</span>
+      <span class="asist-leyenda-item"><span class="asist-muestra asist-f-falta"></span> Le faltaron minutos</span>
+      <span class="asist-leyenda-item"><span class="asist-muestra asist-f-ausente"></span> No marcó (falta el día)</span>
+      <span class="asist-leyenda-item"><span class="asist-muestra asist-f-curso"></span> En curso / sin salida</span>
+      <span class="asist-leyenda-item"><span class="asist-muestra asist-f-libre"></span> Día libre</span>
     </div>
     <div class="table-wrap">
-      <table class="asist-tabla">
+      <table class="asist-reporte">
         <thead>
           <tr>
             <th class="asist-col-nombre">Persona</th>
             {% for d in dias_mes_cab %}
-            <th class="asist-col-dia{{ ' asist-hoy' if d.es_hoy else '' }}">
+            <th class="asist-r-dia{{ ' asist-hoy' if d.es_hoy else '' }}">
               <span class="asist-dia-letra">{{ d.letra }}</span><span class="asist-dia-numero">{{ d.numero }}</span>
             </th>
             {% endfor %}
+            <th class="asist-r-total">Total faltó</th>
           </tr>
         </thead>
         <tbody>
@@ -222,19 +221,31 @@
           <tr>
             <td class="asist-col-nombre">{{ fila.nombre }}</td>
             {% for c in fila.celdas %}
-            <td class="asist-col-dia{{ ' asist-hoy' if c.es_hoy else '' }}">
-              <span class="asist-celda asist-{{ c.estado|replace('_', '-') }}" title="{{ fila.nombre }} {{ c.numero }}/{{ mes_nombre }} — {{ c.detalle or '' }}">
-                {%- if c.estado == 'a_tiempo' -%}✓
-                {%- elif c.estado == 'atraso' -%}T
-                {%- elif c.estado == 'exceso' -%}+
-                {%- elif c.estado == 'atraso_exceso' -%}T+
-                {%- elif c.estado == 'ausente' -%}✕
-                {%- elif c.estado == 'en_curso' -%}…
-                {%- elif c.estado == 'sin_horario' and c.entrada -%}•
-                {%- endif -%}
-              </span>
+            {% set clase = {
+              'a_tiempo': 'ok', 'exceso': 'ok', 'atraso': 'falta', 'atraso_exceso': 'falta', 'ausente': 'ausente',
+              'en_curso': 'curso', 'libre': 'libre', 'futuro': 'futuro', 'sin_horario': 'sin-horario', 'sin_datos': 'sin-datos'}[c.estado] %}
+            {% if c.falta_min and c.estado in ('a_tiempo', 'exceso', 'en_curso') %}{% set clase = 'falta' %}{% endif %}
+            {% if c.sin_salida and clase == 'ok' %}{% set clase = 'curso' %}{% endif %}
+            <td class="asist-r-dia{{ ' asist-hoy' if c.es_hoy else '' }}">
+              <div class="asist-franja asist-f-{{ clase }}" title="{{ fila.nombre }} {{ c.numero }}/{{ mes_nombre }} — {{ c.detalle or '' }}">
+                {% if c.entrada %}
+                <span class="asist-hora">{{ c.entrada }}</span>
+                <span class="asist-hora">{{ c.salida or ('s/salida' if c.sin_salida else '—') }}</span>
+                {% if c.falta_min %}<span class="asist-falta">−{{ c.falta_min }} min</span>
+                {% elif c.estado in ('a_tiempo', 'exceso') %}<span class="asist-ok">✓</span>{% endif %}
+                {% elif c.estado == 'ausente' %}
+                <span class="asist-falta-dia">Faltó</span>
+                <span class="asist-falta">−{{ c.falta_min }} min</span>
+                {% endif %}
+              </div>
             </td>
             {% endfor %}
+            <td class="asist-r-total">
+              {% if fila.total_falta_min %}
+              <span class="asist-falta">−{{ fila.total_falta_min }} min</span>
+              <span class="asist-total-horas">{{ fila.total_falta_min // 60 }} h {{ '%02d'|format(fila.total_falta_min % 60) }} min</span>
+              {% else %}<span class="asist-ok">✓</span>{% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
