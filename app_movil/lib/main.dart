@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'api_client.dart';
+import 'insumos_tab.dart';
 import 'llamados.dart';
 import 'turnos_tab.dart';
 import 'update_checker.dart';
@@ -282,11 +283,13 @@ class _HomeShellState extends State<_HomeShell> {
     final paginas = [
       _AsistenciaTab(sesion: widget.sesion, onLogout: widget.onLogout),
       _CocinaTab(sesion: widget.sesion),
+      InsumosTab(sesion: widget.sesion),
       if (esAdmin) TurnosTab(sesion: widget.sesion),
     ];
     final destinos = [
       const NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Asistencia'),
       const NavigationDestination(icon: Icon(Icons.restaurant), label: 'Cocina'),
+      const NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'Insumos'),
       if (esAdmin) const NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Turnos'),
     ];
     final tabActual = _tab < paginas.length ? _tab : 0;

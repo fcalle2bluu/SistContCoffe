@@ -146,6 +146,56 @@ class ApiClient {
     }
   }
 
+  /// Control de Insumos del mes (`mes` = "AAAA-MM", o null para el actual):
+  /// compras, total, medidas, solicitantes y productos comprados seguido.
+  static Future<Map<String, dynamic>?> insumos(Sesion sesion, {String? mes}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/insumos').replace(queryParameters: mes == null ? null : {'mes': mes});
+      final resp = await http.get(uri, headers: {'Cookie': sesion.cookie});
+      if (resp.statusCode != 200) return null;
+      final datos = jsonDecode(resp.body);
+      return datos is Map<String, dynamic> ? datos : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Registra una compra de insumo. Devuelve null si salió bien, o el
+  /// mensaje de error para mostrar.
+  static Future<String?> registrarInsumo(Sesion sesion, Map<String, String> datos) async {
+    try {
+      final resp = await http.post(Uri.parse('$baseUrl/api/insumos'), headers: {'Cookie': sesion.cookie}, body: datos);
+      if (resp.statusCode == 303 || resp.statusCode == 401) return 'Tu sesión expiró. Vuelve a iniciar sesión.';
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      return json['ok'] == true ? null : (json['error'] as String? ?? 'No se pudo guardar.');
+    } catch (_) {
+      return 'No se pudo conectar. Revisa tu internet.';
+    }
+  }
+
+  static Future<String?> eliminarInsumo(Sesion sesion, int id) async {
+    try {
+      final resp = await http.post(Uri.parse('$baseUrl/api/insumos/$id/eliminar'), headers: {'Cookie': sesion.cookie});
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      return json['ok'] == true ? null : (json['error'] as String? ?? 'No se pudo eliminar.');
+    } catch (_) {
+      return 'No se pudo conectar. Revisa tu internet.';
+    }
+  }
+
+  /// Agrega una medida o un solicitante nuevo a la lista ("medidas" o
+  /// "solicitantes"). Devuelve el nombre como quedó guardado, o null.
+  static Future<String?> agregarReferenciaInsumo(Sesion sesion, String tipo, String nombre) async {
+    try {
+      final resp = await http.post(Uri.parse('$baseUrl/api/insumos/$tipo'),
+          headers: {'Cookie': sesion.cookie}, body: {'nombre': nombre});
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      return json['ok'] == true ? json['nombre'] as String? : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Trae la lista de turnos (Control de Turnos), solo para admins.
   static Future<List<Map<String, dynamic>>?> turnos(Sesion sesion) async {
     try {
