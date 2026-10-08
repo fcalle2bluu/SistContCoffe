@@ -652,8 +652,7 @@ async def _ventas_context(
     hoy = hoy_bolivia()
     inicio_dia = datetime.combine(hoy, time.min, BOLIVIA_TZ)
     fin_dia = inicio_dia + timedelta(days=1)
-    turnos_hoy = await pool().fetch(
-        """
+    sql_turnos = """
         SELECT t.id, t.responsable, t.estado, t.abierto_en, t.cerrado_en, t.monto_final_declarado,
                COALESCE(v.cantidad_ventas, 0) AS cantidad_ventas,
                COALESCE(v.total_ventas, 0) AS total_ventas
@@ -662,11 +661,20 @@ async def _ventas_context(
             SELECT turno_id, COUNT(*) AS cantidad_ventas, SUM(total) AS total_ventas
             FROM ordenes WHERE estado = 'cobrada' GROUP BY turno_id
         ) v ON v.turno_id = t.id
-        WHERE t.abierto_en >= $1 AND t.abierto_en < $2
-        ORDER BY t.abierto_en
-        """,
+    """
+    turnos_hoy = await pool().fetch(
+        sql_turnos + " WHERE t.abierto_en >= $1 AND t.abierto_en < $2 ORDER BY t.abierto_en",
         inicio_dia, fin_dia,
     )
+    # Si hoy todavía no hubo turno (p. ej. el primero de la mañana), se
+    # muestra el último turno aunque sea de un día anterior, con su arqueo,
+    # para saber con qué quedó el cajón antes de abrir.
+    turnos_anteriores = False
+    if not turnos_hoy:
+        turnos_hoy = await pool().fetch(
+            sql_turnos + " WHERE t.abierto_en < $1 ORDER BY t.abierto_en DESC LIMIT 1", inicio_dia
+        )
+        turnos_anteriores = bool(turnos_hoy)
     # Al abrir caja se muestra qué quedó contado en el arqueo del/los
     # turno(s) anterior(es) de hoy, para poder chequear a simple vista lo
     # que debería haber en el cajón antes de empezar el turno nuevo.
@@ -771,6 +779,7 @@ async def _ventas_context(
         "active": "ventas",
         "turno": turno,
         "turnos_hoy": turnos_hoy,
+        "turnos_anteriores": turnos_anteriores,
         "arqueo_por_turno": arqueo_por_turno,
         "categorias_egreso": categorias_egreso,
         "mesas": mesas,

@@ -20,7 +20,11 @@
     <h3 class="card-title">No hay turno abierto</h3>
 
     {% if turnos_hoy|length > 0 %}
+    {% if turnos_anteriores %}
+    <p class="muted-sm strong" style="margin-top:8px;">Hoy todavía no hubo turnos — último turno, del {{ turnos_hoy[0].abierto_en|fecha }}</p>
+    {% else %}
     <p class="muted-sm strong" style="margin-top:8px;">Turnos de hoy ({{ turnos_hoy|length }})</p>
+    {% endif %}
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr><th>Responsable</th><th>Apertura</th><th>Cierre</th><th class="text-right">Ventas</th><th class="text-right">Total ventas</th><th class="text-right">Cierre declarado</th><th></th></tr></thead>
