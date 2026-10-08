@@ -171,12 +171,19 @@ def _mes_api(mes: str | None) -> tuple[date, date]:
     return inicio, fin
 
 
-def _compra_json(c, session: dict) -> dict:
+def _compra_json(c, session: dict, nro: int) -> dict:
+    inicial = float(c["cantidad"])
+    final = float(c["cantidad_final"]) if c["cantidad_final"] is not None else None
     return {
         "id": c["id"],
+        # N° de ítem dentro del mes (1 = la primera compra del mes).
+        "nro": nro,
         "fecha": c["fecha"].isoformat(),
         "detalle": c["detalle"],
-        "cantidad": float(c["cantidad"]),
+        "cantidad": inicial,
+        # Lo que queda; el uso sale solo (inicial − final). None = todavía no se anotó.
+        "cantidad_final": final,
+        "uso": round(inicial - final, 3) if final is not None else None,
         "medida": c["medida"],
         "precio_unitario": round(float(c["precio_unitario"]), 2),
         "total": round(float(c["total"]), 2),
@@ -192,8 +199,8 @@ def _compra_json(c, session: dict) -> dict:
 async def insumos_api(session: dict = Depends(require_session), mes: str | None = None):
     inicio, fin = _mes_api(mes)
     compras = await pool().fetch(
-        "SELECT id, fecha, detalle, cantidad, medida, respaldo, precio_unitario, total, solicitante, responsable "
-        "FROM compras_insumos WHERE fecha >= $1 AND fecha < $2 ORDER BY fecha DESC, id DESC",
+        "SELECT id, fecha, detalle, cantidad, cantidad_final, medida, respaldo, precio_unitario, total, "
+        "solicitante, responsable FROM compras_insumos WHERE fecha >= $1 AND fecha < $2 ORDER BY fecha DESC, id DESC",
         inicio, fin,
     )
     medidas, solicitantes = await _listas_referencia()
@@ -208,7 +215,7 @@ async def insumos_api(session: dict = Depends(require_session), mes: str | None 
         "mes_siguiente": f"{fin:%Y-%m}" if fin <= hoy else None,
         "hoy": hoy.isoformat(),
         "total": round(sum(float(c["total"]) for c in compras), 2),
-        "compras": [_compra_json(c, session) for c in compras],
+        "compras": [_compra_json(c, session, len(compras) - i) for i, c in enumerate(compras)],
         "medidas": [m["nombre"] for m in medidas],
         "solicitantes": [s["nombre"] for s in solicitantes],
         "detalles_frecuentes": [d["detalle"] for d in detalles],
@@ -263,6 +270,34 @@ async def eliminar_insumo_api(insumo_id: int, session: dict = Depends(require_se
     await pool().execute("DELETE FROM compras_insumos WHERE id = $1", insumo_id)
     await bitacora.registrar(
         session, "Eliminó compra de insumo", f"Insumo #{insumo_id}: {compra['detalle']} — Bs {float(compra['total']):.2f} (desde la app)"
+    )
+    return JSONResponse({"ok": True})
+
+
+@router_api.post("/{insumo_id}/final")
+async def cantidad_final_api(insumo_id: int, session: dict = Depends(require_session), cantidad_final: str = Form("")):
+    """Anota cuánto queda del insumo (cualquier usuario). Vacío = borrar lo anotado."""
+    compra = await pool().fetchrow("SELECT detalle, cantidad, medida FROM compras_insumos WHERE id = $1", insumo_id)
+    if not compra:
+        return JSONResponse({"ok": False, "error": "Esa compra ya no existe."}, status_code=404)
+    texto = cantidad_final.strip().replace(",", ".")
+    final = None
+    if texto:
+        try:
+            final = float(texto)
+        except ValueError:
+            return JSONResponse({"ok": False, "error": "Escribe un número."}, status_code=400)
+        if final < 0 or final > float(compra["cantidad"]):
+            return JSONResponse(
+                {"ok": False, "error": f"Tiene que estar entre 0 y {float(compra['cantidad']):g} (lo que se compró)."},
+                status_code=400,
+            )
+    await pool().execute("UPDATE compras_insumos SET cantidad_final = $1 WHERE id = $2", final, insumo_id)
+    medida = compra["medida"] or ""
+    await bitacora.registrar(
+        session, "Anotó cantidad final de insumo",
+        f"Insumo #{insumo_id}: {compra['detalle']} — queda {final:g} {medida} (desde la app)" if final is not None
+        else f"Insumo #{insumo_id}: {compra['detalle']} — borró la cantidad final (desde la app)",
     )
     return JSONResponse({"ok": True})
 

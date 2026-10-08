@@ -22,7 +22,9 @@ String _tituloDia(String iso, String hoyIso) {
 
 /// Pestaña "Insumos" (todos los usuarios): lo mismo que Control de Insumos
 /// de la web — compras del mes agrupadas por día, con su total, y un botón
-/// grande para registrar una compra nueva.
+/// grande para registrar una compra nueva. Cada compra es un ítem numerado
+/// con cantidad inicial (lo comprado), final (lo que queda, se anota
+/// tocándola) y usado (inicial − final, sale solo).
 class InsumosTab extends StatefulWidget {
   final Sesion sesion;
   /// Solo para pruebas: reemplaza la consulta al servidor.
@@ -111,6 +113,143 @@ class _InsumosTabState extends State<InsumosTab> {
     }
   }
 
+  /// Pide cuánto queda del insumo, con atajos "Se acabó" y "Está entero".
+  Future<void> _anotarFinal(Map<String, dynamic> c) async {
+    final inicial = c['cantidad'] as num;
+    final medida = (c['medida'] as String?) ?? '';
+    final actual = c['cantidad_final'] as num?;
+    final ctrl = TextEditingController(text: actual == null ? '' : _cantidad(actual));
+    final valor = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
+        final n = double.tryParse(ctrl.text.trim().replaceAll(',', '.'));
+        final fuera = n != null && (n < 0 || n > inicial);
+        return AlertDialog(
+          backgroundColor: _colorTarjeta,
+          title: Text('¿Cuánto queda de ${c['detalle']}?', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Se compró ${_cantidad(inicial)} $medida', style: const TextStyle(color: Colors.white54)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(labelText: 'Cantidad final', suffixText: medida),
+              onChanged: (_) => setD(() {}),
+              onSubmitted: (v) => Navigator.pop(ctx, v),
+            ),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(onPressed: () => Navigator.pop(ctx, '0'), child: const Text('Se acabó (0)')),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, _cantidad(inicial)),
+                  child: const Text('Está entero'),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            Text(
+              n == null
+                  ? 'El uso se calcula solo: inicial − final.'
+                  : fuera
+                      ? 'Tiene que estar entre 0 y ${_cantidad(inicial)}.'
+                      : 'Usado: ${_cantidad(inicial - n)} $medida',
+              style: TextStyle(color: fuera ? Colors.redAccent : _colorAcento, fontWeight: FontWeight.bold),
+            ),
+          ]),
+          actions: [
+            if (actual != null)
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, ''),
+                child: Text('Borrar', style: TextStyle(color: Colors.red.shade300)),
+              ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _colorAcento),
+              onPressed: () => Navigator.pop(ctx, ctrl.text),
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      }),
+    );
+    if (valor == null) return;
+    final error = await ApiClient.anotarFinalInsumo(widget.sesion, c['id'] as int, valor.trim());
+    if (!mounted) return;
+    if (error != null) {
+      _aviso(error, error: true);
+    } else {
+      _aviso(valor.trim().isEmpty ? 'Cantidad final borrada' : 'Cantidad final anotada ✓');
+      _cargar();
+    }
+  }
+
+  /// Las tres cajitas Inicial / Final / Usado de cada ítem. "Final" se toca
+  /// para anotar lo que queda.
+  Widget _cantidades(Map<String, dynamic> c, {required VoidCallback alAnotar}) {
+    final medida = (c['medida'] as String?) ?? '';
+    final inicial = c['cantidad'] as num;
+    final fin = c['cantidad_final'] as num?;
+    final uso = c['uso'] as num?;
+    Widget caja(String etiqueta, String valor, {Color color = Colors.white, VoidCallback? alTocar, bool resaltar = false}) {
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: alTocar,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F1F1F),
+              borderRadius: BorderRadius.circular(10),
+              border: resaltar ? Border.all(color: _colorAcento) : null,
+            ),
+            child: Column(children: [
+              Text(etiqueta, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              const SizedBox(height: 2),
+              Text(valor,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15)),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    return Column(children: [
+      Row(children: [
+        caja('Inicial', '${_cantidad(inicial)} $medida'),
+        const SizedBox(width: 6),
+        caja(
+          'Final',
+          fin == null ? 'Anotar' : '${_cantidad(fin)} $medida',
+          color: fin == null ? _colorAcento : Colors.white,
+          alTocar: alAnotar,
+          resaltar: fin == null,
+        ),
+        const SizedBox(width: 6),
+        caja('Usado', uso == null ? '—' : '${_cantidad(uso)} $medida',
+            color: uso == null ? Colors.white38 : const Color(0xFF4ADE80)),
+      ]),
+      if (fin != null && inicial > 0) ...[
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: (fin / inicial).clamp(0, 1).toDouble(),
+            minHeight: 5,
+            backgroundColor: Colors.white10,
+            color: fin == 0 ? Colors.redAccent : _colorAcento,
+          ),
+        ),
+      ],
+    ]);
+  }
+
   void _verDetalle(Map<String, dynamic> c) {
     showModalBottomSheet(
       context: context,
@@ -123,12 +262,18 @@ class _InsumosTabState extends State<InsumosTab> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text('Ítem N° ${c['nro']}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
               Text(c['detalle'] as String,
                   style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Text(_bs(c['total'] as num),
                   style: const TextStyle(color: _colorAcento, fontSize: 26, fontWeight: FontWeight.w800)),
               const SizedBox(height: 14),
+              _cantidades(c, alAnotar: () {
+                Navigator.pop(ctx);
+                _anotarFinal(c);
+              }),
+              const SizedBox(height: 8),
               _filaDetalle(Icons.event, 'Fecha', _tituloDia(c['fecha'] as String, _datos!['hoy'] as String)),
               _filaDetalle(Icons.scale, 'Cantidad',
                   '${_cantidad(c['cantidad'] as num)} ${c['medida'] ?? ''} × ${_bs(c['precio_unitario'] as num)}'),
@@ -271,17 +416,38 @@ class _InsumosTabState extends State<InsumosTab> {
                   color: _colorTarjeta,
                   margin: const EdgeInsets.only(bottom: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
                     onTap: () => _verDetalle(c),
-                    title: Text(c['detalle'] as String,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      '${_cantidad(c['cantidad'] as num)} ${c['medida'] ?? ''} × ${_bs(c['precio_unitario'] as num)}'
-                      '${c['solicitante'] != null ? ' · ${c['solicitante']}' : ''}',
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Row(children: [
+                          CircleAvatar(
+                            radius: 15,
+                            backgroundColor: _colorAcento.withValues(alpha: 0.2),
+                            child: Text('${c['nro']}',
+                                style: const TextStyle(color: _colorAcento, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(c['detalle'] as String,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                              Text(
+                                '${_bs(c['precio_unitario'] as num)} c/u'
+                                '${c['solicitante'] != null ? ' · ${c['solicitante']}' : ''}',
+                                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                              ),
+                            ]),
+                          ),
+                          Text(_bs(c['total'] as num),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        ]),
+                        const SizedBox(height: 10),
+                        _cantidades(c, alAnotar: () => _anotarFinal(c)),
+                      ]),
                     ),
-                    trailing: Text(_bs(c['total'] as num),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                 ),
             ],

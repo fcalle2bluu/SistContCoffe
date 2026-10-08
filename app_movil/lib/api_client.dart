@@ -183,6 +183,20 @@ class ApiClient {
     }
   }
 
+  /// Anota cuánto queda de un insumo (`cantidad` vacío = borrar lo anotado).
+  /// Devuelve null si salió bien, o el mensaje de error.
+  static Future<String?> anotarFinalInsumo(Sesion sesion, int id, String cantidad) async {
+    try {
+      final resp = await http.post(Uri.parse('$baseUrl/api/insumos/$id/final'),
+          headers: {'Cookie': sesion.cookie}, body: {'cantidad_final': cantidad});
+      if (resp.statusCode == 303 || resp.statusCode == 401) return 'Tu sesión expiró. Vuelve a iniciar sesión.';
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      return json['ok'] == true ? null : (json['error'] as String? ?? 'No se pudo guardar.');
+    } catch (_) {
+      return 'No se pudo conectar. Revisa tu internet.';
+    }
+  }
+
   /// Agrega una medida o un solicitante nuevo a la lista ("medidas" o
   /// "solicitantes"). Devuelve el nombre como quedó guardado, o null.
   static Future<String?> agregarReferenciaInsumo(Sesion sesion, String tipo, String nombre) async {
