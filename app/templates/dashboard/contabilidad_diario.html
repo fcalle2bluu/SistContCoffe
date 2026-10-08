@@ -53,7 +53,7 @@
         </div>
         <div>
           <label class="field-label">Monto (Bs)</label>
-          <input name="monto_selector" type="number" step="0.01" class="input input-w28" />
+          <input name="monto_selector" type="text" autocomplete="off" placeholder="0.00 o =fórmula" class="input input-w28 campo-formula" />
         </div>
         <button type="button" class="btn btn-outline"
           hx-post="/dashboard/contabilidad/diario/linea" hx-include="closest form"
@@ -139,8 +139,98 @@
   </div>
 </div>
 
+<div id="ayuda-formula" class="ayuda-formula" hidden>
+  <div class="ayuda-formula-resultado"><span>Resultado</span><strong id="ayuda-formula-valor">—</strong></div>
+  <p class="ayuda-formula-titulo">Fórmula como en Excel</p>
+  <p>Empieza con <b>=</b> y usa números con <b>+ − * /</b> y paréntesis.</p>
+  <table>
+    <tr><td><code>=30*0.13</code></td><td>30 por 0,13 → 3,90</td></tr>
+    <tr><td><code>=(120+35.5)/2</code></td><td>con paréntesis → 77,75</td></tr>
+    <tr><td><code>=L1*0.13</code></td><td>monto de la línea 1 × 13% (IVA)</td></tr>
+    <tr><td><code>=L1*0.03</code></td><td>IT de la línea 1</td></tr>
+    <tr><td><code>=L1-L2-L3</code></td><td>línea 1 menos líneas 2 y 3</td></tr>
+    <tr><td><code>=DEBE</code> / <code>=HABER</code></td><td>suma de todo el Debe / Haber</td></tr>
+    <tr><td><code>=DIF</code></td><td>lo que falta para cuadrar</td></tr>
+  </table>
+  <p class="ayuda-formula-lineas" id="ayuda-formula-lineas"></p>
+  <p class="ayuda-formula-pie">Al presionar Enter o «+ Agregar línea» se guarda el número ya calculado.</p>
+</div>
+
 <script>
 (function () {
+  // ---- Fórmulas en el monto (mismo cálculo que hace el servidor) ----
+  function lineasActuales(excluir) {
+    var lineas = [];
+    document.querySelectorAll("#lineas-asiento tr.linea-movible").forEach(function (tr) {
+      var input = tr.querySelector('input[name="monto"]');
+      if (input === excluir) return;
+      var lado = tr.querySelector('input[name="lado"]').value;
+      var nombre = (tr.querySelector("td:nth-child(2) span:last-child") || {}).textContent || "";
+      var valor = parseFloat((input.value || "").replace(",", "."));
+      lineas.push({ lado: lado, monto: isNaN(valor) ? 0 : valor, nombre: nombre.trim() });
+    });
+    return lineas;
+  }
+  function evaluar(texto, lineas) {
+    var expr = texto.replace(/^\s*=/, "").replace(/,/g, ".").trim();
+    if (!expr) throw new Error("Escribe la fórmula después del =");
+    var debe = 0, haber = 0;
+    lineas.forEach(function (l) { if (l.lado === "DEBE") debe += l.monto; else haber += l.monto; });
+    var re = /\s*(?:(\d+(?:\.\d*)?|\.\d+)|(L\d+|DEBE|HABER|DIF)|([-+*\/()]))/iy, tokens = [], m;
+    re.lastIndex = 0;
+    while (re.lastIndex < expr.length) {
+      var antes = re.lastIndex;
+      m = re.exec(expr);
+      if (!m) { if (expr.slice(antes).trim() === "") break; throw new Error("No se entiende «" + expr.slice(antes).trim().slice(0, 10) + "»"); }
+      if (m[1] !== undefined) tokens.push(parseFloat(m[1]));
+      else if (m[2] !== undefined) {
+        var r = m[2].toUpperCase();
+        if (r === "DEBE") tokens.push(debe);
+        else if (r === "HABER") tokens.push(haber);
+        else if (r === "DIF") tokens.push(Math.abs(debe - haber));
+        else { var n = parseInt(r.slice(1), 10); if (n < 1 || n > lineas.length) throw new Error("No existe la línea " + r); tokens.push(lineas[n - 1].monto); }
+      } else tokens.push(m[3]);
+    }
+    var i = 0;
+    function ver() { return tokens[i]; }
+    function suma() { var v = prod(); while (ver() === "+" || ver() === "-") { v = tokens[i++] === "+" ? v + prod() : v - prod(); } return v; }
+    function prod() { var v = fac(); while (ver() === "*" || ver() === "/") { if (tokens[i++] === "*") v *= fac(); else { var d = fac(); if (d === 0) throw new Error("No se puede dividir entre 0"); v /= d; } } return v; }
+    function fac() {
+      var t = ver();
+      if (t === "-") { i++; return -fac(); }
+      if (t === "+") { i++; return fac(); }
+      if (t === "(") { i++; var v = suma(); if (ver() !== ")") throw new Error("Falta cerrar un paréntesis"); i++; return v; }
+      if (typeof t === "number") { i++; return t; }
+      throw new Error("La fórmula está incompleta");
+    }
+    var res = suma();
+    if (i !== tokens.length) throw new Error("Sobra algo al final");
+    return Math.round(res * 100) / 100;
+  }
+  var ayuda = document.getElementById("ayuda-formula");
+  function mostrarAyuda(input) {
+    var texto = input.value || "";
+    if (texto.trim().charAt(0) !== "=") { ayuda.hidden = true; return; }
+    var esSelector = input.name === "monto_selector";
+    var lineas = lineasActuales(esSelector ? null : input);
+    var valor = document.getElementById("ayuda-formula-valor");
+    try {
+      var r = evaluar(texto, esSelector ? lineas : lineasActuales(null).slice(0, Array.prototype.indexOf.call(document.querySelectorAll('#lineas-asiento input[name="monto"]'), input)));
+      valor.textContent = "= " + r.toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      valor.className = r > 0 ? "ok" : "mal";
+    } catch (e) { valor.textContent = e.message; valor.className = "mal"; }
+    var lista = lineasActuales(null).map(function (l, k) { return "<b>L" + (k + 1) + "</b> " + l.nombre + " " + l.monto.toFixed(2); });
+    document.getElementById("ayuda-formula-lineas").innerHTML = lista.length ? "Líneas: " + lista.join(" · ") : "Todavía no hay líneas: agrega una para poder usar L1, L2…";
+    var caja = input.getBoundingClientRect();
+    ayuda.hidden = false;
+    ayuda.style.top = (window.scrollY + caja.bottom + 6) + "px";
+    ayuda.style.left = Math.max(8, Math.min(window.scrollX + caja.left, window.scrollX + document.documentElement.clientWidth - ayuda.offsetWidth - 8)) + "px";
+  }
+  document.addEventListener("input", function (e) { if (e.target.classList && e.target.classList.contains("campo-formula")) mostrarAyuda(e.target); });
+  document.addEventListener("focusin", function (e) { if (e.target.classList && e.target.classList.contains("campo-formula")) mostrarAyuda(e.target); });
+  document.addEventListener("focusout", function (e) { if (e.target.classList && e.target.classList.contains("campo-formula")) setTimeout(function () { ayuda.hidden = true; }, 150); });
+  document.body.addEventListener("htmx:afterSwap", function () { ayuda.hidden = true; });
+
   function agregarLinea() {
     var btn = document.querySelector('[hx-post="/dashboard/contabilidad/diario/linea"]');
     if (btn) btn.click();

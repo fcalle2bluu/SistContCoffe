@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -54,12 +55,118 @@ def _mes_de(fecha: date) -> str:
     return f"{fecha:%Y-%m}"
 
 
-def _parse_lineas(cuenta: list[str], lado: list[str], monto: list[str]) -> list[dict]:
+_TOKEN_FORMULA = re.compile(r"\s*(?:(\d+(?:\.\d*)?|\.\d+)|(L\d+|DEBE|HABER|DIF)|([-+*/()]))", re.IGNORECASE)
+
+
+def evaluar_formula(texto: str, lineas: list[dict]) -> float:
+    """Calcula un monto escrito como fórmula de Excel ("=L1*0.13", "=DIF",
+    "=(120+35,5)/2"). Solo números, + - * / y paréntesis, y referencias: Ln
+    (monto de la línea n del asiento), DEBE / HABER (suma de cada lado) y DIF
+    (lo que falta para cuadrar). Sin eval(): un analizador propio que no
+    puede ejecutar nada más. Lanza ValueError con un mensaje para mostrar."""
+    expr = texto.strip().lstrip("=").replace(",", ".").strip()
+    if not expr:
+        raise ValueError("La fórmula está vacía.")
+    debe = sum(l["monto"] for l in lineas if l["lado"] == "DEBE")
+    haber = sum(l["monto"] for l in lineas if l["lado"] == "HABER")
+    tokens, pos = [], 0
+    while pos < len(expr):
+        m = _TOKEN_FORMULA.match(expr, pos)
+        if not m or m.end() == pos:
+            raise ValueError(f"No se entiende «{expr[pos:].strip()[:10]}». Solo números, + - * / ( ), L1, DEBE, HABER, DIF.")
+        numero, ref, op = m.groups()
+        if numero is not None:
+            tokens.append(float(numero))
+        elif ref is not None:
+            ref = ref.upper()
+            if ref == "DEBE":
+                tokens.append(debe)
+            elif ref == "HABER":
+                tokens.append(haber)
+            elif ref == "DIF":
+                tokens.append(abs(debe - haber))
+            else:
+                n = int(ref[1:])
+                if not 1 <= n <= len(lineas):
+                    raise ValueError(f"No existe la línea {ref} (hay {len(lineas)}).")
+                tokens.append(lineas[n - 1]["monto"])
+        else:
+            tokens.append(op)
+        pos = m.end()
+        if pos < len(expr) and expr[pos:].strip() == "":
+            break
+
+    i = 0
+
+    def ver():
+        return tokens[i] if i < len(tokens) else None
+
+    def tomar():
+        nonlocal i
+        i += 1
+        return tokens[i - 1]
+
+    def suma():
+        valor = producto()
+        while ver() in ("+", "-"):
+            valor = valor + producto() if tomar() == "+" else valor - producto()
+        return valor
+
+    def producto():
+        valor = factor()
+        while ver() in ("*", "/"):
+            if tomar() == "*":
+                valor *= factor()
+            else:
+                divisor = factor()
+                if divisor == 0:
+                    raise ValueError("No se puede dividir entre 0.")
+                valor /= divisor
+        return valor
+
+    def factor():
+        t = ver()
+        if t == "-":
+            tomar()
+            return -factor()
+        if t == "+":
+            tomar()
+            return factor()
+        if t == "(":
+            tomar()
+            valor = suma()
+            if ver() != ")":
+                raise ValueError("Falta cerrar un paréntesis.")
+            tomar()
+            return valor
+        if isinstance(t, float):
+            return tomar()
+        raise ValueError("La fórmula está incompleta.")
+
+    resultado = suma()
+    if i != len(tokens):
+        raise ValueError("La fórmula tiene algo de más al final.")
+    return round(resultado, 2)
+
+
+def _monto(texto: str, lineas: list[dict]) -> float:
+    """Un monto de una línea: número normal o fórmula que empieza con "="."""
+    texto = (texto or "").strip()
+    if texto.startswith("="):
+        return evaluar_formula(texto, lineas)
+    return float(texto.replace(",", "."))
+
+
+def _parse_lineas(
+    cuenta: list[str], lado: list[str], monto: list[str], errores: list[str] | None = None
+) -> list[dict]:
     lineas = []
     for c, l, m in zip(cuenta, lado, monto):
         try:
-            monto_num = float(m)
-        except ValueError:
+            monto_num = _monto(m, lineas)
+        except ValueError as e:
+            if errores is not None and (m or "").strip().startswith("="):
+                errores.append(f"Fórmula «{m.strip()}»: {e}")
             continue
         if not c or monto_num <= 0:
             continue
@@ -368,14 +475,19 @@ async def agregar_linea_asiento(
     lado_selector: str = Form("DEBE"),
     monto_selector: str = Form(""),
 ):
-    lineas = _parse_lineas(cuenta, lado, monto)
-    if cuenta_selector and monto_selector:
+    advertencias: list[str] = []
+    lineas = _parse_lineas(cuenta, lado, monto, advertencias)
+    if cuenta_selector and monto_selector.strip():
         try:
-            monto_num = float(monto_selector)
-        except ValueError:
+            monto_num = _monto(monto_selector, lineas)
+        except ValueError as e:
             monto_num = 0
+            advertencias.append(f"Fórmula «{monto_selector.strip()}»: {e}" if monto_selector.strip().startswith("=")
+                                else "El monto no es un número válido.")
         if monto_num > 0:
             lineas.append({"codigo_cuenta": cuenta_selector, "lado": lado_selector, "monto": monto_num})
+        elif not advertencias:
+            advertencias.append("El monto tiene que ser mayor a 0.")
 
     cuentas_map = {c["codigo"]: c["nombre"] for c in await pool().fetch("SELECT codigo, nombre FROM cuentas_contables")}
     for l in lineas:
@@ -386,7 +498,7 @@ async def agregar_linea_asiento(
     return templates.TemplateResponse(
         request,
         "partials/_lineas_asiento.html",
-        {"lineas": lineas, "total_debe": total_debe, "total_haber": total_haber},
+        {"lineas": lineas, "total_debe": total_debe, "total_haber": total_haber, "advertencias": advertencias},
     )
 
 

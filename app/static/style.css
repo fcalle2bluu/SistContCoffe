@@ -912,3 +912,27 @@ tr.arrastrando { opacity: .45; outline: 2px dashed var(--accent); }
 
 /* Dentro del modal de productos la tabla se ajusta al ancho (sin barra horizontal). */
 .modal-box .data-table { min-width: 0; }
+
+/* Fórmulas en el monto de un asiento: referencia de línea e instructivo. */
+.ref-linea {
+  display: inline-block; min-width: 24px; margin-right: 6px; padding: 1px 5px; border-radius: 6px;
+  background: #1c1917; color: #fff; font: 700 10.5px ui-monospace, Menlo, monospace; text-align: center;
+}
+.ayuda-formula {
+  position: absolute; z-index: 300; width: 340px; max-width: calc(100vw - 16px); padding: 12px 14px;
+  background: #fffdf8; border: 2px solid var(--accent); border-radius: 12px; box-shadow: 0 10px 28px rgba(0,0,0,.18);
+  font-size: 12.5px; color: var(--ink, #1c1917);
+}
+.ayuda-formula p { margin: 4px 0; }
+.ayuda-formula table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+.ayuda-formula td { padding: 3px 4px; border-top: 1px solid #f1e6d3; vertical-align: top; }
+.ayuda-formula code { font: 600 11.5px ui-monospace, Menlo, monospace; color: var(--accent-strong); white-space: nowrap; }
+.ayuda-formula-titulo { font-weight: 800; font-size: 13px; }
+.ayuda-formula-resultado { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 6px 10px; margin-bottom: 6px; border-radius: 8px; background: var(--accent-soft); }
+.ayuda-formula-resultado span { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+.ayuda-formula-resultado strong { font: 800 15px ui-monospace, Menlo, monospace; }
+.ayuda-formula-resultado strong.ok { color: #15803d; }
+.ayuda-formula-resultado strong.mal { color: #b91c1c; font: 600 12px Inter, sans-serif; }
+.ayuda-formula-lineas { color: var(--muted); font-size: 11.5px; }
+.ayuda-formula-pie { color: var(--muted); font-size: 11px; }

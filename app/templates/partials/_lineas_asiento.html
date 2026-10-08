@@ -14,20 +14,21 @@
           <td>
             <input type="hidden" name="cuenta" value="{{ l.codigo_cuenta }}" />
             <input type="hidden" name="lado" value="{{ l.lado }}" />
+            <span class="ref-linea" title="Usa L{{ loop.index }} en una fórmula para tomar este monto">L{{ loop.index }}</span>
             <span {{ color_cuenta(l.codigo_cuenta) }}>{{ l.nombre }}</span>
           </td>
           <td class="num">
             {% if l.lado == "DEBE" %}
-            <input type="number" step="0.01" min="0.01" value="{{ '%.2f'|format(l.monto) }}" name="monto"
-              class="input input-w24 text-right mono" hx-trigger="change"
+            <input type="text" autocomplete="off" value="{{ '%.2f'|format(l.monto) }}" name="monto"
+              class="input input-w24 text-right mono campo-formula" hx-trigger="change"
               hx-post="/dashboard/contabilidad/diario/linea" hx-include="closest form"
               hx-target="#lineas-asiento" hx-swap="outerHTML" />
             {% endif %}
           </td>
           <td class="num">
             {% if l.lado == "HABER" %}
-            <input type="number" step="0.01" min="0.01" value="{{ '%.2f'|format(l.monto) }}" name="monto"
-              class="input input-w24 text-right mono" hx-trigger="change"
+            <input type="text" autocomplete="off" value="{{ '%.2f'|format(l.monto) }}" name="monto"
+              class="input input-w24 text-right mono campo-formula" hx-trigger="change"
               hx-post="/dashboard/contabilidad/diario/linea" hx-include="closest form"
               hx-target="#lineas-asiento" hx-swap="outerHTML" />
             {% endif %}
