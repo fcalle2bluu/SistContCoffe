@@ -60,7 +60,7 @@ EST = {
     "nota": ParagraphStyle("nota", parent=_base["Normal"], fontSize=8, leading=10, textColor=GRIS),
     "celda": ParagraphStyle("celda", parent=_base["Normal"], fontSize=8, leading=10, textColor=TINTA),
     "celda_der": ParagraphStyle("celda_der", parent=_base["Normal"], fontSize=8, leading=10, textColor=TINTA, alignment=TA_RIGHT),
-    "glosa": ParagraphStyle("glosa", parent=_base["Normal"], fontSize=7.5, leading=9.5, textColor=GRIS, fontName="Helvetica-Oblique"),
+    "glosa": ParagraphStyle("glosa", parent=_base["Normal"], fontSize=7.5, leading=9.5, textColor=GRIS, fontName="Helvetica"),
 }
 
 
