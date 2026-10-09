@@ -2,14 +2,20 @@
 {% block title %}Control de Turnos — Café Yanaloma{% endblock %}
 {% block content %}
 <div class="stack-8">
-  <div>
-    <h2 class="section-title">Control de Turnos</h2>
-    <p class="section-subtitle">Historial de todos los turnos de caja: qué se vendió y movió en cada uno.</p>
+  <div class="page-head">
+    <div>
+      <h2 class="section-title">Control de Turnos</h2>
+      <p class="section-subtitle">Turnos de caja del mes: qué se vendió y movió en cada uno. El número vuelve a 1 cada mes.</p>
+    </div>
+    <div class="page-head-actions">
+      {% include "partials/_selector_mes.html" %}
+    </div>
   </div>
 
   {% if turnos|length == 0 %}
-  <p class="muted">Todavía no hay turnos registrados.</p>
+  <p class="muted">No hay turnos en {{ mes.nombre }}.</p>
   {% else %}
+  <p class="muted-sm">{{ turnos|length }} {{ "turno" if turnos|length == 1 else "turnos" }} en {{ mes.nombre }} · Ventas del mes: <span class="strong">Bs {{ "%.2f"|format(total_mes) }}</span></p>
   <div class="table-wrap">
     <table class="data-table data-table-wide">
       <thead>
@@ -22,7 +28,7 @@
       <tbody>
         {% for t in turnos %}
         <tr>
-          <td class="strong">#{{ t.numero }}</td>
+          <td class="strong nowrap">#{{ t.numero }} <span class="muted-sm" title="Número interno: es el que aparece en las glosas del Libro Diario (turno #{{ t.id }})">· ID {{ t.id }}</span></td>
           <td>{{ t.responsable }}</td>
           <td class="small uppercase">{{ t.estado }}</td>
           <td class="small">{{ t.abierto_en|fechahora }}</td>

@@ -1,23 +1,37 @@
+from datetime import datetime, time
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app import bitacora
 from app.db import pool
 from app.deps import require_admin
-from app.routers.contabilidad import NUMERO_MES_SQL, _agrupar_asientos
+from app.routers.contabilidad import NUMERO_MES_SQL, _agrupar_asientos, _mes
 from app.routers.ventas import DENOMINACIONES, TIPOS_PAGO, _calcular_descuento, _efectivo_teorico_turno
 from app.templating import templates
+from app.tz import BOLIVIA_TZ
 
 router = APIRouter(prefix="/dashboard/turnos")
 
+# N° de turno dentro de su mes (1, 2, 3… y vuelve a 1 el mes siguiente),
+# según la fecha de apertura en hora de Bolivia. El id interno sigue siendo
+# el que aparece en las glosas del Libro Diario ("turno #<id>").
+NUMERO_TURNO_MES_SQL = (
+    "ROW_NUMBER() OVER (PARTITION BY date_trunc('month', t.abierto_en AT TIME ZONE 'America/La_Paz') "
+    "ORDER BY t.abierto_en, t.id)"
+)
+
 
 @router.get("", response_class=HTMLResponse)
-async def turnos_page(request: Request, session: dict = Depends(require_admin)):
+async def turnos_page(request: Request, session: dict = Depends(require_admin), mes: str | None = None):
+    mes_info = _mes(mes)
+    desde = datetime.combine(mes_info["inicio"], time.min, BOLIVIA_TZ)
+    hasta = datetime.combine(mes_info["fin"], time.min, BOLIVIA_TZ)
     turnos = await pool().fetch(
-        """
+        f"""
         SELECT t.id, t.responsable, t.estado, t.monto_inicial, t.monto_final_declarado,
                t.abierto_en, t.cerrado_en,
-               ROW_NUMBER() OVER (ORDER BY t.abierto_en) AS numero,
+               {NUMERO_TURNO_MES_SQL} AS numero,
                COALESCE(v.cantidad_ventas, 0) AS cantidad_ventas,
                COALESCE(v.total_ventas, 0) AS total_ventas,
                COALESCE(m.cantidad_movimientos, 0) AS cantidad_movimientos
@@ -29,11 +43,17 @@ async def turnos_page(request: Request, session: dict = Depends(require_admin)):
         LEFT JOIN (
             SELECT turno_id, COUNT(*) AS cantidad_movimientos FROM movimientos_caja GROUP BY turno_id
         ) m ON m.turno_id = t.id
+        WHERE t.abierto_en >= $1 AND t.abierto_en < $2
         ORDER BY t.abierto_en DESC
-        """
+        """,
+        desde, hasta,
     )
     return templates.TemplateResponse(
-        request, "dashboard/turnos.html", {"session": session, "active": "turnos", "turnos": turnos}
+        request, "dashboard/turnos.html",
+        {
+            "session": session, "active": "turnos", "turnos": turnos, "mes": mes_info,
+            "total_mes": sum(float(t["total_ventas"]) for t in turnos),
+        },
     )
 
 
@@ -42,6 +62,10 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
     turno = await pool().fetchrow("SELECT * FROM turnos WHERE id = $1", turno_id)
     if not turno:
         return RedirectResponse("/dashboard/turnos", status_code=303)
+    numero_mes = await pool().fetchval(
+        f"SELECT numero FROM (SELECT t.id, {NUMERO_TURNO_MES_SQL} AS numero FROM turnos t) x WHERE id = $1", turno_id
+    )
+    mes_turno = _mes(f"{turno['abierto_en'].astimezone(BOLIVIA_TZ):%Y-%m}")
 
     ordenes = await pool().fetch(
         "SELECT id, mesa, estado, total, tipo_pago, responsable, creado_en, cobrado_en, observacion, "
@@ -153,6 +177,8 @@ async def turno_detalle(request: Request, turno_id: int, session: dict = Depends
             "asientos_turno": asientos_turno,
             "arqueo_por_corte": arqueo_por_corte,
             "denominaciones": DENOMINACIONES,
+            "numero_mes": numero_mes,
+            "mes_turno": mes_turno,
         },
     )
 

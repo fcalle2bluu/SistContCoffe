@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 
 from app.db import pool
 from app.deps import require_admin
+from app.routers.turnos import NUMERO_TURNO_MES_SQL
 from app.routers.ventas import _efectivo_teorico_turno
 
 router = APIRouter(prefix="/api/turnos")
@@ -27,10 +28,10 @@ def _iso(dt: datetime | None) -> str | None:
 @router.get("")
 async def turnos_lista(session: dict = Depends(require_admin)):
     turnos = await pool().fetch(
-        """
+        f"""
         SELECT t.id, t.responsable, t.estado, t.monto_inicial, t.monto_final_declarado,
                t.abierto_en, t.cerrado_en,
-               ROW_NUMBER() OVER (ORDER BY t.abierto_en) AS numero,
+               {NUMERO_TURNO_MES_SQL} AS numero,
                COALESCE(v.cantidad_ventas, 0) AS cantidad_ventas,
                COALESCE(v.total_ventas, 0) AS total_ventas,
                COALESCE(m.cantidad_movimientos, 0) AS cantidad_movimientos

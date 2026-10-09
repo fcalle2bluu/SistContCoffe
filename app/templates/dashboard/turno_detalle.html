@@ -1,10 +1,11 @@
 {% extends "dashboard/_shell.html" %}
-{% block title %}Turno #{{ turno.id }} — Café Yanaloma{% endblock %}
+{% block title %}Turno #{{ numero_mes }} de {{ mes_turno.nombre }} — Café Yanaloma{% endblock %}
 {% block content %}
 <div class="stack-8">
   <div>
-    <a href="/dashboard/turnos" class="link-muted">← Volver a Control de Turnos</a>
-    <h2 class="section-title">Turno #{{ turno.id }} — {{ turno.responsable }}</h2>
+    <a href="/dashboard/turnos?mes={{ mes_turno.valor }}" class="link-muted">← Volver a Control de Turnos ({{ mes_turno.nombre }})</a>
+    <h2 class="section-title">Turno #{{ numero_mes }} de {{ mes_turno.nombre }} — {{ turno.responsable }}
+      <span class="muted-sm" title="Número interno: es el que aparece en las glosas del Libro Diario">· ID {{ turno.id }}</span></h2>
     <p class="section-subtitle">
       Abierto {{ turno.abierto_en|fechahora }}
       {% if turno.cerrado_en %} · Cerrado {{ turno.cerrado_en|fechahora }}{% else %} · Turno abierto{% endif %}
@@ -512,8 +513,8 @@
       {% endif %}
     </p>
     <form method="post" action="/dashboard/turnos/{{ turno.id }}/eliminar"
-      onsubmit="return confirm('¿Eliminar el turno #{{ turno.id }} completo, con sus {{ ordenes|length }} ventas y {{ movimientos|length }} movimientos? Esta acción no se puede deshacer.');">
-      <button type="submit" class="btn btn-danger">Eliminar turno #{{ turno.id }}</button>
+      onsubmit="return confirm('¿Eliminar el turno #{{ numero_mes }} de {{ mes_turno.nombre }} completo, con sus {{ ordenes|length }} ventas y {{ movimientos|length }} movimientos? Esta acción no se puede deshacer.');">
+      <button type="submit" class="btn btn-danger">Eliminar este turno</button>
     </form>
   </div>
 </div>
