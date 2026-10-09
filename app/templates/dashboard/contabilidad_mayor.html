@@ -75,6 +75,7 @@
       <thead><tr><th>N°</th><th>Fecha</th><th>Glosa</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
       <tbody>
         {% for cta in cuentas_mayor %}
+        {% if not loop.first %}<tr class="separador-cuenta" aria-hidden="true"><td colspan="6"></td></tr>{% endif %}
         <tr {{ color_cuenta(cta.codigo, "group-row") }}>
           <td colspan="6">{{ cta.nombre }} ({{ cta.codigo }})</td>
         </tr>

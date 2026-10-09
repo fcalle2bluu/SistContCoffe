@@ -314,6 +314,11 @@ a { color: inherit; }
   border-top: 1px solid var(--border-strong); border-bottom: 1px solid var(--border);
   font-weight: 700; background: var(--accent-soft);
 }
+/* Libro Mayor: renglón en blanco entre una cuenta y la siguiente. */
+.ledger tr.separador-cuenta td {
+  height: 22px; padding: 0; background: var(--surface);
+  border-left: none; border-right: none; border-bottom: 1px solid var(--border);
+}
 .ledger .total-row td {
   border-top: 1px solid var(--ink); border-bottom: 4px double var(--ink);
   font-weight: 800; font-size: 15px; background: var(--accent-soft-strong);
