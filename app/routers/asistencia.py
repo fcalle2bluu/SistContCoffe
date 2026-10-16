@@ -25,6 +25,10 @@ VENTANA_TOKEN_SEG = 30
 # sumando horas indefinidamente. No se escribe ninguna marca: si después se
 # agrega la salida real, se usa esa.
 HORAS_JORNADA_SIN_SALIDA = 8
+# Después de marcar, la misma persona no puede volver a marcar hasta que
+# pasen estos segundos: si el wifi falla y vuelve a escanear, no se registra
+# una "salida" falsa segundos después de la entrada.
+ESPERA_ENTRE_MARCAS_SEG = 120
 _TZ_BOLIVIA = ZoneInfo("America/La_Paz")
 
 
@@ -522,24 +526,44 @@ async def marcar_asistencia(token: str, session: dict = Depends(require_session)
     if not _token_valido(token):
         return JSONResponse({"ok": False, "error": "El código ya expiró. Pedile al encargado que lo actualice."}, status_code=400)
 
-    hoy = await pool().fetch(
-        "SELECT tipo FROM asistencias WHERE usuario_id = $1 "
-        "AND marcado_en >= date_trunc('day', now() AT TIME ZONE 'America/La_Paz') AT TIME ZONE 'America/La_Paz' "
-        "ORDER BY marcado_en",
-        session["id"],
-    )
-    tipos_hoy = {r["tipo"] for r in hoy}
-    if "entrada" not in tipos_hoy:
-        tipo = "entrada"
-    elif "salida" not in tipos_hoy:
-        tipo = "salida"
-    else:
-        return JSONResponse(
-            {"ok": False, "error": f"{session['nombre']} ya registró entrada y salida hoy."}, status_code=409
+    async with pool().acquire() as conn, conn.transaction():
+        # Un escaneo a la vez por persona: si llegan dos casi juntos (reintento
+        # con mal wifi), el segundo espera al primero y ve su marca.
+        await conn.execute("SELECT pg_advisory_xact_lock(hashtext('asistencia_marcar'), $1)", session["id"])
+        hoy = await conn.fetch(
+            "SELECT tipo, marcado_en, EXTRACT(EPOCH FROM now() - marcado_en) AS seg FROM asistencias "
+            "WHERE usuario_id = $1 "
+            "AND marcado_en >= date_trunc('day', now() AT TIME ZONE 'America/La_Paz') AT TIME ZONE 'America/La_Paz' "
+            "ORDER BY marcado_en",
+            session["id"],
         )
+        if hoy and float(hoy[-1]["seg"]) < ESPERA_ENTRE_MARCAS_SEG:
+            # Ya marcó hace menos de 2 minutos: no se registra otra. Se responde
+            # como éxito con la marca que ya existe (suele ser un reintento cuya
+            # primera respuesta se perdió por el wifi).
+            ultima = hoy[-1]
+            hora = ultima["marcado_en"].astimezone(_TZ_BOLIVIA).strftime("%H:%M")
+            mensaje = f"Tu {ultima['tipo']} ya quedó registrada a las {hora}."
+            if ultima["tipo"] == "entrada":
+                faltan = max(1, int(ESPERA_ENTRE_MARCAS_SEG - float(ultima["seg"])))
+                espera = f"{faltan} segundos" if faltan < 60 else f"{faltan // 60} min {faltan % 60:02d} s"
+                mensaje += f" Para marcar la salida espera {espera}."
+            return JSONResponse({
+                "ok": True, "repetido": True, "nombre": session["nombre"], "tipo": ultima["tipo"],
+                "hora": ultima["marcado_en"].isoformat(), "mensaje": mensaje,
+            })
+        tipos_hoy = {r["tipo"] for r in hoy}
+        if "entrada" not in tipos_hoy:
+            tipo = "entrada"
+        elif "salida" not in tipos_hoy:
+            tipo = "salida"
+        else:
+            return JSONResponse(
+                {"ok": False, "error": f"{session['nombre']} ya registró entrada y salida hoy."}, status_code=409
+            )
 
-    fila = await pool().fetchrow(
-        "INSERT INTO asistencias (usuario_id, username, nombre, tipo) VALUES ($1, $2, $3, $4) RETURNING marcado_en",
-        session["id"], session["username"], session["nombre"], tipo,
-    )
+        fila = await conn.fetchrow(
+            "INSERT INTO asistencias (usuario_id, username, nombre, tipo) VALUES ($1, $2, $3, $4) RETURNING marcado_en",
+            session["id"], session["username"], session["nombre"], tipo,
+        )
     return JSONResponse({"ok": True, "nombre": session["nombre"], "tipo": tipo, "hora": fila["marcado_en"].isoformat()})

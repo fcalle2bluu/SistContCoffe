@@ -435,14 +435,18 @@ class _AsistenciaTabState extends State<_AsistenciaTab> {
     );
     if (resultado == null || !mounted) return;
     final ok = resultado['ok'] == true;
+    final repetido = resultado['repetido'] == true;
     final tipo = resultado['tipo'] as String?;
     final etiquetaTipo = tipo == 'salida' ? 'Salida' : 'Entrada';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: ok ? Colors.green.shade700 : Colors.red.shade700,
-        content: Text(ok
-            ? '¡$etiquetaTipo registrada, ${resultado['nombre']}!'
-            : (resultado['error'] as String? ?? 'No se pudo registrar la asistencia.')),
+        duration: Duration(seconds: ok && !repetido ? 4 : 7),
+        backgroundColor: !ok ? Colors.red.shade700 : (repetido ? Colors.blue.shade700 : Colors.green.shade700),
+        content: Text(!ok
+            ? (resultado['error'] as String? ?? 'No se pudo registrar la asistencia.')
+            : repetido
+                ? (resultado['mensaje'] as String? ?? 'Ya estaba registrada.')
+                : '¡$etiquetaTipo registrada, ${resultado['nombre']}!'),
       ),
     );
     _cargarHistorial();

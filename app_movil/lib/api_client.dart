@@ -239,11 +239,20 @@ class ApiClient {
 
   /// Escanea el QR de asistencia: pega el token al endpoint del backend
   /// usando la cookie de la sesión guardada.
+  /// Con mal wifi no se queda cargando para siempre: a los 20 s avisa que
+  /// vuelva a escanear (el servidor no duplica si la primera sí llegó).
   static Future<Map<String, dynamic>> marcarAsistencia(Sesion sesion, String token) async {
-    final resp = await http.post(
-      Uri.parse('$baseUrl/api/asistencia/marcar?token=$token'),
-      headers: {'Cookie': sesion.cookie},
-    );
+    final http.Response resp;
+    try {
+      resp = await http
+          .post(Uri.parse('$baseUrl/api/asistencia/marcar?token=$token'), headers: {'Cookie': sesion.cookie})
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {
+      return {
+        'ok': false,
+        'error': 'No hubo respuesta (revisa el wifi). Vuelve a escanear: si ya se había registrado, no se duplica.',
+      };
+    }
     if (resp.statusCode == 303 || resp.statusCode == 401) {
       return {'ok': false, 'error': 'Tu sesión expiró. Volvé a iniciar sesión.'};
     }
