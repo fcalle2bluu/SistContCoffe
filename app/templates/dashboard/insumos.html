@@ -70,6 +70,7 @@
       <thead>
         <tr>
           <th>Fecha</th><th>Detalle</th><th class="text-right">Cant.</th><th>Medida</th>
+          <th>Uso</th><th class="text-right">Cant. final</th>
           <th>Respaldo</th><th class="text-right">P. Unit.</th><th class="text-right">Total</th>
           <th>Solicitante</th><th></th>
         </tr>
@@ -81,6 +82,8 @@
           <td>{{ i.detalle }}</td>
           <td class="text-right mono">{{ i.cantidad }}</td>
           <td class="uppercase small">{{ i.medida or "—" }}</td>
+          <td class="small">{{ i.uso or "—" }}</td>
+          <td class="text-right mono">{{ i.cantidad_final if i.cantidad_final is not none else "—" }}</td>
           <td class="truncate small" title="{{ i.respaldo or '' }}">{{ i.respaldo or "—" }}</td>
           <td class="text-right mono">{{ "%.2f"|format(i.precio_unitario) }}</td>
           <td class="text-right mono strong">{{ "%.2f"|format(i.total) }}</td>
@@ -95,7 +98,7 @@
       </tbody>
       <tfoot>
         <tr class="totals-row">
-          <td colspan="6" class="text-right">Total gastado</td>
+          <td colspan="8" class="text-right">Total gastado</td>
           <td class="text-right mono">{{ "%.2f"|format(total_general) }}</td>
           <td colspan="2"></td>
         </tr>

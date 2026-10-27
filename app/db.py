@@ -28,6 +28,7 @@ async def _asegurar_columnas() -> None:
     await _pool.execute(
         "ALTER TABLE compras_insumos ADD COLUMN IF NOT EXISTS cantidad_final numeric(12,3)"
     )
+    await _pool.execute("ALTER TABLE compras_insumos ADD COLUMN IF NOT EXISTS uso varchar(200)")
 
 
 async def close_pool() -> None:

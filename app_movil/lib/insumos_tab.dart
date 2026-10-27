@@ -4,27 +4,23 @@ import 'api_client.dart';
 
 const _colorAcento = Color(0xFFD97706);
 const _colorTarjeta = Color(0xFF161616);
-
-String _bs(num v) => 'Bs ${v.toStringAsFixed(2)}';
+const _colorLinea = Color(0xFF2A2A2A);
 
 String _cantidad(num v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
-const _diasSemana = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const _meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-
-String _tituloDia(String iso, String hoyIso) {
+String _diaMes(String iso) {
   final d = DateTime.parse(iso);
-  final hoy = DateTime.parse(hoyIso);
-  if (iso == hoyIso) return 'Hoy';
-  if (hoy.difference(d).inDays == 1) return 'Ayer';
-  return '${_diasSemana[d.weekday - 1][0].toUpperCase()}${_diasSemana[d.weekday - 1].substring(1)} ${d.day} ${_meses[d.month - 1]}';
+  return '${d.day}/${d.month}';
 }
 
-/// Pestaña "Insumos" (todos los usuarios): lo mismo que Control de Insumos
-/// de la web — compras del mes agrupadas por día, con su total, y un botón
-/// grande para registrar una compra nueva. Cada compra es un ítem numerado
-/// con cantidad inicial (lo comprado), final (lo que queda, se anota
-/// tocándola) y usado (inicial − final, sale solo).
+/// Anchos relativos de las columnas de la planilla:
+/// PRODUCTO · INGRESO · FECHA · USO · CANT. FINAL.
+const _flexColumnas = [30, 18, 16, 24, 20];
+
+/// Pestaña "Insumos" (todos los usuarios), igual que la planilla de Excel:
+/// arriba la fila fija de títulos y abajo una fila por cada insumo que se
+/// agrega (producto, cantidad que ingresó, fecha, para qué se usó y cuánto
+/// quedó). Tocando "Uso" o "Cant. final" se anotan después.
 class InsumosTab extends StatefulWidget {
   final Sesion sesion;
   /// Solo para pruebas: reemplaza la consulta al servidor.
@@ -68,7 +64,7 @@ class _InsumosTabState extends State<InsumosTab> {
     ));
   }
 
-  Future<void> _nuevaCompra() async {
+  Future<void> _nuevaFila() async {
     final datos = _datos;
     if (datos == null) return;
     final guardado = await showModalBottomSheet<bool>(
@@ -76,11 +72,11 @@ class _InsumosTabState extends State<InsumosTab> {
       isScrollControlled: true,
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _FormularioCompra(sesion: widget.sesion, datos: datos),
+      builder: (_) => _FormularioInsumo(sesion: widget.sesion, datos: datos),
     );
     if (guardado == true) {
-      _aviso('Compra registrada ✓');
-      // Vuelve al mes actual para que se vea la compra recién cargada.
+      _aviso('Insumo agregado ✓');
+      // Vuelve al mes actual para que se vea la fila recién cargada.
       _cargar(mes: (_datos?['hoy'] as String).substring(0, 7));
     }
   }
@@ -90,8 +86,9 @@ class _InsumosTabState extends State<InsumosTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _colorTarjeta,
-        title: const Text('¿Eliminar esta compra?', style: TextStyle(color: Colors.white)),
-        content: Text('${c['detalle']} — ${_bs(c['total'] as num)}', style: const TextStyle(color: Colors.white70)),
+        title: const Text('¿Eliminar esta fila?', style: TextStyle(color: Colors.white)),
+        content: Text('${c['detalle']} — ingreso ${_cantidad(c['cantidad'] as num)}',
+            style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
           FilledButton(
@@ -108,7 +105,44 @@ class _InsumosTabState extends State<InsumosTab> {
     if (error != null) {
       _aviso(error, error: true);
     } else {
-      _aviso('Compra eliminada');
+      _aviso('Fila eliminada');
+      _cargar();
+    }
+  }
+
+  /// Pide para qué se usó el insumo (ej. BROWNIE).
+  Future<void> _anotarUso(Map<String, dynamic> c) async {
+    final ctrl = TextEditingController(text: (c['para_que'] as String?) ?? '');
+    final valor = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _colorTarjeta,
+        title: Text('¿Para qué se usó ${c['detalle']}?', style: const TextStyle(color: Colors.white, fontSize: 18)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+          decoration: const InputDecoration(labelText: 'Uso', hintText: 'Ej: BROWNIE'),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _colorAcento),
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (valor == null) return;
+    final error = await ApiClient.anotarUsoInsumo(widget.sesion, c['id'] as int, valor.trim());
+    if (!mounted) return;
+    if (error != null) {
+      _aviso(error, error: true);
+    } else {
+      _aviso('Uso anotado ✓');
       _cargar();
     }
   }
@@ -128,7 +162,7 @@ class _InsumosTabState extends State<InsumosTab> {
           backgroundColor: _colorTarjeta,
           title: Text('¿Cuánto queda de ${c['detalle']}?', style: const TextStyle(color: Colors.white, fontSize: 18)),
           content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('Se compró ${_cantidad(inicial)} $medida', style: const TextStyle(color: Colors.white54)),
+            Text('Ingresaron ${_cantidad(inicial)} $medida', style: const TextStyle(color: Colors.white54)),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -152,15 +186,13 @@ class _InsumosTabState extends State<InsumosTab> {
                 ),
               ),
             ]),
-            const SizedBox(height: 12),
-            Text(
-              n == null
-                  ? 'El uso se calcula solo: inicial − final.'
-                  : fuera
-                      ? 'Tiene que estar entre 0 y ${_cantidad(inicial)}.'
-                      : 'Usado: ${_cantidad(inicial - n)} $medida',
-              style: TextStyle(color: fuera ? Colors.redAccent : _colorAcento, fontWeight: FontWeight.bold),
-            ),
+            if (n != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                fuera ? 'Tiene que estar entre 0 y ${_cantidad(inicial)}.' : 'Se usaron ${_cantidad(inicial - n)} $medida',
+                style: TextStyle(color: fuera ? Colors.redAccent : _colorAcento, fontWeight: FontWeight.bold),
+              ),
+            ],
           ]),
           actions: [
             if (actual != null)
@@ -189,68 +221,10 @@ class _InsumosTabState extends State<InsumosTab> {
     }
   }
 
-  /// Las tres cajitas Inicial / Final / Usado de cada ítem. "Final" se toca
-  /// para anotar lo que queda.
-  Widget _cantidades(Map<String, dynamic> c, {required VoidCallback alAnotar}) {
-    final medida = (c['medida'] as String?) ?? '';
-    final inicial = c['cantidad'] as num;
-    final fin = c['cantidad_final'] as num?;
-    final uso = c['uso'] as num?;
-    Widget caja(String etiqueta, String valor, {Color color = Colors.white, VoidCallback? alTocar, bool resaltar = false}) {
-      return Expanded(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: alTocar,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1F1F1F),
-              borderRadius: BorderRadius.circular(10),
-              border: resaltar ? Border.all(color: _colorAcento) : null,
-            ),
-            child: Column(children: [
-              Text(etiqueta, style: const TextStyle(color: Colors.white38, fontSize: 11)),
-              const SizedBox(height: 2),
-              Text(valor,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15)),
-            ]),
-          ),
-        ),
-      );
-    }
-
-    return Column(children: [
-      Row(children: [
-        caja('Inicial', '${_cantidad(inicial)} $medida'),
-        const SizedBox(width: 6),
-        caja(
-          'Final',
-          fin == null ? 'Anotar' : '${_cantidad(fin)} $medida',
-          color: fin == null ? _colorAcento : Colors.white,
-          alTocar: alAnotar,
-          resaltar: fin == null,
-        ),
-        const SizedBox(width: 6),
-        caja('Usado', uso == null ? '—' : '${_cantidad(uso)} $medida',
-            color: uso == null ? Colors.white38 : const Color(0xFF4ADE80)),
-      ]),
-      if (fin != null && inicial > 0) ...[
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: (fin / inicial).clamp(0, 1).toDouble(),
-            minHeight: 5,
-            backgroundColor: Colors.white10,
-            color: fin == 0 ? Colors.redAccent : _colorAcento,
-          ),
-        ),
-      ],
-    ]);
-  }
-
   void _verDetalle(Map<String, dynamic> c) {
+    final medida = (c['medida'] as String?) ?? '';
+    final fin = c['cantidad_final'] as num?;
+    final usado = c['uso'] as num?;
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF111111),
@@ -262,24 +236,23 @@ class _InsumosTabState extends State<InsumosTab> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Ítem N° ${c['nro']}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+              Text('Fila N° ${c['nro']}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
               Text(c['detalle'] as String,
                   style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(_bs(c['total'] as num),
-                  style: const TextStyle(color: _colorAcento, fontSize: 26, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 14),
-              _cantidades(c, alAnotar: () {
+              const SizedBox(height: 10),
+              _filaDetalle(Icons.input, 'Ingreso', '${_cantidad(c['cantidad'] as num)} $medida'),
+              _filaDetalle(Icons.event, 'Fecha', _diaMes(c['fecha'] as String)),
+              _filaDetalle(Icons.restaurant, 'Uso', (c['para_que'] as String?) ?? '—', alTocar: () {
+                Navigator.pop(ctx);
+                _anotarUso(c);
+              }),
+              _filaDetalle(Icons.inventory_2_outlined, 'Cant. final', fin == null ? '—' : '${_cantidad(fin)} $medida',
+                  alTocar: () {
                 Navigator.pop(ctx);
                 _anotarFinal(c);
               }),
-              const SizedBox(height: 8),
-              _filaDetalle(Icons.event, 'Fecha', _tituloDia(c['fecha'] as String, _datos!['hoy'] as String)),
-              _filaDetalle(Icons.scale, 'Cantidad',
-                  '${_cantidad(c['cantidad'] as num)} ${c['medida'] ?? ''} × ${_bs(c['precio_unitario'] as num)}'),
-              _filaDetalle(Icons.receipt_long, 'Respaldo', (c['respaldo'] as String?) ?? 'Sin respaldo'),
-              _filaDetalle(Icons.person_outline, 'Lo pidió', (c['solicitante'] as String?) ?? '—'),
-              _filaDetalle(Icons.edit_note, 'Lo registró', (c['responsable'] as String?) ?? '—'),
+              if (usado != null) _filaDetalle(Icons.trending_down, 'Se usaron', '${_cantidad(usado)} $medida'),
+              _filaDetalle(Icons.edit_note, 'Lo cargó', (c['responsable'] as String?) ?? '—'),
               if (c['puede_eliminar'] == true) ...[
                 const SizedBox(height: 12),
                 SizedBox(
@@ -291,7 +264,7 @@ class _InsumosTabState extends State<InsumosTab> {
                       padding: const EdgeInsets.all(14),
                     ),
                     icon: const Icon(Icons.delete_outline),
-                    label: const Text('Eliminar esta compra'),
+                    label: const Text('Eliminar esta fila'),
                     onPressed: () {
                       Navigator.pop(ctx);
                       _eliminar(c);
@@ -306,15 +279,88 @@ class _InsumosTabState extends State<InsumosTab> {
     );
   }
 
-  Widget _filaDetalle(IconData icono, String etiqueta, String valor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icono, color: _colorAcento, size: 18),
-        const SizedBox(width: 10),
-        SizedBox(width: 92, child: Text(etiqueta, style: const TextStyle(color: Colors.white38, fontSize: 13))),
-        Expanded(child: Text(valor, style: const TextStyle(color: Colors.white, fontSize: 14))),
-      ]),
+  Widget _filaDetalle(IconData icono, String etiqueta, String valor, {VoidCallback? alTocar}) {
+    return InkWell(
+      onTap: alTocar,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icono, color: _colorAcento, size: 18),
+          const SizedBox(width: 10),
+          SizedBox(width: 92, child: Text(etiqueta, style: const TextStyle(color: Colors.white38, fontSize: 13))),
+          Expanded(child: Text(valor, style: const TextStyle(color: Colors.white, fontSize: 14))),
+          if (alTocar != null) const Icon(Icons.edit, color: Colors.white24, size: 16),
+        ]),
+      ),
+    );
+  }
+
+  /// Una celda de la planilla. Las que se pueden tocar (Uso, Cant. final)
+  /// muestran "Anotar" en naranja mientras estén vacías.
+  Widget _celda(int columna, Widget hijo, {VoidCallback? alTocar, bool ultima = false}) {
+    final contenido = Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      alignment: columna == 0 || columna == 3 ? Alignment.centerLeft : Alignment.center,
+      decoration: BoxDecoration(
+        border: Border(right: ultima ? BorderSide.none : const BorderSide(color: _colorLinea)),
+      ),
+      child: hijo,
+    );
+    return Expanded(
+      flex: _flexColumnas[columna],
+      child: alTocar == null ? contenido : InkWell(onTap: alTocar, child: contenido),
+    );
+  }
+
+  Widget _encabezado() {
+    const estilo = TextStyle(color: _colorAcento, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 0.3);
+    const titulos = ['PRODUCTO', 'INGRESO', 'FECHA', 'USO', 'CANT. FINAL'];
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF241A0C),
+        border: Border(bottom: BorderSide(color: _colorAcento, width: 1.5)),
+      ),
+      child: IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (var i = 0; i < titulos.length; i++)
+            _celda(i, Text(titulos[i], style: estilo, textAlign: i == 0 || i == 3 ? TextAlign.left : TextAlign.center),
+                ultima: i == titulos.length - 1),
+        ]),
+      ),
+    );
+  }
+
+  Widget _fila(Map<String, dynamic> c, int indice) {
+    final medida = (c['medida'] as String?) ?? '';
+    final uso = c['para_que'] as String?;
+    final fin = c['cantidad_final'] as num?;
+    const blanco = TextStyle(color: Colors.white, fontSize: 14);
+    const anotar = TextStyle(color: _colorAcento, fontSize: 12, fontWeight: FontWeight.bold);
+    Widget numero(num v) => Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(_cantidad(v), style: blanco.copyWith(fontWeight: FontWeight.bold, fontSize: 15)),
+          if (medida.isNotEmpty && medida != 'UNIDAD')
+            Text(medida.toLowerCase(),
+                style: const TextStyle(color: Colors.white38, fontSize: 10), overflow: TextOverflow.ellipsis),
+        ]);
+    return Container(
+      color: indice.isEven ? _colorTarjeta : const Color(0xFF1B1B1B),
+      child: InkWell(
+        onTap: () => _verDetalle(c),
+        child: Container(
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _colorLinea))),
+          child: IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              _celda(0, Text(c['detalle'] as String, style: blanco.copyWith(fontWeight: FontWeight.w600))),
+              _celda(1, numero(c['cantidad'] as num)),
+              _celda(2, Text(_diaMes(c['fecha'] as String), style: const TextStyle(color: Colors.white70, fontSize: 13))),
+              _celda(3, Text(uso ?? 'Anotar', style: uso == null ? anotar : blanco), alTocar: () => _anotarUso(c)),
+              _celda(4, fin == null ? const Text('Anotar', style: anotar) : numero(fin),
+                  alTocar: () => _anotarFinal(c), ultima: true),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 
@@ -330,11 +376,9 @@ class _InsumosTabState extends State<InsumosTab> {
         ]),
       );
     }
-    final compras = (datos['compras'] as List).cast<Map<String, dynamic>>();
-    final porDia = <String, List<Map<String, dynamic>>>{};
-    for (final c in compras) {
-      porDia.putIfAbsent(c['fecha'] as String, () => []).add(c);
-    }
+    // El servidor las manda de la más nueva a la más vieja; en la planilla
+    // van en orden de carga, como en el Excel.
+    final filas = (datos['compras'] as List).cast<Map<String, dynamic>>().reversed.toList();
     final mesSiguiente = datos['mes_siguiente'] as String?;
 
     return Scaffold(
@@ -342,146 +386,99 @@ class _InsumosTabState extends State<InsumosTab> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: _colorAcento,
         foregroundColor: Colors.white,
-        onPressed: _nuevaCompra,
-        icon: const Icon(Icons.add_shopping_cart),
-        label: const Text('Registrar compra', style: TextStyle(fontWeight: FontWeight.bold)),
+        onPressed: _nuevaFila,
+        icon: const Icon(Icons.add),
+        label: const Text('Agregar insumo', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-      body: RefreshIndicator(
-        color: _colorAcento,
-        onRefresh: _cargar,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          children: [
-            // Mes y total
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _colorTarjeta,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _colorAcento.withValues(alpha: 0.4)),
-              ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // Mes
+          Row(children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left, color: Colors.white70),
+              onPressed: () => _cargar(mes: datos['mes_anterior'] as String),
+            ),
+            Expanded(
               child: Column(children: [
-                Row(children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left, color: Colors.white70),
-                    onPressed: () => _cargar(mes: datos['mes_anterior'] as String),
-                  ),
-                  Expanded(
-                    child: Text(datos['mes_nombre'] as String,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.chevron_right, color: mesSiguiente == null ? Colors.white12 : Colors.white70),
-                    onPressed: mesSiguiente == null ? null : () => _cargar(mes: mesSiguiente),
-                  ),
-                ]),
-                const SizedBox(height: 4),
-                const Text('Gastado en insumos', style: TextStyle(color: Colors.white38, fontSize: 12)),
-                Text(_bs(datos['total'] as num),
-                    style: const TextStyle(color: _colorAcento, fontSize: 30, fontWeight: FontWeight.w800)),
-                Text('${compras.length} ${compras.length == 1 ? 'compra' : 'compras'}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                Text(datos['mes_nombre'] as String,
+                    style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                Text('${filas.length} ${filas.length == 1 ? 'insumo' : 'insumos'}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 12)),
               ]),
             ),
-            if (_huboError)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('Sin conexión: mostrando lo último que se cargó.',
-                    textAlign: TextAlign.center, style: TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+            IconButton(
+              icon: Icon(Icons.chevron_right, color: mesSiguiente == null ? Colors.white12 : Colors.white70),
+              onPressed: mesSiguiente == null ? null : () => _cargar(mes: mesSiguiente),
+            ),
+          ]),
+          if (_huboError)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Text('Sin conexión: mostrando lo último que se cargó.',
+                  textAlign: TextAlign.center, style: TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+            ),
+          const SizedBox(height: 4),
+          // Planilla: la fila de títulos queda fija y las filas bajan.
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: _colorTarjeta,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                border: Border.all(color: _colorLinea),
               ),
-            if (compras.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 60),
-                child: Column(children: [
-                  Icon(Icons.inventory_2_outlined, color: Colors.white24, size: 48),
-                  SizedBox(height: 10),
-                  Text('Todavía no hay compras este mes.\nToca "Registrar compra" para cargar la primera.',
-                      textAlign: TextAlign.center, style: TextStyle(color: Colors.white38)),
-                ]),
-              ),
-            for (final dia in porDia.entries) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
-                child: Row(children: [
-                  Text(_tituloDia(dia.key, datos['hoy'] as String),
-                      style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  Text(_bs(dia.value.fold<num>(0, (t, c) => t + (c['total'] as num))),
-                      style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                ]),
-              ),
-              for (final c in dia.value)
-                Card(
-                  color: _colorTarjeta,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => _verDetalle(c),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        Row(children: [
-                          CircleAvatar(
-                            radius: 15,
-                            backgroundColor: _colorAcento.withValues(alpha: 0.2),
-                            child: Text('${c['nro']}',
-                                style: const TextStyle(color: _colorAcento, fontWeight: FontWeight.bold, fontSize: 12)),
+              clipBehavior: Clip.antiAlias,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                _encabezado(),
+                Expanded(
+                  child: RefreshIndicator(
+                    color: _colorAcento,
+                    onRefresh: _cargar,
+                    child: filas.isEmpty
+                        ? ListView(children: const [
+                            Padding(
+                              padding: EdgeInsets.only(top: 60),
+                              child: Text('Todavía no hay insumos este mes.\nToca "Agregar insumo" para cargar el primero.',
+                                  textAlign: TextAlign.center, style: TextStyle(color: Colors.white38)),
+                            ),
+                          ])
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 96),
+                            itemCount: filas.length,
+                            itemBuilder: (_, i) => _fila(filas[i], i),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(c['detalle'] as String,
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
-                              Text(
-                                '${_bs(c['precio_unitario'] as num)} c/u'
-                                '${c['solicitante'] != null ? ' · ${c['solicitante']}' : ''}',
-                                style: const TextStyle(color: Colors.white54, fontSize: 12),
-                              ),
-                            ]),
-                          ),
-                          Text(_bs(c['total'] as num),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                        ]),
-                        const SizedBox(height: 10),
-                        _cantidades(c, alAnotar: () => _anotarFinal(c)),
-                      ]),
-                    ),
                   ),
                 ),
-            ],
-          ],
-        ),
+              ]),
+            ),
+          ),
+        ]),
       ),
     );
   }
 }
 
-/// Formulario para registrar una compra: lo que se compró (con sugerencias
-/// de lo que se compra seguido), cantidad + medida, precio unitario con el
-/// total calculado en vivo, fecha, respaldo y quién lo pidió.
-class _FormularioCompra extends StatefulWidget {
+/// Formulario para agregar una fila: producto (con sugerencias de lo de
+/// siempre), cantidad que ingresó, fecha, uso y, si ya se sabe, la cantidad
+/// final.
+class _FormularioInsumo extends StatefulWidget {
   final Sesion sesion;
   final Map<String, dynamic> datos;
-  const _FormularioCompra({required this.sesion, required this.datos});
+  const _FormularioInsumo({required this.sesion, required this.datos});
 
   @override
-  State<_FormularioCompra> createState() => _FormularioCompraState();
+  State<_FormularioInsumo> createState() => _FormularioInsumoState();
 }
 
-class _FormularioCompraState extends State<_FormularioCompra> {
-  TextEditingController? _detalle;
+class _FormularioInsumoState extends State<_FormularioInsumo> {
+  TextEditingController? _producto;
   int _versionListas = 0;
-  final _cantidad = TextEditingController(text: '1');
-  final _precio = TextEditingController();
-  final _respaldo = TextEditingController();
+  final _ingreso = TextEditingController();
+  final _uso = TextEditingController();
+  final _final = TextEditingController();
   late DateTime _fecha;
   late List<String> _medidas;
-  late List<String> _solicitantes;
   String? _medida;
-  String? _solicitante;
-  bool _conFactura = false;
   bool _guardando = false;
   String? _error;
 
@@ -490,17 +487,10 @@ class _FormularioCompraState extends State<_FormularioCompra> {
     super.initState();
     _fecha = DateTime.parse(widget.datos['hoy'] as String);
     _medidas = (widget.datos['medidas'] as List).cast<String>();
-    _solicitantes = (widget.datos['solicitantes'] as List).cast<String>();
     _medida = _medidas.contains('UNIDAD') ? 'UNIDAD' : (_medidas.isNotEmpty ? _medidas.first : null);
-    _solicitante = _solicitantes.contains(widget.sesion.nombre) ? widget.sesion.nombre : null;
-    for (final c in [_cantidad, _precio]) {
-      c.addListener(() => setState(() {}));
-    }
   }
 
   double? _num(TextEditingController c) => double.tryParse(c.text.trim().replaceAll(',', '.'));
-
-  double get _total => (_num(_cantidad) ?? 0) * (_num(_precio) ?? 0);
 
   Future<void> _elegirFecha() async {
     final hoy = DateTime.parse(widget.datos['hoy'] as String);
@@ -513,18 +503,18 @@ class _FormularioCompraState extends State<_FormularioCompra> {
     if (elegida != null) setState(() => _fecha = elegida);
   }
 
-  Future<String?> _pedirNombre(String titulo, String ejemplo) {
+  Future<void> _nuevaMedida() async {
     final ctrl = TextEditingController();
-    return showDialog<String>(
+    final nombre = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: _colorTarjeta,
-        title: Text(titulo, style: const TextStyle(color: Colors.white)),
+        title: const Text('Nueva medida', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(hintText: ejemplo),
+          decoration: const InputDecoration(hintText: 'Ej: MAPLE'),
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
@@ -537,62 +527,47 @@ class _FormularioCompraState extends State<_FormularioCompra> {
         ],
       ),
     );
-  }
-
-  Future<void> _nuevaReferencia(String tipo) async {
-    final esMedida = tipo == 'medidas';
-    final nombre = await _pedirNombre(esMedida ? 'Nueva medida' : 'Nuevo solicitante', esMedida ? 'Ej: ONZAS' : 'Ej: Freddy');
-    // Siempre se redibujan los desplegables: si se canceló, vuelven a mostrar
+    // Siempre se redibuja el desplegable: si se canceló, vuelve a mostrar
     // lo que estaba elegido en vez de "+ Otra…".
     setState(() => _versionListas++);
     if (nombre == null || nombre.trim().isEmpty) return;
-    final guardado = await ApiClient.agregarReferenciaInsumo(widget.sesion, tipo, nombre.trim());
+    final guardado = await ApiClient.agregarReferenciaInsumo(widget.sesion, 'medidas', nombre.trim());
     if (guardado == null || !mounted) return;
     setState(() {
       _versionListas++;
-      if (esMedida) {
-        if (!_medidas.contains(guardado)) _medidas = [..._medidas, guardado]..sort();
-        _medida = guardado;
-      } else {
-        if (!_solicitantes.contains(guardado)) _solicitantes = [..._solicitantes, guardado]..sort();
-        _solicitante = guardado;
-      }
+      if (!_medidas.contains(guardado)) _medidas = [..._medidas, guardado]..sort();
+      _medida = guardado;
     });
   }
 
   Future<void> _guardar() async {
-    final cantidad = _num(_cantidad);
-    final precio = _num(_precio);
-    final detalle = _detalle?.text.trim() ?? '';
-    if (detalle.isEmpty) {
-      setState(() => _error = 'Escribe qué compraste.');
+    final producto = _producto?.text.trim() ?? '';
+    final ingreso = _num(_ingreso);
+    final fin = _final.text.trim().isEmpty ? null : _num(_final);
+    if (producto.isEmpty) {
+      setState(() => _error = 'Escribe el producto.');
       return;
     }
-    if (cantidad == null || cantidad <= 0) {
-      setState(() => _error = 'La cantidad tiene que ser mayor a 0.');
+    if (ingreso == null || ingreso <= 0) {
+      setState(() => _error = 'La cantidad de ingreso tiene que ser mayor a 0.');
       return;
     }
-    if (precio == null || precio < 0) {
-      setState(() => _error = 'Escribe el precio por unidad.');
+    if (_final.text.trim().isNotEmpty && (fin == null || fin < 0 || fin > ingreso)) {
+      setState(() => _error = 'La cantidad final tiene que estar entre 0 y ${_cantidad(ingreso)}.');
       return;
     }
     String dos(int n) => n.toString().padLeft(2, '0');
-    var respaldo = _respaldo.text.trim();
-    if (_conFactura && respaldo.isNotEmpty && !respaldo.toLowerCase().contains('factura')) {
-      respaldo = 'Según Factura N° $respaldo';
-    }
     setState(() {
       _guardando = true;
       _error = null;
     });
     final error = await ApiClient.registrarInsumo(widget.sesion, {
       'fecha': '${_fecha.year}-${dos(_fecha.month)}-${dos(_fecha.day)}',
-      'detalle': detalle,
-      'cantidad': cantidad.toString(),
+      'detalle': producto,
+      'cantidad': ingreso.toString(),
       'medida': _medida ?? '',
-      'precio_unitario': precio.toString(),
-      'respaldo': respaldo.isEmpty ? 'Sin respaldo' : respaldo,
-      'solicitante': _solicitante ?? '',
+      'uso': _uso.text.trim(),
+      'cantidad_final': fin?.toString() ?? '',
     });
     if (!mounted) return;
     if (error == null) {
@@ -632,11 +607,11 @@ class _FormularioCompraState extends State<_FormularioCompra> {
                     width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
               ),
               const SizedBox(height: 14),
-              const Text('Registrar compra',
+              const Text('Agregar insumo',
                   style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
 
-              // Qué se compró, con sugerencias de lo de siempre
+              // Producto, con sugerencias de lo de siempre
               Autocomplete<String>(
                 optionsBuilder: (v) {
                   final q = v.text.trim().toLowerCase();
@@ -644,13 +619,13 @@ class _FormularioCompraState extends State<_FormularioCompra> {
                   return frecuentes.where((d) => d.toLowerCase().contains(q)).take(6);
                 },
                 fieldViewBuilder: (context, ctrl, foco, alEnviar) {
-                  _detalle = ctrl;
+                  _producto = ctrl;
                   return TextField(
                     controller: ctrl,
                     focusNode: foco,
-                    textCapitalization: TextCapitalization.sentences,
+                    textCapitalization: TextCapitalization.characters,
                     style: const TextStyle(color: Colors.white),
-                    decoration: _deco('¿Qué compraste?', ayuda: 'Ej: Leche deslactosada'),
+                    decoration: _deco('Producto', ayuda: 'Ej: HUEVOS'),
                   );
                 },
               ),
@@ -659,15 +634,14 @@ class _FormularioCompraState extends State<_FormularioCompra> {
               Row(children: [
                 Expanded(
                   child: TextField(
-                    controller: _cantidad,
+                    controller: _ingreso,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     style: const TextStyle(color: Colors.white),
-                    decoration: _deco('Cantidad'),
+                    decoration: _deco('Ingreso cantidad', ayuda: 'Ej: 30'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  flex: 2,
                   child: DropdownButtonFormField<String>(
                     key: ValueKey('medida-$_medida-$_versionListas'),
                     initialValue: _medida,
@@ -680,7 +654,7 @@ class _FormularioCompraState extends State<_FormularioCompra> {
                     ],
                     onChanged: (v) {
                       if (v == '__nueva__') {
-                        _nuevaReferencia('medidas');
+                        _nuevaMedida();
                       } else {
                         setState(() => _medida = v);
                       }
@@ -688,28 +662,6 @@ class _FormularioCompraState extends State<_FormularioCompra> {
                   ),
                 ),
               ]),
-              const SizedBox(height: 12),
-
-              TextField(
-                controller: _precio,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: Colors.white),
-                decoration: _deco('Precio por unidad (Bs)', ayuda: 'Ej: 8.90'),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: _colorAcento.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(children: [
-                  const Text('Total', style: TextStyle(color: Colors.white70)),
-                  const Spacer(),
-                  Text(_bs(_total),
-                      style: const TextStyle(color: _colorAcento, fontSize: 20, fontWeight: FontWeight.w800)),
-                ]),
-              ),
               const SizedBox(height: 12),
 
               // Fecha
@@ -726,51 +678,19 @@ class _FormularioCompraState extends State<_FormularioCompra> {
               ),
               const SizedBox(height: 12),
 
-              // Respaldo
-              Row(children: [
-                const Text('¿Tiene factura?', style: TextStyle(color: Colors.white70)),
-                const Spacer(),
-                ChoiceChip(
-                  label: const Text('Sin factura'),
-                  selected: !_conFactura,
-                  onSelected: (_) => setState(() => _conFactura = false),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('Con factura'),
-                  selected: _conFactura,
-                  selectedColor: _colorAcento.withValues(alpha: 0.4),
-                  onSelected: (_) => setState(() => _conFactura = true),
-                ),
-              ]),
-              const SizedBox(height: 8),
               TextField(
-                controller: _respaldo,
+                controller: _uso,
+                textCapitalization: TextCapitalization.characters,
                 style: const TextStyle(color: Colors.white),
-                decoration: _deco(
-                  _conFactura ? 'N° de factura y proveedor' : 'Respaldo (opcional)',
-                  ayuda: _conFactura ? 'Ej: 676683 por HIPERMAXI S.A.' : 'Ej: Recibo, nota de venta…',
-                ),
+                decoration: _deco('Uso (para qué)', ayuda: 'Ej: BROWNIE'),
               ),
               const SizedBox(height: 12),
 
-              DropdownButtonFormField<String>(
-                key: ValueKey('solicitante-$_solicitante-$_versionListas'),
-                initialValue: _solicitante,
-                isExpanded: true,
-                dropdownColor: const Color(0xFF1C1C1C),
-                decoration: _deco('¿Quién lo pidió?'),
-                items: [
-                  for (final s in _solicitantes) DropdownMenuItem(value: s, child: Text(s)),
-                  const DropdownMenuItem(value: '__nuevo__', child: Text('+ Otra persona…', style: TextStyle(color: _colorAcento))),
-                ],
-                onChanged: (v) {
-                  if (v == '__nuevo__') {
-                    _nuevaReferencia('solicitantes');
-                  } else {
-                    setState(() => _solicitante = v);
-                  }
-                },
+              TextField(
+                controller: _final,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: Colors.white),
+                decoration: _deco('Cantidad final (opcional)', ayuda: 'Se puede anotar después'),
               ),
 
               if (_error != null) ...[
@@ -784,7 +704,7 @@ class _FormularioCompraState extends State<_FormularioCompra> {
                 icon: _guardando
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.check),
-                label: Text(_guardando ? 'Guardando…' : 'Guardar compra',
+                label: Text(_guardando ? 'Guardando…' : 'Guardar fila',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],

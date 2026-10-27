@@ -12,7 +12,8 @@ from app.tz import hoy_bolivia
 router = APIRouter(prefix="/dashboard/insumos")
 
 SELECT_INSUMOS = (
-    "SELECT id, fecha, detalle, cantidad, medida, respaldo, precio_unitario, total, solicitante, responsable "
+    "SELECT id, fecha, detalle, cantidad, medida, respaldo, precio_unitario, total, solicitante, responsable, "
+    "uso, cantidad_final "
     "FROM compras_insumos ORDER BY fecha DESC, id DESC"
 )
 
@@ -181,7 +182,10 @@ def _compra_json(c, session: dict, nro: int) -> dict:
         "fecha": c["fecha"].isoformat(),
         "detalle": c["detalle"],
         "cantidad": inicial,
-        # Lo que queda; el uso sale solo (inicial − final). None = todavía no se anotó.
+        # Para qué se usó (texto libre, ej. "BROWNIE"). Va como "para_que"
+        # porque las apps viejas leen "uso" como número.
+        "para_que": c["uso"],
+        # Lo que queda; lo usado sale solo (inicial − final). None = todavía no se anotó.
         "cantidad_final": final,
         "uso": round(inicial - final, 3) if final is not None else None,
         "medida": c["medida"],
@@ -199,7 +203,7 @@ def _compra_json(c, session: dict, nro: int) -> dict:
 async def insumos_api(session: dict = Depends(require_session), mes: str | None = None):
     inicio, fin = _mes_api(mes)
     compras = await pool().fetch(
-        "SELECT id, fecha, detalle, cantidad, cantidad_final, medida, respaldo, precio_unitario, total, "
+        "SELECT id, fecha, detalle, cantidad, cantidad_final, uso, medida, respaldo, precio_unitario, total, "
         "solicitante, responsable FROM compras_insumos WHERE fecha >= $1 AND fecha < $2 ORDER BY fecha DESC, id DESC",
         inicio, fin,
     )
@@ -232,30 +236,40 @@ async def crear_insumo_api(
     respaldo: str = Form(""),
     precio_unitario: str = Form(""),
     solicitante: str = Form(""),
+    uso: str = Form(""),
+    cantidad_final: str = Form(""),
 ):
+    """La app carga una fila como en la planilla: producto, cantidad que
+    ingresó, fecha, uso y (opcional) cantidad final. El precio es opcional."""
     detalle = detalle.strip()
     try:
         cantidad_num = float(cantidad.replace(",", "."))
-        precio_num = float(precio_unitario.replace(",", "."))
+        precio_num = float(precio_unitario.replace(",", ".")) if precio_unitario.strip() else 0.0
+        final_num = float(cantidad_final.replace(",", ".")) if cantidad_final.strip() else None
         fecha_d = date.fromisoformat(fecha)
     except ValueError:
-        return JSONResponse({"ok": False, "error": "Revisa la fecha, la cantidad y el precio."}, status_code=400)
+        return JSONResponse({"ok": False, "error": "Revisa la fecha y las cantidades."}, status_code=400)
     if not detalle or cantidad_num <= 0 or precio_num < 0:
         return JSONResponse(
-            {"ok": False, "error": "Completa qué compraste, una cantidad mayor a 0 y el precio."}, status_code=400
+            {"ok": False, "error": "Completa el producto y una cantidad de ingreso mayor a 0."}, status_code=400
+        )
+    if final_num is not None and not 0 <= final_num <= cantidad_num:
+        return JSONResponse(
+            {"ok": False, "error": f"La cantidad final tiene que estar entre 0 y {cantidad_num:g}."}, status_code=400
         )
     if fecha_d > hoy_bolivia():
         return JSONResponse({"ok": False, "error": "La fecha no puede ser futura."}, status_code=400)
     nuevo_id = await pool().fetchval(
         """
-        INSERT INTO compras_insumos (fecha, detalle, cantidad, medida, respaldo, precio_unitario, solicitante, responsable)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+        INSERT INTO compras_insumos (fecha, detalle, cantidad, medida, respaldo, precio_unitario, solicitante, responsable,
+                                     uso, cantidad_final)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id
         """,
         fecha_d, detalle, cantidad_num, medida.strip() or None, respaldo.strip() or None, precio_num,
-        solicitante.strip() or None, session["nombre"],
+        solicitante.strip() or None, session["nombre"], uso.strip()[:200] or None, final_num,
     )
     await bitacora.registrar(
-        session, "Registró compra de insumo", f"{detalle} — Bs {cantidad_num * precio_num:.2f} (desde la app)"
+        session, "Registró insumo", f"{detalle} — ingreso {cantidad_num:g} {medida.strip()} (desde la app)"
     )
     return JSONResponse({"ok": True, "id": nuevo_id})
 
@@ -298,6 +312,20 @@ async def cantidad_final_api(insumo_id: int, session: dict = Depends(require_ses
         session, "Anotó cantidad final de insumo",
         f"Insumo #{insumo_id}: {compra['detalle']} — queda {final:g} {medida} (desde la app)" if final is not None
         else f"Insumo #{insumo_id}: {compra['detalle']} — borró la cantidad final (desde la app)",
+    )
+    return JSONResponse({"ok": True})
+
+
+@router_api.post("/{insumo_id}/uso")
+async def uso_api(insumo_id: int, session: dict = Depends(require_session), uso: str = Form("")):
+    """Cambia para qué se usó el insumo (cualquier usuario)."""
+    detalle = await pool().fetchval("SELECT detalle FROM compras_insumos WHERE id = $1", insumo_id)
+    if detalle is None:
+        return JSONResponse({"ok": False, "error": "Ese insumo ya no existe."}, status_code=404)
+    uso = uso.strip()[:200] or None
+    await pool().execute("UPDATE compras_insumos SET uso = $1 WHERE id = $2", uso, insumo_id)
+    await bitacora.registrar(
+        session, "Anotó uso de insumo", f"Insumo #{insumo_id}: {detalle} — uso: {uso or '(vacío)'} (desde la app)"
     )
     return JSONResponse({"ok": True})
 
