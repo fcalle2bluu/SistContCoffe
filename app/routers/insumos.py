@@ -185,9 +185,10 @@ def _compra_json(c, session: dict, nro: int) -> dict:
         # Para qué se usó (texto libre, ej. "BROWNIE"). Va como "para_que"
         # porque las apps viejas leen "uso" como número.
         "para_que": c["uso"],
-        # Lo que queda; lo usado sale solo (inicial − final). None = todavía no se anotó.
+        # Lo que queda en total: puede ser más que lo de esta fila (salieron 1 de
+        # 70 huevos). Lo usado sale solo si queda menos que eso; si no, None.
         "cantidad_final": final,
-        "uso": round(inicial - final, 3) if final is not None else None,
+        "uso": round(inicial - final, 3) if final is not None and final <= inicial else None,
         "medida": c["medida"],
         "precio_unitario": round(float(c["precio_unitario"]), 2),
         "total": round(float(c["total"]), 2),
@@ -253,10 +254,8 @@ async def crear_insumo_api(
         return JSONResponse(
             {"ok": False, "error": "Completa el producto y una cantidad de ingreso mayor a 0."}, status_code=400
         )
-    if final_num is not None and not 0 <= final_num <= cantidad_num:
-        return JSONResponse(
-            {"ok": False, "error": f"La cantidad final tiene que estar entre 0 y {cantidad_num:g}."}, status_code=400
-        )
+    if final_num is not None and final_num < 0:
+        return JSONResponse({"ok": False, "error": "La cantidad final no puede ser negativa."}, status_code=400)
     if fecha_d > hoy_bolivia():
         return JSONResponse({"ok": False, "error": "La fecha no puede ser futura."}, status_code=400)
     nuevo_id = await pool().fetchval(
@@ -301,11 +300,8 @@ async def cantidad_final_api(insumo_id: int, session: dict = Depends(require_ses
             final = float(texto)
         except ValueError:
             return JSONResponse({"ok": False, "error": "Escribe un número."}, status_code=400)
-        if final < 0 or final > float(compra["cantidad"]):
-            return JSONResponse(
-                {"ok": False, "error": f"Tiene que estar entre 0 y {float(compra['cantidad']):g} (lo que se compró)."},
-                status_code=400,
-            )
+        if final < 0:
+            return JSONResponse({"ok": False, "error": "La cantidad final no puede ser negativa."}, status_code=400)
     await pool().execute("UPDATE compras_insumos SET cantidad_final = $1 WHERE id = $2", final, insumo_id)
     medida = compra["medida"] or ""
     await bitacora.registrar(

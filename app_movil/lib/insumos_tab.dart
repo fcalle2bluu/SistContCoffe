@@ -157,7 +157,7 @@ class _InsumosTabState extends State<InsumosTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
         final n = double.tryParse(ctrl.text.trim().replaceAll(',', '.'));
-        final fuera = n != null && (n < 0 || n > inicial);
+        final negativo = n != null && n < 0;
         return AlertDialog(
           backgroundColor: _colorTarjeta,
           title: Text('¿Cuánto queda de ${c['detalle']}?', style: const TextStyle(color: Colors.white, fontSize: 18)),
@@ -186,11 +186,11 @@ class _InsumosTabState extends State<InsumosTab> {
                 ),
               ),
             ]),
-            if (n != null) ...[
+            if (n != null && (negativo || n <= inicial)) ...[
               const SizedBox(height: 12),
               Text(
-                fuera ? 'Tiene que estar entre 0 y ${_cantidad(inicial)}.' : 'Se usaron ${_cantidad(inicial - n)} $medida',
-                style: TextStyle(color: fuera ? Colors.redAccent : _colorAcento, fontWeight: FontWeight.bold),
+                negativo ? 'No puede ser negativa.' : 'Se usaron ${_cantidad(inicial - n)} $medida',
+                style: TextStyle(color: negativo ? Colors.redAccent : _colorAcento, fontWeight: FontWeight.bold),
               ),
             ],
           ]),
@@ -552,8 +552,8 @@ class _FormularioInsumoState extends State<_FormularioInsumo> {
       setState(() => _error = 'La cantidad de ingreso tiene que ser mayor a 0.');
       return;
     }
-    if (_final.text.trim().isNotEmpty && (fin == null || fin < 0 || fin > ingreso)) {
-      setState(() => _error = 'La cantidad final tiene que estar entre 0 y ${_cantidad(ingreso)}.');
+    if (_final.text.trim().isNotEmpty && (fin == null || fin < 0)) {
+      setState(() => _error = 'Revisa la cantidad final.');
       return;
     }
     String dos(int n) => n.toString().padLeft(2, '0');
