@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from contextlib import asynccontextmanager
 from datetime import datetime, time, timedelta, timezone
 
@@ -31,20 +32,62 @@ DENOMINACIONES = (
 CUENTA_CAJA_EFECTIVO = "1110101"  # CAJA MONEDA NACIONAL — donde se resguarda la plata que se retira de la caja
 CUENTA_CAJA_CHICA = "1110102"  # CAJA CHICA — la caja del turno: fondo + ventas en efectivo
 CUENTA_BANCO = "1110103"  # BANCO BISA
-CUENTA_VENTAS = "5010101"  # Ventas
-CUENTA_GASTOS_ADMINISTRATIVOS = "405"  # GASTOS ADMINISTRATIVOS (categorías de egreso sin cuenta propia todavía)
-CUENTA_INSUMOS_ALIMENTICIOS = "11506"  # INSUMOS ALIMENTICIOS
+CUENTA_CREDITO_FISCAL = "1130203"  # CRÉDITO FISCAL
+CUENTA_OTRAS_POR_COBRAR = "1130206"  # Otras Cuentas por Cobrar (devoluciones / diferencias)
+CUENTA_MATERIAL_ESCRITORIO = "11401"  # MATERIAL DE ESCRITORIO
 CUENTA_PRODUCTOS_LIMPIEZA = "11402"  # PRODUCTOS DE LIMPIEZA
+CUENTA_CAFE_ORO_VERDE = "11501"  # CAFÉ EN ORO VERDE
+CUENTA_INSUMOS_ALIMENTICIOS = "11506"  # INSUMOS ALIMENTICIOS
+CUENTA_INVENTARIO_VASOS = "11507"  # INVENTARIO DE VASOS Y DESECHABLES
+CUENTA_MATERIAL_COCINA = "11508"  # MATERIAL DE COCINA
+CUENTA_IT = "1160103"  # IT
+CUENTA_IT_POR_PAGAR = "1160104"  # IT POR PAGAR
+CUENTA_GAS_LICUADO = "11701"  # GAS LICUADO
+CUENTA_SERVICIOS_BASICOS = "12705"  # SERVICIOS BÁSICOS (luz, agua, teléfono, internet)
+CUENTA_INSTRUMENTOS_COCINA = "13101"  # INSTRUMENTOS DE COCINA (equipamiento menor y herramientas)
+CUENTA_EQUIPO_SEGURIDAD = "13124"  # EQUIPO DE SEGURIDAD
+CUENTA_OBLIGACIONES_PERSONAL = "2250103"  # Obligaciones con el Personal
+CUENTA_GASTOS_ADMINISTRATIVOS = "405"  # GASTOS ADMINISTRATIVOS
+CUENTA_REFACCIONES_MANTENIMIENTO = "406"  # REFACCIONES Y MANTENIMIENTO
+CUENTA_VIATICOS = "407"  # VIÁTICOS
+CUENTA_PUBLICIDAD = "409"  # PUBLICIDAD Y MARKETING
+CUENTA_VENTAS = "5010101"  # Ventas
+CUENTA_IVA = "900006"  # IVA
 CUENTA_SERVICIOS_EXTERNOS = "900008"  # SERVICIOS EXTERNOS
 
-# Categoría de egreso (en minúsculas) → cuenta contable a la que se debita.
-# Las categorías que no están acá (p. ej. "Servicios de limpieza", "Publicidad
-# y marketing", "Impuestos") todavía no tienen una cuenta propia en el plan de
-# cuentas, así que siguen yendo a Gastos Administrativos hasta que se cree una.
+# Categoría de egreso (normalizada) → cuenta contable a la que se debita.
 CUENTAS_POR_CATEGORIA_EGRESO = {
+    # Inventarios y suministros
     "insumos alimenticios": CUENTA_INSUMOS_ALIMENTICIOS,
+    "inventario de vasos": CUENTA_INVENTARIO_VASOS,
+    "material de cocina": CUENTA_MATERIAL_COCINA,
+    "material de escritorio": CUENTA_MATERIAL_ESCRITORIO,
     "productos de limpieza": CUENTA_PRODUCTOS_LIMPIEZA,
+    "gas licuado": CUENTA_GAS_LICUADO,
+
+    # Servicios y mantenimiento
+    "servicios de limpieza": CUENTA_SERVICIOS_EXTERNOS,
     "servicios externos": CUENTA_SERVICIOS_EXTERNOS,
+    "pago de servicios basicos": CUENTA_SERVICIOS_BASICOS,
+    "pago de servicios básicos": CUENTA_SERVICIOS_BASICOS,
+    "servicio telefonico": CUENTA_SERVICIOS_BASICOS,
+    "servicio telefónico": CUENTA_SERVICIOS_BASICOS,
+    "refacciones y mantenimiento": CUENTA_REFACCIONES_MANTENIMIENTO,
+
+    # Personal y viáticos
+    "obligaciones con el personal": CUENTA_OBLIGACIONES_PERSONAL,
+    "viaticos": CUENTA_VIATICOS,
+    "viáticos": CUENTA_VIATICOS,
+
+    # Seguridad y equipamiento
+    "equipo de seguridad": CUENTA_EQUIPO_SEGURIDAD,
+    "instrumentos de cocina": CUENTA_INSTRUMENTOS_COCINA,
+
+    # Otros
+    "impuestos": CUENTA_IT,
+    "publicidad y marketing": CUENTA_PUBLICIDAD,
+    "cambio de pago y devolucion": CUENTA_OTRAS_POR_COBRAR,
+    "gastos administrativos": CUENTA_GASTOS_ADMINISTRATIVOS,
 }
 
 
@@ -110,11 +153,61 @@ def _parse_hora_local(valor: str) -> datetime | None:
         return None
 
 
+def _normalizar_texto(texto: str) -> str:
+    """Quita tildes y pasa a minúsculas para comparaciones robustas."""
+    t = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode("ascii")
+    return t.strip().lower()
+
+
 def _cuenta_egreso_por_categoria(categoria: str | None) -> str:
-    if categoria:
-        cuenta = CUENTAS_POR_CATEGORIA_EGRESO.get(categoria.strip().lower())
-        if cuenta:
-            return cuenta
+    """Determina la cuenta contable de débito para un egreso de caja según su categoría.
+    Nunca envía a Gastos Administrativos cosas operativas como vasos, insumos, limpieza,
+    servicios básicos o cocina."""
+    if not categoria:
+        return CUENTA_GASTOS_ADMINISTRATIVOS
+
+    cat_limpia = _normalizar_texto(categoria)
+    cat_orig = categoria.strip().lower()
+
+    # 1. Búsqueda exacta en diccionario (con y sin tildes)
+    if cat_limpia in CUENTAS_POR_CATEGORIA_EGRESO:
+        return CUENTAS_POR_CATEGORIA_EGRESO[cat_limpia]
+    if cat_orig in CUENTAS_POR_CATEGORIA_EGRESO:
+        return CUENTAS_POR_CATEGORIA_EGRESO[cat_orig]
+
+    # 2. Detección inteligente por palabras clave (para evitar que variaciones o nuevas categorías
+    # caigan por descuido a Gastos Administrativos)
+    if any(k in cat_limpia for k in ("vaso", "tapa", "desechable", "vasos", "empaque")):
+        return CUENTA_INVENTARIO_VASOS
+    if "cocina" in cat_limpia:
+        if any(k in cat_limpia for k in ("instrumento", "equipo", "maquina", "molino", "portafiltro")):
+            return CUENTA_INSTRUMENTOS_COCINA
+        return CUENTA_MATERIAL_COCINA
+    if any(k in cat_limpia for k in ("escritorio", "papeleria", "funda", "boligrafo", "letrero")):
+        return CUENTA_MATERIAL_ESCRITORIO
+    if "limpieza" in cat_limpia:
+        if "servicio" in cat_limpia or "fumig" in cat_limpia:
+            return CUENTA_SERVICIOS_EXTERNOS
+        return CUENTA_PRODUCTOS_LIMPIEZA
+    if "gas" in cat_limpia or "garrafa" in cat_limpia:
+        return CUENTA_GAS_LICUADO
+    if any(k in cat_limpia for k in ("basico", "telefon", "luz", "agua", "internet", "cotel", "delapaz")):
+        return CUENTA_SERVICIOS_BASICOS
+    if any(k in cat_limpia for k in ("personal", "sueldo", "emplead", "salario")):
+        return CUENTA_OBLIGACIONES_PERSONAL
+    if any(k in cat_limpia for k in ("mantenimiento", "refaccion", "reparac", "plomer", "albanil")):
+        return CUENTA_REFACCIONES_MANTENIMIENTO
+    if any(k in cat_limpia for k in ("viatico", "pasaje")):
+        return CUENTA_VIATICOS
+    if "seguridad" in cat_limpia:
+        return CUENTA_EQUIPO_SEGURIDAD
+    if any(k in cat_limpia for k in ("publicidad", "marketing", "volante", "letrero")):
+        return CUENTA_PUBLICIDAD
+    if "impuesto" in cat_limpia:
+        return CUENTA_IT
+    if any(k in cat_limpia for k in ("alimento", "insumo", "comida", "leche", "cafe", "reposteria")):
+        return CUENTA_INSUMOS_ALIMENTICIOS
+
     return CUENTA_GASTOS_ADMINISTRATIVOS
 
 
@@ -1789,9 +1882,12 @@ async def agregar_categoria_egreso(
 ):
     nombre_nueva = nombre_nueva.strip()
     if nombre_nueva:
+        codigo_cta = _cuenta_egreso_por_categoria(nombre_nueva)
         await pool().execute(
-            "INSERT INTO categorias_egreso_referencia (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING",
+            "INSERT INTO categorias_egreso_referencia (nombre, codigo_cuenta) VALUES ($1, $2) "
+            "ON CONFLICT (nombre) DO UPDATE SET codigo_cuenta = COALESCE(categorias_egreso_referencia.codigo_cuenta, EXCLUDED.codigo_cuenta)",
             nombre_nueva,
+            codigo_cta,
         )
     categorias = await pool().fetch("SELECT nombre FROM categorias_egreso_referencia ORDER BY nombre")
     return templates.TemplateResponse(
